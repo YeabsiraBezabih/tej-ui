@@ -1,0 +1,8 @@
+[net]
+retry = 10
+
+[http]
+timeout = 120
+
+[registries.crates-io]
+protocol = "sparse"

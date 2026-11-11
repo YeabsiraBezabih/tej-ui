@@ -1,0 +1,27 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor directories
+.idea/
+.vscode/
+*.swp
+*~
+
+# Rust build artifacts
+target/
+**/*.rs.bk
+Cargo.lock
+
+# Partial / temporary download files
+*.part
+*.tmp
+
+# Python artifacts
+__pycache__/
+*.pyc
+
+# Database files
+*.db
+*.db-*
+*.redb
