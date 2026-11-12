@@ -6,7 +6,7 @@ pub use tej_core::{
 
 pub use tej_view::{
     Button, Canvas, CanvasPainter, CanvasState, Checkbox, EitherState, For, HStack, If, Input,
-    SearchBar, Text, VStack, View,
+    SearchBar, StyleProps, Styled, StyledState, Text, VStack, View, ViewExt,
 };
 
 pub use tej_layout::{

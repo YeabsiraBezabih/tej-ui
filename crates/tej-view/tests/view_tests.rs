@@ -1,6 +1,22 @@
 use tej_core::Signal;
 use tej_hal::Color;
-use tej_view::{Button, Canvas, Checkbox, HStack, If, Text, VStack, View};
+use tej_layout::Dimension;
+use tej_view::{Button, Canvas, Checkbox, HStack, If, Text, VStack, View, ViewExt};
+
+#[test]
+fn test_view_ext_styling_modifiers() {
+    let styled_button = Button::new(Text::new("Submit"))
+        .padding(12.0)
+        .background(Color::rgb(45, 55, 72))
+        .corner_radius(8.0)
+        .border(1.5, Color::rgb(66, 153, 225))
+        .width(Dimension::Points(200.0));
+
+    let state = styled_button.build();
+    assert_eq!(state.style.corner_radius, 8.0);
+    assert_eq!(state.style.border_width, 1.5);
+    assert_eq!(state.style.padding.top, 12.0);
+}
 
 #[test]
 fn test_canvas_view_rendering() {
