@@ -18,6 +18,7 @@ members = [
     "crates/tej-animation",
     "crates/tej",
     "examples/task-manager",
+    "examples/obsidian-clone",
     "benches",
     "tests",
 ]

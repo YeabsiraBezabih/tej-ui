@@ -1,0 +1,23 @@
+[package]
+name = "obsidian-clone-example"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+tej.workspace = true
+tej-core.workspace = true
+tej-hal.workspace = true
+tej-animation.workspace = true
+tej-widgets.workspace = true
+tej-icons.workspace = true
+tej-3d.workspace = true
+tej-db-sync.workspace = true
+mydb.workspace = true
+mydb-core.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true
