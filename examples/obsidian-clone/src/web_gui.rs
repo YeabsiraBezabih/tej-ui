@@ -17,15 +17,9 @@ pub fn start_web_gui_background(notes: Vec<NoteItem>) {
 
     let notes = Arc::new(notes);
     thread::spawn(move || {
-        let listener = match TcpListener::bind("127.0.0.1:4000") {
-            Ok(l) => l,
-            Err(_) => match TcpListener::bind("127.0.0.1:4001") {
-                Ok(l) => l,
-                Err(e) => {
-                    eprintln!("Failed to bind web GUI server: {e}");
-                    return;
-                }
-            },
+        let listener = (4000..=4010).find_map(|p| TcpListener::bind(format!("127.0.0.1:{p}")).ok());
+        let Some(listener) = listener else {
+            return;
         };
 
         for mut stream in listener.incoming().flatten() {

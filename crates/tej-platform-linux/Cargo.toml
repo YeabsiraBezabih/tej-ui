@@ -11,6 +11,8 @@ tej-hal.workspace = true
 tej-layout.workspace = true
 thiserror.workspace = true
 smallvec.workspace = true
+parking_lot.workspace = true
+minifb = "0.29"
 
 [lints]
 workspace = true

@@ -5,6 +5,7 @@
 
 mod app_view;
 mod db;
+mod desktop_gui;
 mod graph;
 mod models;
 mod palette;
@@ -12,6 +13,7 @@ mod repl;
 mod web_gui;
 
 use db::VaultDatabase;
+use desktop_gui::run_desktop_gui;
 use repl::run_interactive;
 use std::env;
 use std::error::Error;
@@ -20,6 +22,7 @@ use web_gui::start_web_gui_background;
 fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = env::args().collect();
     let is_test_mode = args.iter().any(|a| a == "--test" || a == "--batch");
+    let is_cli_mode = args.iter().any(|a| a == "--cli" || a == "--repl");
 
     println!("========================================================");
     println!("   Starting Obsidian Desktop Clone (Powered by tej-ui)   ");
@@ -44,6 +47,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    // Launch interactive REPL
-    run_interactive(vault_db, notes)
+    if is_cli_mode {
+        // Launch interactive terminal REPL
+        return run_interactive(vault_db, notes);
+    }
+
+    // Launch authentic native desktop GUI window (X11 / Wayland)
+    run_desktop_gui(vault_db, notes);
+    Ok(())
 }
