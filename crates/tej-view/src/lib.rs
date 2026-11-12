@@ -11,6 +11,7 @@ pub mod view;
 pub use control_flow::cond::{EitherState, If, IfState};
 pub use control_flow::iter::{For, ForState};
 pub use primitives::button::{Button, ButtonState, ClickHandler};
+pub use primitives::canvas::{Canvas, CanvasPainter, CanvasState};
 pub use primitives::checkbox::{Checkbox, CheckboxState, ToggleHandler};
 pub use primitives::input::{Input, InputState, SearchBar, TextChangeHandler};
 pub use primitives::stacks::{HStack, StackState, VStack};

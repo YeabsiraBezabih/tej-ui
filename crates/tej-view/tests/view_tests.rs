@@ -1,5 +1,19 @@
 use tej_core::Signal;
-use tej_view::{Button, Checkbox, HStack, If, Text, VStack, View};
+use tej_hal::Color;
+use tej_view::{Button, Canvas, Checkbox, HStack, If, Text, VStack, View};
+
+#[test]
+fn test_canvas_view_rendering() {
+    let canvas = Canvas::new(|compositor, bounds| {
+        compositor.fill_rect(bounds, Color::rgb(30, 30, 40));
+    });
+
+    let mut state = canvas.build();
+    assert_eq!(state.redraw_count, 0);
+
+    canvas.patch(&mut state, 1);
+    assert_eq!(state.redraw_count, 1);
+}
 
 #[test]
 fn test_static_text_view() {
