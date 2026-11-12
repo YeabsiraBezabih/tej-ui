@@ -1,11 +1,11 @@
 //! Native desktop GUI runner for the Obsidian Clone using `tej-platform-linux`.
 //!
-//! Provides ultra-responsive input handling, pixel-accurate hit-testing,
-//! silky spring physics, and low CPU/RAM resource consumption.
+//! Provides ultra-responsive input handling, dynamic window resizing,
+//! pixel-accurate hit-testing, silky spring physics, and low CPU/RAM resource consumption.
 
 use crate::app_view::ObsidianState;
 use crate::db::VaultDatabase;
-use crate::gui_renderer::{RenderContext, TAB_RECTS, render_frame};
+use crate::gui_renderer::{RenderContext, calculate_tab_rects, render_frame};
 use crate::models::NoteItem;
 use std::f32::consts::PI;
 use std::fs;
@@ -30,10 +30,8 @@ pub fn run_desktop_gui(vault_db: VaultDatabase, notes: Vec<NoteItem>) {
         return;
     }
 
-    println!("  ✓ Native desktop GUI window opened (1280x800).");
-    println!(
-        "  ✓ Interactivity active: Click notes in sidebar, switch tabs, or press 1-3 / Tab / Esc."
-    );
+    println!("  ✓ Native desktop GUI window opened.");
+    println!("  ✓ Dynamic tiling & resizing enabled (Hyprland/Wayland/X11 compliant).");
 
     let mut surface = LinuxSurface::new(window_size);
     let mut state = ObsidianState::new();
@@ -43,12 +41,24 @@ pub fn run_desktop_gui(vault_db: VaultDatabase, notes: Vec<NoteItem>) {
     let mut graph_angle = 0.0f32;
 
     while window.is_open() {
+        // 0. Ensure surface buffer matches physical window size 1:1 (prevents squishing/stretching)
+        let win_size = window.size();
+        if surface.size() != win_size && win_size.width > 0.0 && win_size.height > 0.0 {
+            surface.resize(win_size);
+        }
+        #[allow(clippy::cast_precision_loss)]
+        let win_w = surface.width() as f32;
+
         // 1. Process Hardware Events with zero-latency dispatch
         for event in window.poll_events() {
             match event {
+                UiEvent::Resize { width, height } => {
+                    surface.resize(Size::new(width, height));
+                }
                 UiEvent::MouseMove { position } => {
                     update_hover_states(
                         position,
+                        win_w,
                         &state,
                         notes.len(),
                         &mut hovered_note,
@@ -56,7 +66,13 @@ pub fn run_desktop_gui(vault_db: VaultDatabase, notes: Vec<NoteItem>) {
                     );
                 }
                 UiEvent::MouseDown { position, .. } => {
-                    handle_click(position, &mut state, &notes, &mut selected_note_index);
+                    handle_click(
+                        position,
+                        win_w,
+                        &mut state,
+                        &notes,
+                        &mut selected_note_index,
+                    );
                 }
                 UiEvent::KeyDown { key_code, .. } => match key_code {
                     27 => return,                  // Esc key to exit
@@ -100,7 +116,7 @@ pub fn run_desktop_gui(vault_db: VaultDatabase, notes: Vec<NoteItem>) {
         };
         render_frame(&mut surface, &render_ctx);
 
-        // 5. Blit to Native Platform Window
+        // 5. Blit to Native Platform Window (1:1 physical pixels)
         window.update_surface(&surface);
 
         // 6. Adaptive Resource-Efficient Sleeping (Near 0% Idle CPU)
@@ -114,6 +130,7 @@ pub fn run_desktop_gui(vault_db: VaultDatabase, notes: Vec<NoteItem>) {
 
 fn update_hover_states(
     pos: Point,
+    win_w: f32,
     state: &ObsidianState,
     total_notes: usize,
     hovered_note: &mut Option<usize>,
@@ -121,7 +138,8 @@ fn update_hover_states(
 ) {
     // Check Tabs hover
     *hovered_tab = None;
-    for (i, &rect) in TAB_RECTS.iter().enumerate() {
+    let tab_rects = calculate_tab_rects(win_w);
+    for (i, rect) in tab_rects.iter().enumerate() {
         if rect.contains(pos) {
             *hovered_tab = Some(i);
             break;
@@ -131,23 +149,28 @@ fn update_hover_states(
     // Check Sidebar Notes hover
     *hovered_note = None;
     let sidebar_w = state.sidebar_width_spring.get();
-    if pos.x >= 12.0 && pos.x <= (sidebar_w - 12.0) && pos.y >= 110.0 {
-        let note_idx = ((pos.y - 110.0) / 36.0) as usize;
-        let rect_y = 110.0 + (note_idx as f32) * 36.0;
-        if note_idx < total_notes && pos.y >= rect_y && pos.y <= (rect_y + 32.0) {
-            *hovered_note = Some(note_idx);
+    if pos.x >= 8.0 && pos.x <= (sidebar_w - 8.0) && pos.y >= 104.0 {
+        for i in 0..total_notes {
+            let y = 104.0 + (i as f32) * 34.0;
+            let rect = Rect::new(8.0, y, sidebar_w - 16.0, 30.0);
+            if rect.contains(pos) {
+                *hovered_note = Some(i);
+                break;
+            }
         }
     }
 }
 
 fn handle_click(
     pos: Point,
+    win_w: f32,
     state: &mut ObsidianState,
     notes: &[NoteItem],
     selected_idx: &mut usize,
 ) {
     // 1. Header Tab Clicks
-    for (i, &rect) in TAB_RECTS.iter().enumerate() {
+    let tab_rects = calculate_tab_rects(win_w);
+    for (i, rect) in tab_rects.iter().enumerate() {
         if rect.contains(pos) {
             state.active_tab.set(i);
             return;
@@ -163,15 +186,16 @@ fn handle_click(
 
     // 3. Sidebar Note Items Hit Test
     let sidebar_w = state.sidebar_width_spring.get();
-    if pos.x >= 12.0 && pos.x <= (sidebar_w - 12.0) && pos.y >= 110.0 {
-        let note_idx = ((pos.y - 110.0) / 36.0) as usize;
-        let rect_y = 110.0 + (note_idx as f32) * 36.0;
-        if note_idx < notes.len() && pos.y >= rect_y && pos.y <= (rect_y + 32.0) {
-            *selected_idx = note_idx;
-            state
-                .selected_note_id
-                .set(Some(notes[note_idx].id.to_string()));
-            state.active_tab.set(0); // Instantly switch to editor
+    if pos.x >= 8.0 && pos.x <= (sidebar_w - 8.0) && pos.y >= 104.0 {
+        for (i, note) in notes.iter().enumerate() {
+            let y = 104.0 + (i as f32) * 34.0;
+            let rect = Rect::new(8.0, y, sidebar_w - 16.0, 30.0);
+            if rect.contains(pos) {
+                *selected_idx = i;
+                state.selected_note_id.set(Some(note.id.to_string()));
+                state.active_tab.set(0); // Instantly switch to editor
+                return;
+            }
         }
     }
 }

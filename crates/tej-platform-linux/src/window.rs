@@ -130,6 +130,18 @@ impl PlatformWindow for LinuxWindow {
 
         if let Some(w) = self.native_window.lock().as_mut() {
             if w.0.is_open() {
+                // Poll window resize events dynamically from compositor
+                let (win_w, win_h) = w.0.get_size();
+                #[allow(clippy::cast_precision_loss)]
+                let current_size = Size::new(win_w as f32, win_h as f32);
+                if self.size != current_size && win_w > 0 && win_h > 0 {
+                    self.size = current_size;
+                    events.push(UiEvent::Resize {
+                        width: current_size.width,
+                        height: current_size.height,
+                    });
+                }
+
                 // Poll mouse position with Pass mode so we always receive real-time cursor coords
                 if let Some((x, y)) = w.0.get_mouse_pos(MouseMode::Pass) {
                     let pt = Point::new(x, y);

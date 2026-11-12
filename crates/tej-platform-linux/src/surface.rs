@@ -73,6 +73,23 @@ impl LinuxSurface {
         self.pixels.fill(px);
     }
 
+    /// Resize surface buffer to match the active window dimensions.
+    pub fn resize(&mut self, new_size: Size) {
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let width = (new_size.width.max(1.0) as usize).min(8192);
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let height = (new_size.height.max(1.0) as usize).min(8192);
+
+        if self.width == width && self.height == height {
+            return;
+        }
+
+        self.size = new_size;
+        self.width = width;
+        self.height = height;
+        self.pixels.resize(width * height, 0xFF1E_1E24);
+    }
+
     /// Number of draw calls executed in the current/last frame.
     #[must_use]
     pub const fn draw_calls(&self) -> usize {
