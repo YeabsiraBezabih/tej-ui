@@ -10,6 +10,7 @@ members = [
     "crates/tej-db-sync",
     "crates/tej",
     "examples/task-manager",
+    "benches",
     "tests",
 ]
 resolver = "2"
