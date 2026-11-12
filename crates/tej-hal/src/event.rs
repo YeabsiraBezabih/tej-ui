@@ -40,6 +40,10 @@ pub enum UiEvent {
         width: f32,
         height: f32,
     },
+    /// Monitor DPI scaling factor changed (e.g. window dragged to a high-DPI display).
+    ScaleFactorChanged {
+        scale_factor: f32,
+    },
     FocusGained,
     FocusLost,
     CloseRequested,

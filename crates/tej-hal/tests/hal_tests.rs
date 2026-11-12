@@ -1,5 +1,8 @@
-use tej_hal::{Color, DirtyRectTracker, MouseButton, UiEvent};
-use tej_layout::{Point, Rect};
+use tej_hal::{
+    Color, DirtyRectTracker, MonitorId, MonitorInfo, MonitorManager, MouseButton, PlatformWindow,
+    UiEvent, WindowId, WindowRegistry,
+};
+use tej_layout::{Point, Rect, Size};
 
 #[test]
 fn test_dirty_rect_aggregation() {
@@ -46,4 +49,76 @@ fn test_color_constructors() {
     assert_eq!(c.g, 20);
     assert_eq!(c.b, 30);
     assert_eq!(c.a, 255);
+}
+
+#[derive(Debug)]
+struct MockWindow {
+    id: WindowId,
+    title: String,
+    size: Size,
+}
+
+impl PlatformWindow for MockWindow {
+    fn id(&self) -> WindowId {
+        self.id
+    }
+    fn size(&self) -> Size {
+        self.size
+    }
+    fn request_redraw(&self) {}
+    fn set_title(&mut self, title: &str) {
+        self.title = title.to_string();
+    }
+    fn poll_events(&mut self) -> Vec<UiEvent> {
+        Vec::new()
+    }
+}
+
+#[test]
+fn test_multi_monitor_and_window_registry() {
+    // 1. Multi-monitor management
+    let mut manager = MonitorManager::default();
+    assert_eq!(manager.monitors().len(), 1);
+
+    // Add secondary 4K monitor at 2.0x DPI scale factor
+    manager.add_monitor(MonitorInfo::new(
+        MonitorId(2),
+        "Dell 4K External",
+        Rect::from_origin_size(Point::new(1920.0, 0.0), Size::new(3840.0, 2160.0)),
+        2.0,
+        false,
+    ));
+
+    assert_eq!(manager.monitors().len(), 2);
+    let secondary = manager.monitor_at_point(Point::new(2000.0, 500.0)).unwrap();
+    assert_eq!(secondary.id, MonitorId(2));
+    assert_eq!(secondary.scale_factor, 2.0);
+    assert_eq!(secondary.physical_size(), Size::new(7680.0, 4320.0));
+
+    // 2. Window Registry
+    let mut registry = WindowRegistry::new();
+    assert_eq!(registry.count(), 0);
+
+    let win1 = Box::new(MockWindow {
+        id: WindowId(1),
+        title: "Main".to_string(),
+        size: Size::new(800.0, 600.0),
+    });
+    let win2 = Box::new(MockWindow {
+        id: WindowId(2),
+        title: "Inspector".to_string(),
+        size: Size::new(400.0, 600.0),
+    });
+
+    registry.register(win1);
+    registry.register(win2);
+    assert_eq!(registry.count(), 2);
+    assert_eq!(registry.focused_window_id(), Some(WindowId(1)));
+
+    registry.set_focused_window(WindowId(2));
+    assert_eq!(registry.focused_window_id(), Some(WindowId(2)));
+
+    let removed = registry.unregister(WindowId(1));
+    assert!(removed.is_some());
+    assert_eq!(registry.count(), 1);
 }

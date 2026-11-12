@@ -62,6 +62,24 @@ impl Rect {
 
     #[inline]
     #[must_use]
+    pub const fn from_origin_size(origin: Point, size: Size) -> Self {
+        Self { origin, size }
+    }
+
+    #[inline]
+    #[must_use]
+    pub const fn width(&self) -> f32 {
+        self.size.width
+    }
+
+    #[inline]
+    #[must_use]
+    pub const fn height(&self) -> f32 {
+        self.size.height
+    }
+
+    #[inline]
+    #[must_use]
     pub fn min_x(&self) -> f32 {
         self.origin.x
     }

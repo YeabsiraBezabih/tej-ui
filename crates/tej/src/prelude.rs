@@ -20,8 +20,16 @@ pub use tej_text::{
 };
 
 pub use tej_hal::{
-    Color, DirtyRectTracker, MouseButton, PlatformWindow, SurfaceCompositor, UiEvent, WindowConfig,
-    WindowId,
+    Color, DirtyRectTracker, MonitorId, MonitorInfo, MonitorManager, MouseButton, PlatformWindow,
+    SurfaceCompositor, UiEvent, WindowConfig, WindowId, WindowRegistry,
+};
+
+pub use tej_platform_linux::{LinuxSurface, LinuxWindow};
+pub use tej_platform_macos::{
+    MacosWindow, MacosWindowAttributes, MacosWindowStyle, MetalSurfaceCompositor,
+};
+pub use tej_platform_windows::{
+    DirectCompositionSurface, DwmAttributes, WindowBackdrop, WindowsWindow,
 };
 
 pub use tej_db_sync::{DbSyncHook, ReactiveDbQuery, VirtualList, ZeroCopyRow};
