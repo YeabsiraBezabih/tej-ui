@@ -21,6 +21,7 @@ tej-widgets.workspace = true
 tej-services.workspace = true
 tej-devtools.workspace = true
 tej-3d.workspace = true
+tej-icons.workspace = true
 
 [lints]
 workspace = true
