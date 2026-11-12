@@ -35,9 +35,12 @@ pub use tej_platform_windows::{
 pub use tej_db_sync::{DbSyncHook, ReactiveDbQuery, VirtualList, ZeroCopyRow};
 
 pub use tej_widgets::{
-    CommandAction, CommandItem, CommandPalette, DataGrid, DataGridDimensions, GridCellCoords,
-    GridColumn, MenuItem, Modal, PinState, Popover, PopoverPlacement, SortDirection, TabItem, Tabs,
-    ToastItem, ToastSeverity, TreeNode, TreeView, fuzzy_match,
+    Accordion, AccordionItem, Alert, AlertSeverity, Avatar, Badge, BadgeVariant, Breadcrumb,
+    BreadcrumbItem, Card, CommandAction, CommandItem, CommandPalette, DataGrid, DataGridDimensions,
+    GridCellCoords, GridColumn, MenuItem, Modal, Pagination, PinState, Popover, PopoverPlacement,
+    Progress, RadioGroup, RadioItem, ScrollArea, Select, SelectOption, Separator,
+    SeparatorOrientation, Sheet, SheetSide, Sidebar, SidebarItem, Skeleton, Slider, SortDirection,
+    Switch, TabItem, Tabs, ToastItem, ToastSeverity, Tooltip, TreeNode, TreeView, fuzzy_match,
 };
 
 pub use tej_services::{
