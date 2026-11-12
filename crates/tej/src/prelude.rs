@@ -29,4 +29,9 @@ pub use tej_widgets::{
     ToastItem, ToastSeverity, TreeNode, TreeView, fuzzy_match,
 };
 
+pub use tej_services::{
+    Clipboard, ClipboardData, Credential, CredentialStore, DragDropEvent, DropPayload, FileDialog,
+    FileFilter, Modifiers, Shortcut, ShortcutHandler, ShortcutManager, TrayEvent, TrayIcon,
+};
+
 pub use crate::app::App;
