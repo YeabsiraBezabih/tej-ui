@@ -33,7 +33,7 @@ impl TextMeasurer {
 
         // Fast hash of string slice pointer + length + font to avoid allocating cache keys
         let hash_key = (text.as_ptr() as u64) ^ ((text_len as u64) << 32);
-        let font_key = (font as u32) ^ font_size.to_bits();
+        let font_key = font.cache_id() ^ font_size.to_bits();
 
         if let Some(&cached) = self.cache.read().get(&(hash_key, font_key)) {
             return cached;

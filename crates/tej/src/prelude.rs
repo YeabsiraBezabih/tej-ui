@@ -14,7 +14,10 @@ pub use tej_layout::{
     LayoutStyle, Point, Rect, Size,
 };
 
-pub use tej_text::{FontWeight, SystemFont, TextMeasurer};
+pub use tej_text::{
+    BidiClassifier, BidiRun, FontCategory, FontFallbackChain, FontWeight, GlyphCluster, ShapedRun,
+    SystemFont, TextDirection, TextMeasurer, TextShaper,
+};
 
 pub use tej_hal::{
     Color, DirtyRectTracker, MouseButton, PlatformWindow, SurfaceCompositor, UiEvent, WindowConfig,
