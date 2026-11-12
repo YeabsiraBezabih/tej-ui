@@ -17,7 +17,9 @@ pub struct ObsidianState {
     pub sidebar_collapsed: Signal<bool>,
     #[allow(dead_code)]
     pub palette_open: Signal<bool>,
+    #[allow(dead_code)]
     pub palette_query: Signal<String>,
+    #[allow(dead_code)]
     pub palette_index: Signal<usize>,
     pub sidebar_width_spring: AnimatedSpring,
 }
