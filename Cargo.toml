@@ -13,6 +13,7 @@ members = [
     "crates/tej-widgets",
     "crates/tej-services",
     "crates/tej-devtools",
+    "crates/tej-3d",
     "crates/tej",
     "examples/task-manager",
     "benches",
@@ -43,6 +44,7 @@ tej-db-sync = { path = "crates/tej-db-sync" }
 tej-widgets = { path = "crates/tej-widgets" }
 tej-services = { path = "crates/tej-services" }
 tej-devtools = { path = "crates/tej-devtools" }
+tej-3d = { path = "crates/tej-3d" }
 tej = { path = "crates/tej" }
 
 # Database integration

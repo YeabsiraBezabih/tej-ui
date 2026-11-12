@@ -49,4 +49,10 @@ pub use tej_devtools::{
     DagNodeInfo, DagSnapshot, DirtyHudOverlay, FrameMetrics, HotReloadHost, ReactiveDagInspector,
 };
 
+pub use tej_3d::{
+    Canvas3D, Canvas3DState, GpuTextureDescriptor, GpuTextureFormat, Light, LightKind, Mat4, Mesh,
+    Object3D, OrbitControls, PerspectiveCamera, Rasterizer3D, Ray, Scene, StandardMaterial,
+    TextureHandle, Transform3D, Vec3, Vertex,
+};
+
 pub use crate::app::App;
