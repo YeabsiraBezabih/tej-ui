@@ -19,6 +19,7 @@ tej-a11y.workspace = true
 tej-db-sync.workspace = true
 tej-widgets.workspace = true
 tej-services.workspace = true
+tej-devtools.workspace = true
 
 [lints]
 workspace = true

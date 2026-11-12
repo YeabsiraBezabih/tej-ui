@@ -159,3 +159,46 @@ fn test_enterprise_datagrid_and_command_palette() {
     assert_eq!(p_state.visible_items.len(), 2);
     assert_eq!(p_state.visible_items[0].title, "Deploy Production");
 }
+
+#[test]
+fn test_enterprise_devtools_and_i18n_pipeline() {
+    // 1. i18n BiDi classification and font fallback
+    let mixed_title = "Project مشروع Alpha";
+    let classifier = BidiClassifier::new();
+    let runs = classifier.segment(mixed_title);
+    assert_eq!(runs.len(), 3);
+    assert_eq!(runs[1].direction, TextDirection::RightToLeft);
+
+    let fallback = FontFallbackChain::default();
+    assert_eq!(
+        FontFallbackChain::categorize_char('م'),
+        FontCategory::ComplexScript
+    );
+    assert_eq!(fallback.font_for_char('م'), &fallback.rtl_fallback);
+
+    // 2. DevTools HotReloadHost with preserved Signal state
+    let active_tab = Signal::new(1);
+    let view = Text::new("Initial View");
+    let mut host = HotReloadHost::new(view);
+    assert_eq!(host.generation(), 1);
+
+    active_tab.set(2);
+    assert_eq!(active_tab.get(), 2);
+
+    let reload_duration = host.swap_view(Text::new("Hot-Reloaded View"));
+    assert!(reload_duration >= 0.0);
+    assert_eq!(host.generation(), 2);
+    assert_eq!(active_tab.get(), 2); // Reactive state intact
+
+    // 3. Multi-monitor scale factor handling
+    let mut manager = MonitorManager::default();
+    manager.add_monitor(MonitorInfo::new(
+        MonitorId(2),
+        "4K External Display",
+        Rect::new(1920.0, 0.0, 3840.0, 2160.0),
+        2.0,
+        false,
+    ));
+    let external = manager.monitor_at_point(Point::new(2000.0, 100.0)).unwrap();
+    assert_eq!(external.scale_factor, 2.0);
+}

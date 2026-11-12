@@ -45,4 +45,8 @@ pub use tej_services::{
     FileFilter, Modifiers, Shortcut, ShortcutHandler, ShortcutManager, TrayEvent, TrayIcon,
 };
 
+pub use tej_devtools::{
+    DagNodeInfo, DagSnapshot, DirtyHudOverlay, FrameMetrics, HotReloadHost, ReactiveDagInspector,
+};
+
 pub use crate::app::App;
