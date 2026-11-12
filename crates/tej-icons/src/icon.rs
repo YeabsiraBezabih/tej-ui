@@ -1,6 +1,6 @@
 //! Vector Icon view widget and rasterizer.
 
-use crate::lucide::LucideIcon;
+use crate::catalog::LucideIcon;
 use crate::path::{PathCommand, VectorPath};
 use tej_hal::{Color, SurfaceCompositor};
 use tej_layout::{Point, Rect, Size};

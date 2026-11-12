@@ -1,5 +1,7 @@
 use tej_hal::{Color, SurfaceCompositor};
-use tej_icons::{Icon, LucideIcon, PathCommand, VectorPath};
+use tej_icons::{
+    ActionIcon, DeviceIcon, Icon, LucideIcon, NavigationIcon, PathCommand, SystemIcon, VectorPath,
+};
 use tej_layout::{Point, Rect, Size};
 use tej_view::View;
 
@@ -26,14 +28,32 @@ fn test_svg_path_parsing() {
 }
 
 #[test]
-fn test_lucide_icon_vector_paths() {
-    let search = LucideIcon::Search;
-    let path = search.to_vector_path();
-    assert!(!path.commands.is_empty());
+fn test_expanded_lucide_catalog_coverage() {
+    // Navigation icons
+    assert!(!NavigationIcon::ChevronDown.svg_path().is_empty());
+    assert!(!NavigationIcon::ArrowUpRight.svg_path().is_empty());
+    assert!(!NavigationIcon::Compass.svg_path().is_empty());
 
-    let plus = LucideIcon::Plus;
-    let p_path = plus.to_vector_path();
-    assert!(!p_path.commands.is_empty());
+    // Action icons
+    assert!(!ActionIcon::Plus.svg_path().is_empty());
+    assert!(!ActionIcon::Trash2.svg_path().is_empty());
+    assert!(!ActionIcon::Share.svg_path().is_empty());
+
+    // Device icons
+    assert!(!DeviceIcon::Laptop.svg_path().is_empty());
+    assert!(!DeviceIcon::Cpu.svg_path().is_empty());
+    assert!(!DeviceIcon::Database.svg_path().is_empty());
+
+    // System icons
+    assert!(!SystemIcon::ShieldCheck.svg_path().is_empty());
+    assert!(!SystemIcon::Star.svg_path().is_empty());
+    assert!(!SystemIcon::AlertTriangle.svg_path().is_empty());
+
+    // Unified LucideIcon conversions
+    assert!(!LucideIcon::Search.to_vector_path().commands.is_empty());
+    assert!(!LucideIcon::Laptop.to_vector_path().commands.is_empty());
+    assert!(!LucideIcon::ShieldCheck.to_vector_path().commands.is_empty());
+    assert!(!LucideIcon::Heart.to_vector_path().commands.is_empty());
 }
 
 #[derive(Debug)]

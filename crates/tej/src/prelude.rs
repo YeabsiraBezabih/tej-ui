@@ -58,6 +58,9 @@ pub use tej_3d::{
     TextureHandle, Transform3D, Vec3, Vertex,
 };
 
-pub use tej_icons::{Icon, IconSource, IconState, LucideIcon, PathCommand, VectorPath};
+pub use tej_icons::{
+    ActionIcon, CommunicationIcon, DeviceIcon, EditorIcon, Icon, IconSource, IconState, LucideIcon,
+    MediaIcon, NavigationIcon, PathCommand, SystemIcon, VectorPath,
+};
 
 pub use crate::app::App;
