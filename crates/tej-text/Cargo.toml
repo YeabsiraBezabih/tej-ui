@@ -1,0 +1,15 @@
+[package]
+name = "tej-text"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+tej-layout.workspace = true
+thiserror.workspace = true
+parking_lot.workspace = true
+
+[lints]
+workspace = true

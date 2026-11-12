@@ -1,0 +1,80 @@
+[workspace]
+members = [
+    "crates/tej-core",
+    "crates/tej-view",
+    "crates/tej-layout",
+    "crates/tej-text",
+    "crates/tej-hal",
+    "crates/tej-platform-linux",
+    "crates/tej-a11y",
+    "crates/tej-db-sync",
+    "crates/tej",
+    "examples/task-manager",
+    "tests",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85.0"
+authors = ["Yeabsira Bezabih <ets1389@aastu.edu.et>"]
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+
+[workspace.dependencies]
+# Internal workspace crates
+tej-core = { path = "crates/tej-core" }
+tej-view = { path = "crates/tej-view" }
+tej-layout = { path = "crates/tej-layout" }
+tej-text = { path = "crates/tej-text" }
+tej-hal = { path = "crates/tej-hal" }
+tej-platform-linux = { path = "crates/tej-platform-linux" }
+tej-a11y = { path = "crates/tej-a11y" }
+tej-db-sync = { path = "crates/tej-db-sync" }
+tej = { path = "crates/tej" }
+
+# Database integration
+mydb = { path = "../modular-acid-dbms/crates/mydb" }
+mydb-core = { path = "../modular-acid-dbms/crates/mydb-core" }
+
+# Core utilities
+parking_lot = "0.12"
+smallvec = "1.14"
+thiserror = "2.0"
+slotmap = "1.0"
+bitflags = "2.8"
+
+# Tracing
+tracing = "0.1"
+
+# Testing & Tempfile
+tempfile = "3.17"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.bench]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "warn"
+missing_debug_implementations = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+must_use_candidate = "allow"
+cast_possible_truncation = "allow"
+cast_possible_wrap = "allow"
+cast_sign_loss = "allow"
+module_name_repetitions = "allow"
+similar_names = "allow"
+doc_markdown = "allow"

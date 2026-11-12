@@ -1,0 +1,16 @@
+[package]
+name = "task-manager-example"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+tej.workspace = true
+mydb.workspace = true
+mydb-core.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true
