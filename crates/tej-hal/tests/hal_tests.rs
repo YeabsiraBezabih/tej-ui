@@ -1,6 +1,6 @@
 use tej_hal::{
-    Color, DirtyRectTracker, MonitorId, MonitorInfo, MonitorManager, MouseButton, PlatformWindow,
-    UiEvent, WindowId, WindowRegistry,
+    Color, DirtyRectTracker, FocusDirection, FocusId, FocusManager, MonitorId, MonitorInfo,
+    MonitorManager, MouseButton, PlatformWindow, UiEvent, WindowId, WindowRegistry,
 };
 use tej_layout::{Point, Rect, Size};
 
@@ -121,4 +121,40 @@ fn test_multi_monitor_and_window_registry() {
     let removed = registry.unregister(WindowId(1));
     assert!(removed.is_some());
     assert_eq!(registry.count(), 1);
+}
+
+#[test]
+fn test_focus_manager_tab_cycling() {
+    let mut fm = FocusManager::new();
+    let id1 = FocusId::next_unique();
+    let id2 = FocusId::next_unique();
+    let id3 = FocusId::next_unique();
+
+    fm.register_target(id1);
+    fm.register_target(id2);
+    fm.register_target(id3);
+
+    assert_eq!(fm.current_focus(), None);
+    assert!(!fm.is_focused(id1));
+
+    // Tab forward: None -> id1 -> id2 -> id3 -> id1
+    assert_eq!(fm.traverse(FocusDirection::Next), Some(id1));
+    assert!(fm.is_focused(id1));
+
+    assert_eq!(fm.traverse(FocusDirection::Next), Some(id2));
+    assert!(fm.is_focused(id2));
+
+    assert_eq!(fm.traverse(FocusDirection::Next), Some(id3));
+    assert!(fm.is_focused(id3));
+
+    assert_eq!(fm.traverse(FocusDirection::Next), Some(id1));
+    assert!(fm.is_focused(id1));
+
+    // Shift-Tab backward: id1 -> id3
+    assert_eq!(fm.traverse(FocusDirection::Previous), Some(id3));
+    assert!(fm.is_focused(id3));
+
+    // Unregister
+    fm.unregister_target(id3);
+    assert_eq!(fm.current_focus(), None);
 }

@@ -2,8 +2,37 @@ use crate::cursor::ZeroCopyRow;
 use crate::hook::DbSyncHook;
 use mydb::Database;
 use mydb_core::{KeyRange, Storage};
+use std::ops::Bound;
 use std::sync::Arc;
 use tej_core::Signal;
+
+/// Convert a key prefix into a tightly bounded `KeyRange` to enable logarithmic $O(\log N)$
+/// B-Tree traversal and avoid scanning irrelevant pages.
+#[must_use]
+pub fn prefix_to_range(prefix: &[u8]) -> KeyRange {
+    if prefix.is_empty() {
+        return KeyRange::all();
+    }
+
+    let start = Bound::Included(prefix.to_vec());
+
+    let mut end_vec = prefix.to_vec();
+    while let Some(&last) = end_vec.last() {
+        if last < 255 {
+            *end_vec.last_mut().expect("checked non-empty") += 1;
+            return KeyRange {
+                start,
+                end: Bound::Excluded(end_vec),
+            };
+        }
+        end_vec.pop();
+    }
+
+    KeyRange {
+        start,
+        end: Bound::Unbounded,
+    }
+}
 
 /// Reactive database query handle bound to a table or key prefix.
 #[derive(Clone, Debug)]
@@ -32,6 +61,9 @@ impl<S: Storage> ReactiveDbQuery<S> {
     }
 
     /// Execute a zero-copy read scan passing rows to visitor closure.
+    ///
+    /// Utilizes tightly bounded B-Tree prefix ranges for $O(\log N)$ entry seeking
+    /// without scanning irrelevant database pages.
     pub fn scan_zero_copy<F>(&self, mut visitor: F) -> Result<(), mydb_core::DbError>
     where
         F: FnMut(ZeroCopyRow<'_>) -> bool,
@@ -40,7 +72,7 @@ impl<S: Storage> ReactiveDbQuery<S> {
         let _ = self.version_signal.get();
 
         let rx = self.db.begin_read()?;
-        let range = KeyRange::all();
+        let range = prefix_to_range(&self.prefix);
 
         rx.scan_range_visitor(&range, |k, v| {
             if k.starts_with(&self.prefix) {
