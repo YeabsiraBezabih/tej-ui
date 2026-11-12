@@ -1,24 +1,40 @@
 //! Content view rendering passes for editor, 3D graph, and database virtual table.
 
 use super::theme::{
-    COLOR_ACCENT, COLOR_BORDER, COLOR_CARD, COLOR_GREEN, COLOR_TEXT, COLOR_TEXT_DIM,
+    COLOR_ACCENT, COLOR_ACTIVE, COLOR_BORDER, COLOR_CARD, COLOR_GREEN, COLOR_TEXT, COLOR_TEXT_DIM,
     COLOR_TEXT_MUTED, COLOR_YELLOW,
 };
 use crate::db::VaultDatabase;
 use crate::models::NoteItem;
-use tej_hal::SurfaceCompositor;
+use tej_hal::{Color, SurfaceCompositor};
 use tej_layout::{Point, Rect};
 use tej_platform_linux::LinuxSurface;
 
-/// Render Markdown document editor view.
+/// Configuration parameters for rendering the markdown editor and preview.
+#[derive(Clone, Copy, Debug)]
+pub struct EditorViewConfig<'a> {
+    pub note: &'a NoteItem,
+    pub is_preview: bool,
+    pub cursor: (usize, usize),
+    pub cursor_blink: bool,
+}
+
+/// Render Markdown document panel supporting interactive Editing and compiled Live Preview.
 pub fn render_markdown_editor(
     surface: &mut LinuxSurface,
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
-    note: &NoteItem,
+    bounds: Rect,
+    config: EditorViewConfig<'_>,
 ) {
+    let x = bounds.origin.x;
+    let y = bounds.origin.y;
+    let w = bounds.size.width;
+    let h = bounds.size.height;
+    let note = config.note;
+    let is_preview = config.is_preview;
+    let cursor = config.cursor;
+    let cursor_blink = config.cursor_blink;
+
+    // 1. Breadcrumb navigation
     surface.draw_text(
         &format!("Vault > {} > {}", note.folder, note.title),
         Point::new(x + 6.0, y + 6.0),
@@ -26,52 +42,134 @@ pub fn render_markdown_editor(
         COLOR_TEXT_DIM,
     );
 
-    surface.draw_text(&note.title, Point::new(x + 6.0, y + 28.0), 18.0, COLOR_TEXT);
-    surface.fill_rect(
-        Rect::new(x + 6.0, y + 54.0, w.min(800.0), 1.0),
-        COLOR_BORDER,
-    );
+    // 2. Mode Toggle Button (Edit vs Preview)
+    let btn_w = 160.0;
+    let btn_x = (x + w - btn_w - 10.0).max(x + 180.0);
+    let btn_rect = Rect::new(btn_x, y + 4.0, btn_w, 24.0);
 
-    let max_y = y + h - 10.0;
-    let mut line_y = y + 68.0;
-    let mut in_code_block = false;
+    if is_preview {
+        surface.fill_rect(btn_rect, COLOR_CARD);
+        surface.fill_rect(
+            Rect::new(btn_rect.origin.x, btn_rect.origin.y, btn_w, 1.0),
+            COLOR_ACCENT,
+        );
+        surface.fill_rect(
+            Rect::new(btn_rect.origin.x, btn_rect.origin.y + 23.0, btn_w, 1.0),
+            COLOR_ACCENT,
+        );
+        surface.fill_rect(
+            Rect::new(btn_rect.origin.x, btn_rect.origin.y, 1.0, 24.0),
+            COLOR_ACCENT,
+        );
+        surface.fill_rect(
+            Rect::new(
+                btn_rect.origin.x + btn_w - 1.0,
+                btn_rect.origin.y,
+                1.0,
+                24.0,
+            ),
+            COLOR_ACCENT,
+        );
+        surface.draw_text(
+            "[Mode: Preview] (Edit)",
+            Point::new(btn_x + 8.0, y + 9.0),
+            10.0,
+            COLOR_ACCENT,
+        );
+    } else {
+        surface.fill_rect(btn_rect, COLOR_ACTIVE);
+        surface.fill_rect(
+            Rect::new(btn_rect.origin.x, btn_rect.origin.y, btn_w, 1.0),
+            COLOR_GREEN,
+        );
+        surface.fill_rect(
+            Rect::new(btn_rect.origin.x, btn_rect.origin.y + 23.0, btn_w, 1.0),
+            COLOR_GREEN,
+        );
+        surface.fill_rect(
+            Rect::new(btn_rect.origin.x, btn_rect.origin.y, 1.0, 24.0),
+            COLOR_GREEN,
+        );
+        surface.fill_rect(
+            Rect::new(
+                btn_rect.origin.x + btn_w - 1.0,
+                btn_rect.origin.y,
+                1.0,
+                24.0,
+            ),
+            COLOR_GREEN,
+        );
+        surface.draw_text(
+            "[Mode: Edit] (Preview)",
+            Point::new(btn_x + 8.0, y + 9.0),
+            10.0,
+            COLOR_GREEN,
+        );
+    }
 
-    for (idx, line) in note.content.lines().enumerate() {
-        if line_y > max_y {
-            break;
-        }
+    // 3. Render content based on mode
+    if is_preview {
+        // Live Preview: Native Markdown, LaTeX math, Mermaid diagrams, and SVGs!
+        crate::markdown::render_markdown_document(
+            surface,
+            x + 6.0,
+            y + 36.0,
+            w - 12.0,
+            h - 40.0,
+            &note.content,
+        );
+    } else {
+        // Interactive Edit Mode: Line numbers, active line tint, and blinking cursor
+        surface.draw_text(&note.title, Point::new(x + 6.0, y + 28.0), 18.0, COLOR_TEXT);
+        surface.fill_rect(
+            Rect::new(x + 6.0, y + 52.0, w.min(800.0), 1.0),
+            COLOR_BORDER,
+        );
 
-        let num_str = format!("{:2}", idx + 1);
-        surface.draw_text(&num_str, Point::new(x + 6.0, line_y), 10.0, COLOR_TEXT_DIM);
+        let max_y = y + h - 10.0;
+        let mut line_y = y + 66.0;
 
-        if line.starts_with("```") {
-            in_code_block = !in_code_block;
-            surface.draw_text(line, Point::new(x + 36.0, line_y), 11.0, COLOR_YELLOW);
+        for (idx, line) in note.content.lines().enumerate() {
+            if line_y > max_y {
+                break;
+            }
+
+            let is_current_line = cursor.0 == idx;
+            if is_current_line {
+                surface.fill_rect(
+                    Rect::new(x + 36.0, line_y - 2.0, w - 46.0, 20.0),
+                    Color::rgb(35, 36, 52),
+                );
+            }
+
+            let num_str = format!("{:2}", idx + 1);
+            let num_color = if is_current_line {
+                COLOR_ACCENT
+            } else {
+                COLOR_TEXT_DIM
+            };
+            surface.draw_text(&num_str, Point::new(x + 6.0, line_y), 10.0, num_color);
+
+            let line_color = if line.starts_with('#') {
+                COLOR_ACCENT
+            } else if line.starts_with('-') || line.starts_with('*') {
+                COLOR_GREEN
+            } else if line.starts_with("```") || line.starts_with("$$") {
+                COLOR_YELLOW
+            } else {
+                COLOR_TEXT
+            };
+
+            surface.draw_text(line, Point::new(x + 38.0, line_y), 12.0, line_color);
+
+            // Blinking cursor
+            if is_current_line && cursor_blink {
+                let cursor_x = x + 38.0 + (cursor.1 as f32) * 7.5;
+                surface.fill_rect(Rect::new(cursor_x, line_y, 2.0, 16.0), COLOR_ACCENT);
+            }
+
             line_y += 20.0;
-            continue;
         }
-
-        let (color, font_size) = if in_code_block {
-            (COLOR_YELLOW, 11.0)
-        } else if line.starts_with("# ") {
-            (COLOR_ACCENT, 16.0)
-        } else if line.starts_with("## ") {
-            (COLOR_ACCENT, 14.0)
-        } else if line.starts_with('-') || line.starts_with('*') {
-            (COLOR_GREEN, 12.0)
-        } else {
-            (COLOR_TEXT, 12.0)
-        };
-
-        let max_chars = ((w - 40.0) / 7.2).max(10.0) as usize;
-        let display_line = if line.len() > max_chars && !line.starts_with('#') {
-            &line[..max_chars]
-        } else {
-            line
-        };
-
-        surface.draw_text(display_line, Point::new(x + 36.0, line_y), font_size, color);
-        line_y += if font_size > 13.0 { 24.0 } else { 20.0 };
     }
 }
 

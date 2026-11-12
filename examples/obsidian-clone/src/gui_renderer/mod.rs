@@ -23,6 +23,9 @@ pub struct RenderContext<'a> {
     pub graph_angle: f32,
     pub ram_mb: f32,
     pub vault_db: &'a VaultDatabase,
+    pub is_preview: bool,
+    pub cursor: (usize, usize),
+    pub cursor_blink: bool,
 }
 
 /// Render the complete desktop frame matching dynamic physical window dimensions.
@@ -76,11 +79,13 @@ pub fn render_frame(surface: &mut LinuxSurface, ctx: &RenderContext<'_>) {
         ),
         _ => render_markdown_editor(
             surface,
-            content_x,
-            46.0,
-            content_w,
-            content_h,
-            &ctx.notes[ctx.selected_idx],
+            Rect::new(content_x, 46.0, content_w, content_h),
+            EditorViewConfig {
+                note: &ctx.notes[ctx.selected_idx],
+                is_preview: ctx.is_preview,
+                cursor: ctx.cursor,
+                cursor_blink: ctx.cursor_blink,
+            },
         ),
     }
 

@@ -8,6 +8,7 @@ mod db;
 mod desktop_gui;
 mod graph;
 mod gui_renderer;
+mod markdown;
 mod models;
 mod palette;
 mod repl;
