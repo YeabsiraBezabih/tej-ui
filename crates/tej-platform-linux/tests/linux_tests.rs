@@ -45,13 +45,10 @@ fn test_linux_surface_draw_text() {
     let mut surface = LinuxSurface::new(Size::new(200.0, 100.0));
     surface.clear(Color::BLACK);
     surface.begin_frame(&[]);
-    surface.draw_text("tej-ui", Point::new(10.0, 10.0), 8.0, Color::WHITE);
+    surface.draw_text("tej-ui", Point::new(10.0, 10.0), 16.0, Color::WHITE);
     surface.end_frame();
 
     assert_eq!(surface.draw_calls(), 1);
-    let white_pack = ((Color::WHITE.a as u32) << 24)
-        | ((Color::WHITE.r as u32) << 16)
-        | ((Color::WHITE.g as u32) << 8)
-        | (Color::WHITE.b as u32);
-    assert!(surface.pixels().contains(&white_pack));
+    // Antialiased text rasterization must draw visible illuminated glyph pixels
+    assert!(surface.pixels().iter().any(|&p| (p & 0x00FF_FFFF) > 0));
 }

@@ -7,6 +7,7 @@ mod app_view;
 mod db;
 mod desktop_gui;
 mod graph;
+mod gui_renderer;
 mod models;
 mod palette;
 mod repl;

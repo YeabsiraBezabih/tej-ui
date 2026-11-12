@@ -10,6 +10,7 @@ license.workspace = true
 tej-layout.workspace = true
 thiserror.workspace = true
 parking_lot.workspace = true
+fontdue.workspace = true
 
 [lints]
 workspace = true

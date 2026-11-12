@@ -1,6 +1,6 @@
 use tej_text::{
-    BidiClassifier, FontCategory, FontFallbackChain, SystemFont, TextDirection, TextMeasurer,
-    TextShaper,
+    BidiClassifier, FontCategory, FontFallbackChain, FontRasterizer, SystemFont, TextDirection,
+    TextMeasurer, TextShaper,
 };
 
 #[test]
@@ -105,4 +105,24 @@ fn test_fallback_chain_and_emoji() {
         FontCategory::Emoji
     );
     assert_eq!(fallback.font_for_char('🚀'), &fallback.emoji_fallback);
+}
+
+#[test]
+fn test_font_rasterizer_system() {
+    let candidates = [
+        "/usr/share/fonts/noto/NotoSans-Regular.ttf",
+        "/usr/share/fonts/Adwaita/AdwaitaSans-Regular.ttf",
+        "/usr/share/fonts/TTF/DejaVuSans.ttf",
+    ];
+    for path in &candidates {
+        if let Ok(bytes) = std::fs::read(path) {
+            let rasterizer = FontRasterizer::from_bytes(&bytes).unwrap();
+            let glyph = rasterizer.rasterize('A', 16.0);
+            assert!(glyph.metrics.advance_width > 0.0);
+            let size = rasterizer.measure_text("Hello tej-ui", 14.0);
+            assert!(size.width > 0.0);
+            assert!(size.height > 0.0);
+            break;
+        }
+    }
 }

@@ -12,6 +12,7 @@ tej-layout.workspace = true
 thiserror.workspace = true
 smallvec.workspace = true
 parking_lot.workspace = true
+fontdue.workspace = true
 minifb = "0.29"
 
 [lints]

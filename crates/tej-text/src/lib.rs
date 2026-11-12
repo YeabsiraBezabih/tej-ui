@@ -7,10 +7,12 @@ pub mod bidi;
 pub mod fallback;
 pub mod font;
 pub mod measurement;
+pub mod rasterizer;
 pub mod shaper;
 
 pub use bidi::{BidiClassifier, BidiRun, TextDirection};
 pub use fallback::{FontCategory, FontFallbackChain};
 pub use font::{FontWeight, SystemFont};
 pub use measurement::TextMeasurer;
+pub use rasterizer::{FontRasterizer, RasterizedGlyph};
 pub use shaper::{GlyphCluster, ShapedRun, TextShaper};

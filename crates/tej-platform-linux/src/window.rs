@@ -26,6 +26,7 @@ pub struct LinuxWindow {
     native_window: Mutex<Option<NativeWindowHandle>>,
     event_queue: Mutex<Vec<UiEvent>>,
     last_mouse_pos: Mutex<Option<Point>>,
+    last_mouse_down: Mutex<bool>,
     redraw_requested: bool,
 }
 
@@ -70,6 +71,7 @@ impl LinuxWindow {
             native_window: Mutex::new(native_window),
             event_queue: Mutex::new(Vec::new()),
             last_mouse_pos: Mutex::new(initial_mouse),
+            last_mouse_down: Mutex::new(false),
             redraw_requested: true,
         }
     }
@@ -128,7 +130,8 @@ impl PlatformWindow for LinuxWindow {
 
         if let Some(w) = self.native_window.lock().as_mut() {
             if w.0.is_open() {
-                if let Some((x, y)) = w.0.get_mouse_pos(MouseMode::Discard) {
+                // Poll mouse position with Pass mode so we always receive real-time cursor coords
+                if let Some((x, y)) = w.0.get_mouse_pos(MouseMode::Pass) {
                     let pt = Point::new(x, y);
                     let mut last = self.last_mouse_pos.lock();
                     if *last != Some(pt) {
@@ -137,23 +140,57 @@ impl PlatformWindow for LinuxWindow {
                     }
                 }
 
-                if w.0.get_mouse_down(MfbMouseButton::Left) {
-                    if let Some((x, y)) = w.0.get_mouse_pos(MouseMode::Discard) {
-                        events.push(UiEvent::MouseDown {
-                            button: MouseButton::Left,
-                            position: Point::new(x, y),
-                        });
-                    }
+                // Poll mouse button down / up edge transitions
+                let is_down = w.0.get_mouse_down(MfbMouseButton::Left);
+                let mut last_down = self.last_mouse_down.lock();
+                if is_down && !*last_down {
+                    *last_down = true;
+                    let pos = self.last_mouse_pos.lock().unwrap_or(Point::ZERO);
+                    events.push(UiEvent::MouseDown {
+                        button: MouseButton::Left,
+                        position: pos,
+                    });
+                } else if !is_down && *last_down {
+                    *last_down = false;
+                    let pos = self.last_mouse_pos.lock().unwrap_or(Point::ZERO);
+                    events.push(UiEvent::MouseUp {
+                        button: MouseButton::Left,
+                        position: pos,
+                    });
                 }
 
+                // Poll scroll wheel
                 if let Some((dx, dy)) = w.0.get_scroll_wheel() {
                     if dx != 0.0 || dy != 0.0 {
                         events.push(UiEvent::Scroll {
                             delta_x: dx,
                             delta_y: dy,
-                            position: Point::ZERO,
+                            position: self.last_mouse_pos.lock().unwrap_or(Point::ZERO),
                         });
                     }
+                }
+
+                // Poll keyboard presses with edge triggering
+                for key in w.0.get_keys_pressed(minifb::KeyRepeat::No) {
+                    let code = match key {
+                        minifb::Key::Key1 => 49,
+                        minifb::Key::Key2 => 50,
+                        minifb::Key::Key3 => 51,
+                        minifb::Key::Key4 => 52,
+                        minifb::Key::Key5 => 53,
+                        minifb::Key::Key6 => 54,
+                        minifb::Key::Escape => 27,
+                        minifb::Key::Tab => 9,
+                        minifb::Key::Enter => 13,
+                        minifb::Key::Space => 32,
+                        minifb::Key::Backspace => 8,
+                        minifb::Key::Up => 38,
+                        minifb::Key::Down => 40,
+                        minifb::Key::Left => 37,
+                        minifb::Key::Right => 39,
+                        _ => key as u32,
+                    };
+                    events.push(UiEvent::KeyDown { key_code: code });
                 }
             }
         }
