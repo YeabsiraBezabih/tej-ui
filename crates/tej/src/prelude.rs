@@ -23,4 +23,10 @@ pub use tej_hal::{
 
 pub use tej_db_sync::{DbSyncHook, ReactiveDbQuery, VirtualList, ZeroCopyRow};
 
+pub use tej_widgets::{
+    CommandAction, CommandItem, CommandPalette, DataGrid, DataGridDimensions, GridCellCoords,
+    GridColumn, MenuItem, Modal, PinState, Popover, PopoverPlacement, SortDirection, TabItem, Tabs,
+    ToastItem, ToastSeverity, TreeNode, TreeView, fuzzy_match,
+};
+
 pub use crate::app::App;

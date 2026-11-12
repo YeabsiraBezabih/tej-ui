@@ -1,0 +1,20 @@
+[package]
+name = "tej-widgets"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+tej-core.workspace = true
+tej-view.workspace = true
+tej-layout.workspace = true
+tej-hal.workspace = true
+tej-db-sync.workspace = true
+thiserror.workspace = true
+smallvec.workspace = true
+parking_lot.workspace = true
+
+[lints]
+workspace = true

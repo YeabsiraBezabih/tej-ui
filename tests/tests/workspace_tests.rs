@@ -115,3 +115,47 @@ fn test_flat_soa_layout_and_dirty_clip_pipeline() {
     assert!(tracker.has_dirty());
     assert_eq!(tracker.rects().len(), 1);
 }
+
+#[test]
+fn test_enterprise_datagrid_and_command_palette() {
+    // 1. DataGrid test with 100,000 cells
+    let columns = vec![
+        GridColumn::new("id", "Task ID")
+            .width(80.0)
+            .pin(PinState::Left),
+        GridColumn::new("title", "Title").width(300.0),
+        GridColumn::new("assignee", "Assignee").width(150.0),
+    ];
+
+    let grid = DataGrid::new(
+        columns,
+        DataGridDimensions {
+            total_rows: 100_000,
+            row_height: 32.0,
+            viewport_width: 1000.0,
+            viewport_height: 640.0,
+        },
+        Signal::new(0.0),
+        Signal::new(320.0),
+        |coords| Text::new(format!("Cell ({}, {})", coords.row, coords.col)),
+    );
+
+    let state = grid.build();
+    assert_eq!(state.start_row, 10);
+    assert!(state.end_row <= 35);
+    assert!(state.visible_cols.contains(&0)); // Pinned left column
+
+    // 2. Command Palette fuzzy match
+    let query = Signal::new(String::from("deploy"));
+    let palette = CommandPalette::new(
+        query,
+        Signal::new(0),
+        vec![
+            CommandItem::new("d1", "Deploy Production", "Release").shortcut("Cmd+Shift+D"),
+            CommandItem::new("d2", "Develop Locally", "Environment"),
+        ],
+    );
+    let p_state = palette.build();
+    assert_eq!(p_state.visible_items.len(), 2);
+    assert_eq!(p_state.visible_items[0].title, "Deploy Production");
+}
