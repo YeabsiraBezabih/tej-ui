@@ -7,9 +7,11 @@
 //! - Navigation: `Tabs`, `TreeView`, `Breadcrumb`, `Pagination`.
 //! - Overlays: `Modal`, `Popover`, `ContextMenu`, `Sheet`, `ToastItem`.
 //! - Feedback: `Badge`, `Avatar`, `Progress`, `Skeleton`, `Alert`, `Tooltip`.
+//! - Text Editing: `RichTextEditor`, multi-line `TextBuffer`, undo/redo, and native `ImeState`.
 
 pub mod command_palette;
 pub mod datagrid;
+pub mod editor;
 pub mod feedback;
 pub mod forms;
 pub mod layout;
@@ -22,6 +24,10 @@ pub use command_palette::{
 pub use datagrid::{
     DataGrid, DataGridDimensions, DataGridState, GridCellCoords, GridColumn, PinState,
     SortDirection,
+};
+pub use editor::{
+    CursorPos, EditAction, ImeState, RichTextEditor, RichTextEditorState, TextBuffer,
+    TextSelection, UndoStack,
 };
 pub use feedback::{
     Alert, AlertSeverity, AlertState, Avatar, AvatarState, Badge, BadgeState, BadgeVariant,

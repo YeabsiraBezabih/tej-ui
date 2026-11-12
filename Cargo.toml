@@ -15,6 +15,7 @@ members = [
     "crates/tej-devtools",
     "crates/tej-3d",
     "crates/tej-icons",
+    "crates/tej-animation",
     "crates/tej",
     "examples/task-manager",
     "benches",
@@ -47,6 +48,7 @@ tej-services = { path = "crates/tej-services" }
 tej-devtools = { path = "crates/tej-devtools" }
 tej-3d = { path = "crates/tej-3d" }
 tej-icons = { path = "crates/tej-icons" }
+tej-animation = { path = "crates/tej-animation" }
 tej = { path = "crates/tej" }
 
 # Database integration

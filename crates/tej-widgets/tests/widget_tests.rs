@@ -3,10 +3,10 @@ use tej_core::Signal;
 use tej_view::{Text, View};
 use tej_widgets::{
     Accordion, AccordionItem, Alert, AlertSeverity, Avatar, Badge, BadgeVariant, Breadcrumb,
-    BreadcrumbItem, Card, CommandItem, CommandPalette, DataGrid, GridColumn, Modal, Pagination,
-    PinState, Popover, Progress, RadioGroup, RadioItem, ScrollArea, Select, SelectOption,
-    Separator, Sheet, SheetSide, Sidebar, SidebarItem, Skeleton, Slider, Switch, TabItem, Tabs,
-    Tooltip, TreeNode, TreeView, fuzzy_match,
+    BreadcrumbItem, Card, CommandItem, CommandPalette, CursorPos, DataGrid, GridColumn, Modal,
+    Pagination, PinState, Popover, Progress, RadioGroup, RadioItem, RichTextEditor, ScrollArea,
+    Select, SelectOption, Separator, Sheet, SheetSide, Sidebar, SidebarItem, Skeleton, Slider,
+    Switch, TabItem, Tabs, TextBuffer, Tooltip, TreeNode, TreeView, fuzzy_match,
 };
 
 #[test]
@@ -311,4 +311,51 @@ fn test_navigation_breadcrumb_pagination_and_sheet() {
     assert!(!sheet_open.get());
     sheet.patch(&mut sh_state, 1);
     assert!(!sh_state.is_open);
+}
+
+#[test]
+fn test_rich_text_editor_operations_and_ime() {
+    // 1. TextBuffer line creation and multi-line insertion
+    let mut buf = TextBuffer::new();
+    assert_eq!(buf.line_count(), 1);
+    let p = buf.insert_str(CursorPos::zero(), "Hello\nWorld");
+    assert_eq!(buf.line_count(), 2);
+    assert_eq!(p.line, 1);
+    assert_eq!(p.col, 5);
+    assert_eq!(buf.text(), "Hello\nWorld");
+
+    // 2. Editor typing and backspace
+    let mut editor = RichTextEditor::new();
+    editor.insert_text("Rust");
+    assert_eq!(editor.text(), "Rust");
+    assert_eq!(editor.selection().head.col, 4);
+
+    editor.backspace();
+    assert_eq!(editor.text(), "Rus");
+
+    // 3. Multi-line selection and replacement
+    editor.insert_text("t 2024\nFast UI");
+    editor.select_all();
+    assert!(!editor.selection().is_collapsed());
+    editor.insert_text("Replaced");
+    assert_eq!(editor.text(), "Replaced");
+
+    // 4. Undo / Redo
+    assert!(editor.undo());
+    assert_ne!(editor.text(), "Replaced");
+    assert!(editor.redo());
+    assert_eq!(editor.text(), "Replaced");
+
+    // 5. Native IME composition (e.g. Japanese or Amharic input)
+    editor.update_ime("にほんご".to_string(), 4);
+    assert!(editor.ime().is_composing);
+    assert_eq!(editor.ime().preedit, "にほんご");
+
+    editor.commit_ime();
+    assert!(!editor.ime().is_composing);
+    assert!(editor.text().ends_with("にほんご"));
+
+    // 6. View build
+    let state = editor.build();
+    assert!(format!("{state:?}").contains("RichTextEditorState"));
 }

@@ -36,11 +36,13 @@ pub use tej_db_sync::{DbSyncHook, ReactiveDbQuery, VirtualList, ZeroCopyRow};
 
 pub use tej_widgets::{
     Accordion, AccordionItem, Alert, AlertSeverity, Avatar, Badge, BadgeVariant, Breadcrumb,
-    BreadcrumbItem, Card, CommandAction, CommandItem, CommandPalette, DataGrid, DataGridDimensions,
-    GridCellCoords, GridColumn, MenuItem, Modal, Pagination, PinState, Popover, PopoverPlacement,
-    Progress, RadioGroup, RadioItem, ScrollArea, Select, SelectOption, Separator,
+    BreadcrumbItem, Card, CommandAction, CommandItem, CommandPalette, CursorPos, DataGrid,
+    DataGridDimensions, EditAction, GridCellCoords, GridColumn, ImeState, MenuItem, Modal,
+    Pagination, PinState, Popover, PopoverPlacement, Progress, RadioGroup, RadioItem,
+    RichTextEditor, RichTextEditorState, ScrollArea, Select, SelectOption, Separator,
     SeparatorOrientation, Sheet, SheetSide, Sidebar, SidebarItem, Skeleton, Slider, SortDirection,
-    Switch, TabItem, Tabs, ToastItem, ToastSeverity, Tooltip, TreeNode, TreeView, fuzzy_match,
+    Switch, TabItem, Tabs, TextBuffer, TextSelection, ToastItem, ToastSeverity, Tooltip, TreeNode,
+    TreeView, UndoStack, fuzzy_match,
 };
 
 pub use tej_services::{
@@ -61,6 +63,10 @@ pub use tej_3d::{
 pub use tej_icons::{
     ActionIcon, CommunicationIcon, DeviceIcon, EditorIcon, Icon, IconSource, IconState, LucideIcon,
     MediaIcon, NavigationIcon, PathCommand, SystemIcon, VectorPath,
+};
+
+pub use tej_animation::{
+    AnimatedSpring, AnimatedValue, Lerp, SpringConfig, SpringSimulation, VsyncTicker,
 };
 
 pub use crate::app::App;
