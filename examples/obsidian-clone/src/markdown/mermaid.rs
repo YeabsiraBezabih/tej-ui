@@ -4,9 +4,9 @@
 //! connecting edges, and arrowheads directly onto the Linux surface.
 
 use std::collections::HashMap;
-use tej_hal::{Color, SurfaceCompositor};
-use tej_layout::{Point, Rect};
-use tej_platform_linux::LinuxSurface;
+use tej_ui_hal::{Color, SurfaceCompositor};
+use tej_ui_layout::{Point, Rect};
+use tej_ui_platform_linux::LinuxSurface;
 
 const COLOR_MERMAID_BG: Color = Color::rgb(24, 25, 38);
 const COLOR_MERMAID_BORDER: Color = Color::rgb(49, 50, 68);

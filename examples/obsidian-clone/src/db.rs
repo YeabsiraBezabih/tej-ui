@@ -5,7 +5,7 @@ use mydb::index::SecondaryIndex;
 use mydb::{Database, MemStorage};
 use mydb_core::DbError;
 use std::sync::Arc;
-use tej_db_sync::DbSyncHook;
+use tej_ui_db_sync::DbSyncHook;
 
 /// The initialized vault database engine.
 pub struct VaultDatabase {

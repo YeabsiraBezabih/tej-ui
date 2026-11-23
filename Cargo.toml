@@ -1,24 +1,31 @@
 [workspace]
 members = [
-    "crates/tej-core",
-    "crates/tej-view",
-    "crates/tej-layout",
-    "crates/tej-text",
-    "crates/tej-hal",
-    "crates/tej-platform-linux",
-    "crates/tej-platform-windows",
-    "crates/tej-platform-macos",
-    "crates/tej-a11y",
-    "crates/tej-db-sync",
-    "crates/tej-widgets",
-    "crates/tej-services",
-    "crates/tej-devtools",
-    "crates/tej-3d",
-    "crates/tej-icons",
-    "crates/tej-animation",
-    "crates/tej",
+    "crates/tej-ui-core",
+    "crates/tej-ui-view",
+    "crates/tej-ui-layout",
+    "crates/tej-ui-text",
+    "crates/tej-ui-hal",
+    "crates/tej-ui-platform-linux",
+    "crates/tej-ui-platform-windows",
+    "crates/tej-ui-platform-macos",
+    "crates/tej-ui-platform-web",
+    "crates/tej-ui-a11y",
+    "crates/tej-ui-db-sync",
+    "crates/tej-ui-widgets",
+    "crates/tej-ui-services",
+    "crates/tej-ui-devtools",
+    "crates/tej-ui-3d",
+    "crates/tej-ui-icons",
+    "crates/tej-ui-animation",
+    "crates/tej-ui-cli",
+    "crates/tej-ui",
+    "crates/tej-ui-3d-benches",
+    "crates/tej-ui-benches",
     "examples/task-manager",
     "examples/obsidian-clone",
+    "examples/telemetry-dashboard",
+    "examples/blender-nanite-viewer",
+    "examples/tej-ui-gallery",
     "benches",
     "tests",
 ]
@@ -33,32 +40,57 @@ license = "MIT OR Apache-2.0"
 readme = "README.md"
 
 [workspace.dependencies]
-# Internal workspace crates
-tej-core = { path = "crates/tej-core" }
-tej-view = { path = "crates/tej-view" }
-tej-layout = { path = "crates/tej-layout" }
-tej-text = { path = "crates/tej-text" }
-tej-hal = { path = "crates/tej-hal" }
-tej-platform-linux = { path = "crates/tej-platform-linux" }
-tej-platform-windows = { path = "crates/tej-platform-windows" }
-tej-platform-macos = { path = "crates/tej-platform-macos" }
-tej-a11y = { path = "crates/tej-a11y" }
-tej-db-sync = { path = "crates/tej-db-sync" }
-tej-widgets = { path = "crates/tej-widgets" }
-tej-services = { path = "crates/tej-services" }
-tej-devtools = { path = "crates/tej-devtools" }
-tej-3d = { path = "crates/tej-3d" }
-tej-icons = { path = "crates/tej-icons" }
-tej-animation = { path = "crates/tej-animation" }
-tej = { path = "crates/tej" }
+# Canonical tej-ui workspace crates
+tej-ui-core = { package = "tej-ui-core", path = "crates/tej-ui-core" }
+tej-ui-view = { package = "tej-ui-view", path = "crates/tej-ui-view" }
+tej-ui-layout = { package = "tej-ui-layout", path = "crates/tej-ui-layout" }
+tej-ui-text = { package = "tej-ui-text", path = "crates/tej-ui-text" }
+tej-ui-hal = { package = "tej-ui-hal", path = "crates/tej-ui-hal" }
+tej-ui-platform-linux = { package = "tej-ui-platform-linux", path = "crates/tej-ui-platform-linux" }
+tej-ui-platform-windows = { package = "tej-ui-platform-windows", path = "crates/tej-ui-platform-windows" }
+tej-ui-platform-macos = { package = "tej-ui-platform-macos", path = "crates/tej-ui-platform-macos" }
+tej-ui-platform-web = { package = "tej-ui-platform-web", path = "crates/tej-ui-platform-web" }
+tej-ui-a11y = { package = "tej-ui-a11y", path = "crates/tej-ui-a11y" }
+tej-ui-db-sync = { package = "tej-ui-db-sync", path = "crates/tej-ui-db-sync" }
+tej-ui-widgets = { package = "tej-ui-widgets", path = "crates/tej-ui-widgets" }
+tej-ui-services = { package = "tej-ui-services", path = "crates/tej-ui-services" }
+tej-ui-devtools = { package = "tej-ui-devtools", path = "crates/tej-ui-devtools" }
+tej-ui-3d = { package = "tej-ui-3d", path = "crates/tej-ui-3d" }
+tej-ui-icons = { package = "tej-ui-icons", path = "crates/tej-ui-icons" }
+tej-ui-animation = { package = "tej-ui-animation", path = "crates/tej-ui-animation" }
+tej-ui-cli = { package = "tej-ui-cli", path = "crates/tej-ui-cli" }
+tej-ui = { package = "tej-ui", path = "crates/tej-ui" }
+
+# Aliases for backwards compatibility across internal crates
+tej-core = { package = "tej-ui-core", path = "crates/tej-ui-core" }
+tej-view = { package = "tej-ui-view", path = "crates/tej-ui-view" }
+tej-layout = { package = "tej-ui-layout", path = "crates/tej-ui-layout" }
+tej-text = { package = "tej-ui-text", path = "crates/tej-ui-text" }
+tej-hal = { package = "tej-ui-hal", path = "crates/tej-ui-hal" }
+tej-platform-linux = { package = "tej-ui-platform-linux", path = "crates/tej-ui-platform-linux" }
+tej-platform-windows = { package = "tej-ui-platform-windows", path = "crates/tej-ui-platform-windows" }
+tej-platform-macos = { package = "tej-ui-platform-macos", path = "crates/tej-ui-platform-macos" }
+tej-platform-web = { package = "tej-ui-platform-web", path = "crates/tej-ui-platform-web" }
+tej-a11y = { package = "tej-ui-a11y", path = "crates/tej-ui-a11y" }
+tej-db-sync = { package = "tej-ui-db-sync", path = "crates/tej-ui-db-sync" }
+tej-widgets = { package = "tej-ui-widgets", path = "crates/tej-ui-widgets" }
+tej-services = { package = "tej-ui-services", path = "crates/tej-ui-services" }
+tej-devtools = { package = "tej-ui-devtools", path = "crates/tej-ui-devtools" }
+tej-3d = { package = "tej-ui-3d", path = "crates/tej-ui-3d" }
+tej-icons = { package = "tej-ui-icons", path = "crates/tej-ui-icons" }
+tej-animation = { package = "tej-ui-animation", path = "crates/tej-ui-animation" }
+tej = { package = "tej-ui", path = "crates/tej-ui" }
 
 # Database integration
-mydb = { path = "../modular-acid-dbms/crates/mydb" }
-mydb-core = { path = "../modular-acid-dbms/crates/mydb-core" }
+mydb = { package = "tej-db", path = "../tej-db/crates/tej-db" }
+mydb-core = { package = "tej-db-core", path = "../tej-db/crates/tej-db-core" }
 
 # Core utilities
 parking_lot = "0.12"
 fontdue = "0.9.5"
+fontique = "0.11"
+swash = "0.2"
+unicode-bidi = "0.3"
 smallvec = "1.14"
 thiserror = "2.0"
 slotmap = "1.0"
@@ -66,6 +98,20 @@ bitflags = "2.8"
 
 # Tracing
 tracing = "0.1"
+
+# GPU & Platform
+wgpu = "24.0"
+bytemuck = { version = "1.21", features = ["derive"] }
+raw-window-handle = "0.6"
+pollster = "0.4"
+lyon_path = "1.0"
+lyon_algorithms = "1.0"
+lyon_geom = "1.0"
+lyon_extra = "1.0"
+lyon_tessellation = "1.0"
+
+# Accessibility
+accesskit = "0.25"
 
 # Testing & Tempfile
 tempfile = "3.17"

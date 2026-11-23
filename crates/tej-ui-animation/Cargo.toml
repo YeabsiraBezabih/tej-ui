@@ -1,0 +1,16 @@
+[package]
+name = "tej-ui-animation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+tej-ui-core.workspace = true
+tej-ui-layout.workspace = true
+tej-ui-hal.workspace = true
+smallvec.workspace = true
+
+[lints]
+workspace = true

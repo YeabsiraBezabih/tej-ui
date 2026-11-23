@@ -1,0 +1,18 @@
+[package]
+name = "tej-ui-a11y"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+tej-ui-layout.workspace = true
+tej-ui-core.workspace = true
+parking_lot.workspace = true
+thiserror.workspace = true
+smallvec.workspace = true
+accesskit.workspace = true
+
+[lints]
+workspace = true

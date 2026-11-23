@@ -1,0 +1,24 @@
+[package]
+name = "tej-ui-db-sync"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+tej-ui-core.workspace = true
+tej-ui-view.workspace = true
+tej-ui-layout.workspace = true
+mydb.workspace = true
+mydb-core.workspace = true
+parking_lot.workspace = true
+thiserror.workspace = true
+smallvec.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

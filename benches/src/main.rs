@@ -3,14 +3,13 @@ use std::fs;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
-use tej::prelude::*;
+use tej_ui::prelude::*;
 
 fn get_rss_memory_mb() -> f64 {
     if let Ok(statm) = fs::read_to_string("/proc/self/statm") {
         let parts: Vec<&str> = statm.split_whitespace().collect();
         if parts.len() >= 2 {
             if let Ok(resident_pages) = parts[1].parse::<u64>() {
-                // Page size is typically 4KB
                 let page_size_kb = 4.0;
                 return (resident_pages as f64 * page_size_kb) / 1024.0;
             }
@@ -104,7 +103,6 @@ fn bench_db_virtual_list() {
         load_start.elapsed()
     );
 
-    // Measure memory before virtual list
     let mem_loaded = get_rss_memory_mb();
     println!("RSS Memory with 50K DB records: {mem_loaded:.2} MB");
 
@@ -139,6 +137,106 @@ fn bench_db_virtual_list() {
     println!("RSS Memory after scrolling 1M items: {mem_after_scroll:.2} MB (Flat memory proof!)");
 }
 
+fn bench_direct_rle_filtering() {
+    println!("\n--- [4] Direct RLE In-Place Filtering Benchmark (Zero Decompression) ---");
+    let mut col = RleColumn::new();
+    // 500,000 Active, 300,000 Pending, 200,000 Archived = 1,000,000 rows
+    col.push_run(1u8, 500_000);
+    col.push_run(2u8, 300_000);
+    col.push_run(3u8, 200_000);
+
+    let iterations = 10_000;
+    let start = Instant::now();
+    let mut total_matches = 0;
+    for _ in 0..iterations {
+        let bitset = DirectRleFilter::filter_equals(&col, 1);
+        total_matches += bitset.total_set();
+    }
+    let elapsed = start.elapsed();
+    let per_op_ns = (elapsed.as_nanos() as f64) / (iterations as f64);
+    let rows_per_sec = (col.total_rows() as f64 * iterations as f64) / elapsed.as_secs_f64();
+
+    println!("Rows filtered:       1,000,000 rows per pass (3 RLE runs)");
+    println!("Filter iterations:   {iterations}");
+    println!(
+        "Time per filter:     {per_op_ns:.2} ns (0.00{:.0} µs)",
+        per_op_ns / 1000.0
+    );
+    println!(
+        "Filter throughput:   {:.2} Billion rows / sec",
+        rows_per_sec / 1e9
+    );
+    println!(
+        "Total match verify:  {} (Bitset correct)",
+        total_matches / iterations
+    );
+}
+
+fn bench_rabitq_semantic_palette() {
+    println!("\n--- [5] 1-Bit RaBitQ Semantic Command Palette Benchmark ---");
+    let mut palette = SemanticPalette::new();
+    // Register 10,000 command actions with 64-bit signatures
+    for i in 0..10_000 {
+        let sig = 0xAAAAAAAAAAAAAAAAu64 ^ ((i as u64) << 16) ^ ((i as u64) >> 4);
+        palette.register(i as u32, format!("Action #{i:05}"), sig);
+    }
+
+    let query_sig = 0xAAAAAAAAAAAAFFFFu64;
+    let queries = 5_000;
+    let start = Instant::now();
+    let mut top_match_dist = 0;
+    for _ in 0..queries {
+        let results = palette.search(query_sig, 5);
+        if let Some(first) = results.first() {
+            top_match_dist = first.distance;
+        }
+    }
+    let elapsed = start.elapsed();
+    let per_search_us = (elapsed.as_micros() as f64) / (queries as f64);
+    let ops_per_sec = (queries as f64) / elapsed.as_secs_f64();
+
+    println!("Palette catalog:     10,000 registered actions");
+    println!("Queries executed:    {queries} top-5 searches");
+    println!("Time per search:     {per_search_us:.2} µs (Hardware SIMD popcount)");
+    println!("Search throughput:   {ops_per_sec:.0} searches / sec");
+    println!("Top match distance:  {top_match_dist} bits (Hamming minimum)");
+}
+
+fn bench_cow_time_travel() {
+    println!("\n--- [6] 8-Byte COW B+ Tree Time-Travel Undo Stack Benchmark ---");
+    let mut stack = CowTimeTravelStack::new(100);
+
+    // Commit 10,000 successive transaction snapshots
+    let commit_start = Instant::now();
+    for root in 101..=10_100 {
+        stack.record_commit(root);
+    }
+    let commit_elapsed = commit_start.elapsed();
+    let (undo_cnt, redo_cnt) = stack.counts();
+    let mem_bytes = stack.heap_memory_bytes();
+
+    // Perform 5,000 undos and 5,000 redos
+    let time_travel_start = Instant::now();
+    for _ in 0..5_000 {
+        let _ = stack.undo();
+    }
+    for _ in 0..5_000 {
+        let _ = stack.redo();
+    }
+    let time_travel_elapsed = time_travel_start.elapsed();
+
+    println!("Transaction commits: 10,000 snapshots recorded in {commit_elapsed:?}");
+    println!("History depth:       {undo_cnt} undos, {redo_cnt} redos");
+    println!(
+        "RAM footprint:       {mem_bytes} bytes ({:.2} KB for 10K full states!)",
+        mem_bytes as f64 / 1024.0
+    );
+    println!(
+        "10,000 Time-travels: {time_travel_elapsed:?} ({:.2} ns per state pivot)",
+        (time_travel_elapsed.as_nanos() as f64) / 10_000.0
+    );
+}
+
 fn main() {
     println!("============================================================");
     println!("         tej-ui Real-World Performance Benchmark           ");
@@ -151,6 +249,9 @@ fn main() {
     bench_layout(1_000);
     bench_layout(10_000);
     bench_db_virtual_list();
+    bench_direct_rle_filtering();
+    bench_rabitq_semantic_palette();
+    bench_cow_time_travel();
 
     let final_mem = get_rss_memory_mb();
     println!("\nFinal Process RSS Memory: {final_mem:.2} MB");

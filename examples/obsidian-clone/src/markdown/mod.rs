@@ -1,5 +1,7 @@
 //! Markdown compiling, layout, and rendering engine with native LaTeX, Mermaid, and SVG support.
 
+#![allow(dead_code)]
+
 pub mod latex;
 pub mod mermaid;
 pub mod svg;
@@ -10,9 +12,9 @@ pub use latex::render_latex_block;
 pub use mermaid::render_mermaid_diagram;
 pub use svg::render_svg_block;
 
-use tej_hal::{Color, SurfaceCompositor};
-use tej_layout::{Point, Rect};
-use tej_platform_linux::LinuxSurface;
+use tej_ui_hal::{Color, SurfaceCompositor};
+use tej_ui_layout::{Point, Rect};
+use tej_ui_platform_linux::LinuxSurface;
 
 const COLOR_TEXT: Color = Color::rgb(205, 214, 244);
 const COLOR_TEXT_DIM: Color = Color::rgb(108, 112, 134);

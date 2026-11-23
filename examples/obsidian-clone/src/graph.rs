@@ -1,8 +1,10 @@
 //! 3D interactive knowledge graph visualization for Obsidian notes.
 
 use crate::models::NoteItem;
-use tej_3d::{Canvas3D, Light, Mesh, Object3D, PerspectiveCamera, Scene, StandardMaterial, Vec3};
-use tej_hal::Color;
+use tej_ui_3d::{
+    Canvas3D, Light, Mesh, Object3D, PerspectiveCamera, Scene, StandardMaterial, Vec3,
+};
+use tej_ui_hal::Color;
 
 /// Construct the 3D knowledge graph scene representing interconnected notes and tags.
 #[must_use]
@@ -60,6 +62,7 @@ pub fn build_knowledge_graph(notes: &[NoteItem]) -> Canvas3D {
         near: 0.1,
         far: 100.0,
         up: Vec3::new(0.0, 1.0, 0.0),
+        ..Default::default()
     };
 
     Canvas3D::new(scene, camera)

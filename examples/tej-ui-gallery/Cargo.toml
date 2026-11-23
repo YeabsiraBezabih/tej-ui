@@ -1,0 +1,24 @@
+[package]
+name = "tej-ui-gallery"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+tej-ui = { workspace = true, features = ["full"] }
+tej-ui-core.workspace = true
+tej-ui-view.workspace = true
+tej-ui-layout.workspace = true
+tej-ui-text.workspace = true
+tej-ui-hal.workspace = true
+tej-ui-widgets.workspace = true
+tej-ui-3d.workspace = true
+tej-ui-a11y.workspace = true
+tej-ui-services.workspace = true
+accesskit.workspace = true
+
+[lints]
+workspace = true

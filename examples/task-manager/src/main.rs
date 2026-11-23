@@ -1,6 +1,6 @@
 use mydb::Database;
 use std::sync::Arc;
-use tej::prelude::*;
+use tej_ui::prelude::*;
 
 #[derive(Clone, Copy, Debug)]
 struct AppState {
@@ -54,15 +54,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 4. Construct declarative view
     let view = task_manager_view(state);
 
-    // 5. Run single headless frame for verification
+    // 5. Run headless frame or interactive desktop window based on CLI flags
     let app = App::new(view).window(WindowConfig {
         title: "tej-ui Task Manager (1M+ items)".into(),
         size: Size::new(900.0, 750.0),
         ..Default::default()
     });
 
-    let _state = app.run_headless_frame();
-    println!("Headless frame rendered cleanly with flat memory footprint!");
+    let args: Vec<String> = std::env::args().collect();
+    let is_headless = args
+        .iter()
+        .any(|a| a == "--headless" || a == "--batch" || a == "--test");
+
+    if is_headless {
+        let _state = app.run_headless_frame();
+        println!("Headless frame rendered cleanly with flat memory footprint!");
+    } else {
+        println!("Starting interactive native window...");
+        app.run()?;
+    }
 
     Ok(())
 }

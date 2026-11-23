@@ -5,9 +5,12 @@ edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
+publish = false
 
 [dependencies]
-tej.workspace = true
+tej-ui = { workspace = true, features = ["full"] }
+tej-ui-hal = { workspace = true }
+tej-ui-widgets = { workspace = true }
 mydb.workspace = true
 mydb-core.workspace = true
 tempfile.workspace = true

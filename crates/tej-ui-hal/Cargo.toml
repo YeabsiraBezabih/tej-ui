@@ -1,0 +1,37 @@
+[package]
+name = "tej-ui-hal"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[features]
+default = ["gpu"]
+gpu = [
+    "dep:wgpu",
+    "dep:bytemuck",
+    "dep:pollster",
+    "dep:lyon_path",
+    "dep:lyon_algorithms",
+    "dep:lyon_geom",
+    "dep:lyon_extra",
+    "dep:lyon_tessellation",
+]
+
+[dependencies]
+tej-ui-layout.workspace = true
+thiserror.workspace = true
+smallvec.workspace = true
+raw-window-handle.workspace = true
+wgpu = { workspace = true, optional = true }
+bytemuck = { workspace = true, optional = true }
+pollster = { workspace = true, optional = true }
+lyon_path = { workspace = true, optional = true }
+lyon_algorithms = { workspace = true, optional = true }
+lyon_geom = { workspace = true, optional = true }
+lyon_extra = { workspace = true, optional = true }
+lyon_tessellation = { workspace = true, optional = true }
+
+[lints]
+workspace = true

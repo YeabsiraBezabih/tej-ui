@@ -1,0 +1,20 @@
+[package]
+name = "tej-ui-text"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+tej-ui-layout.workspace = true
+tej-ui-hal.workspace = true
+thiserror.workspace = true
+parking_lot.workspace = true
+fontdue.workspace = true
+fontique.workspace = true
+swash.workspace = true
+unicode-bidi.workspace = true
+
+[lints]
+workspace = true

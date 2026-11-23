@@ -1,0 +1,21 @@
+[package]
+name = "tej-ui-3d"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+tej-ui-core.workspace = true
+tej-ui-view.workspace = true
+tej-ui-layout.workspace = true
+tej-ui-hal.workspace = true
+mydb.workspace = true
+mydb-core.workspace = true
+parking_lot.workspace = true
+thiserror.workspace = true
+smallvec.workspace = true
+
+[lints]
+workspace = true

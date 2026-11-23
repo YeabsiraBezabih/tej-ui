@@ -5,9 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
+publish = false
 
 [dependencies]
-tej.workspace = true
+tej-ui.workspace = true
 mydb.workspace = true
 mydb-core.workspace = true
 tracing.workspace = true

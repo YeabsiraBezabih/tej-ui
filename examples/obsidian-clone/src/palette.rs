@@ -1,7 +1,7 @@
 //! Obsidian command palette (`Cmd + K`) actions and fuzzy search.
 
-use tej_core::Signal;
-use tej_widgets::{CommandItem, CommandPalette};
+use tej_ui_core::Signal;
+use tej_ui_widgets::{CommandItem, CommandPalette};
 
 /// Build the Obsidian command palette populated with vault navigation and action shortcuts.
 #[must_use]

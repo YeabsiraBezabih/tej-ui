@@ -1,0 +1,20 @@
+[package]
+name = "tej-ui-3d-benches"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+tej-ui.workspace = true
+tej-ui-3d = { path = "../tej-ui-3d" }
+tej-ui-hal = { path = "../tej-ui-hal" }
+tej-ui-layout = { path = "../tej-ui-layout" }
+mydb.workspace = true
+mydb-core.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true

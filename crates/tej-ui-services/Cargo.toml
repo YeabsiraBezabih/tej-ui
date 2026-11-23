@@ -1,0 +1,22 @@
+[package]
+name = "tej-ui-services"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+tej-ui-core.workspace = true
+tej-ui-layout.workspace = true
+thiserror.workspace = true
+parking_lot.workspace = true
+smallvec.workspace = true
+raw-window-handle.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+
+workspace = true

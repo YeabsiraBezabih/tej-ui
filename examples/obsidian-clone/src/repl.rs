@@ -6,7 +6,7 @@ use crate::graph::build_knowledge_graph;
 use crate::models::NoteItem;
 use crate::palette::build_obsidian_palette;
 use std::io::{self, Write};
-use tej::prelude::*;
+use tej_ui::prelude::*;
 
 /// Launch the interactive terminal session.
 pub fn run_interactive(
@@ -66,9 +66,6 @@ pub fn run_interactive(
                 println!("  new <folder> <title>   - Create a new markdown note in ACID database");
                 println!(
                     "  render                 - Build and layout the complete native view tree"
-                );
-                println!(
-                    "  web                    - Start live browser GUI on http://127.0.0.1:4000"
                 );
                 println!("  exit / quit            - Exit interactive shell\n");
             }
@@ -293,11 +290,6 @@ pub fn run_interactive(
                 println!(
                     "Rendered Obsidian View Tree (zero-vtable static dispatch). Frame valid.\n"
                 );
-            }
-
-            "web" => {
-                crate::web_gui::start_web_gui_background(notes.clone());
-                println!("Live Web GUI server running at: http://127.0.0.1:4000\n");
             }
 
             "exit" | "quit" => {

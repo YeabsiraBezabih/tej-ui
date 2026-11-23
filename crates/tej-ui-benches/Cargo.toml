@@ -1,0 +1,32 @@
+[package]
+name = "tej-ui-benches"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+tej-ui.workspace = true
+tej-ui-core.workspace = true
+tej-ui-view.workspace = true
+tej-ui-layout.workspace = true
+tej-ui-text.workspace = true
+tej-ui-hal.workspace = true
+tej-ui-a11y.workspace = true
+tej-ui-db-sync.workspace = true
+tej-ui-widgets.workspace = true
+mydb.workspace = true
+mydb-core.workspace = true
+tempfile.workspace = true
+
+# Competitor engines and frameworks
+egui = { version = "0.32", default-features = false }
+taffy = "0.15"
+iced_core = "0.14"
+slint = { version = "1.18", default-features = false, features = ["std", "renderer-software", "compat-1-2"] }
+dioxus-core = "0.6"
+
+[lints]
+workspace = true

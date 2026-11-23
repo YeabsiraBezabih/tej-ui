@@ -1,10 +1,10 @@
 //! Main view layout and UI composition for the Obsidian clone desktop app.
 
 use crate::models::NoteItem;
-use tej::prelude::*;
-use tej_animation::{AnimatedSpring, SpringConfig};
-use tej_icons::LucideIcon;
-use tej_widgets::{
+use tej_ui::prelude::*;
+use tej_ui_animation::{AnimatedSpring, SpringConfig};
+use tej_ui_icons::LucideIcon;
+use tej_ui_widgets::{
     Badge, BadgeVariant, Card, RichTextEditor, Sidebar, SidebarItem, TabItem, Tabs, TreeNode,
     TreeView,
 };

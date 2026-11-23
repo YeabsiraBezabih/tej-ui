@@ -1,7 +1,7 @@
 use mydb::Database;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use tej::prelude::*;
+use tej_ui::prelude::*;
 
 #[test]
 fn test_end_to_end_reactivity_and_view_lifecycle() {
