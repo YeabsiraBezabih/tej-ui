@@ -5,6 +5,17 @@ edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
+description = "Command-line scaffolding, build, and developer workflow tool for tej-ui applications."
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/tej-ui-cli"
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[[bin]]
+name = "tej-ui"
+path = "src/main.rs"
 
 [dependencies]
 tej-ui-core.workspace = true

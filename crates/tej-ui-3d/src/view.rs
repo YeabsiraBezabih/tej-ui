@@ -24,6 +24,7 @@ pub struct Canvas3D {
     scene: Arc<parking_lot::RwLock<Scene>>,
     camera: Arc<parking_lot::RwLock<PerspectiveCamera>>,
     controls: Arc<parking_lot::RwLock<OrbitControls>>,
+    rasterizer: Arc<parking_lot::Mutex<Option<Rasterizer3D>>>,
     width: Dimension,
     height: Dimension,
 }
@@ -46,9 +47,16 @@ impl Canvas3D {
             scene: Arc::new(parking_lot::RwLock::new(scene)),
             camera: Arc::new(parking_lot::RwLock::new(camera)),
             controls: Arc::new(parking_lot::RwLock::new(controls)),
+            rasterizer: Arc::new(parking_lot::Mutex::new(None)),
             width: Dimension::Auto,
             height: Dimension::Auto,
         }
+    }
+
+    /// Returns the dimensions of the cached internal rasterizer, if initialized.
+    #[must_use]
+    pub fn cached_rasterizer_size(&self) -> Option<(usize, usize)> {
+        self.rasterizer.lock().as_ref().map(|r| (r.width, r.height))
     }
 
     /// Sets explicit widget width.
@@ -97,15 +105,25 @@ impl Canvas3D {
         rasterizer.render_scene(&scene, &camera);
     }
 
-    /// Composites the rendered 3D scene onto the 2D surface compositor.
+    /// Composites the rendered 3D scene onto the 2D surface compositor, reusing a cached
+    /// [`Rasterizer3D`] instance and resizing only when viewport dimensions change.
     pub fn paint_direct(&self, compositor: &mut dyn SurfaceCompositor, bounds: Rect) {
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let w = (bounds.size.width as usize).clamp(32, 2048);
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let h = (bounds.size.height as usize).clamp(32, 2048);
 
-        let mut rasterizer = Rasterizer3D::new(w, h);
-        self.render_offline(&mut rasterizer);
+        let mut guard = self.rasterizer.lock();
+        let rasterizer = match guard.as_mut() {
+            Some(r) => {
+                r.resize(w, h);
+                r
+            }
+            None => guard.insert(Rasterizer3D::new(w, h)),
+        };
+
+        rasterizer.clear(Color::rgb(30, 30, 36));
+        self.render_offline(rasterizer);
 
         // Blit color buffer directly to 2D compositor
         compositor.blit_pixels(bounds.origin, w, h, &rasterizer.color_buffer);

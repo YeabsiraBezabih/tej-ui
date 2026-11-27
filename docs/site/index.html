@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tej-UI — Zero-Copy Rust UI Framework Documentation</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+    h1, h2, h3, .font-display { font-family: 'Space Grotesk', sans-serif; }
+    code, pre, .font-mono { font-family: 'JetBrains Mono', monospace; }
+    .tab-active { background: #1e293b; color: #f8fafc; border-color: #38bdf8; }
+    .code-kw { color: #c084fc; }
+    .code-ty { color: #38bdf8; }
+    .code-str { color: #4ade80; }
+    .code-fn { color: #60a5fa; }
+    .code-cm { color: #94a3b8; }
+    .code-num { color: #fbbf24; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased selection:bg-sky-500/30 selection:text-sky-200">
+
+  <!-- Toast notification -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 hidden items-center gap-2 rounded-lg border border-emerald-500/40 bg-slate-900 px-4 py-2.5 text-sm font-medium text-emerald-300 shadow-xl">
+    <i data-lucide="check-circle-2" class="h-4 w-4 text-emerald-400"></i>
+    <span id="toast-msg">Copied to clipboard</span>
+  </div>
+
+  <!-- Top Navigation -->
+  <header class="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md">
+    <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
+      <button type="button" data-nav="home" class="flex items-center gap-2.5 text-left focus:outline-none">
+        <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 font-display text-lg font-bold text-white shadow-lg shadow-sky-500/20">T</span>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-display text-lg font-bold tracking-tight text-white">tej-ui</span>
+            <span class="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 font-mono text-[11px] font-medium text-sky-300">v0.1.0</span>
+          </div>
+          <p class="hidden text-[11px] text-slate-400 sm:block">Rust UI Framework + Tej-DB Sync</p>
+        </div>
+      </button>
+
+      <nav class="hidden items-center gap-1 md:flex" aria-label="Main navigation">
+        <button type="button" data-nav="home" class="nav-btn rounded-lg px-3 py-1.5 text-sm font-medium text-slate-200 hover:bg-slate-800/80">Overview</button>
+        <button type="button" data-nav="quickstart" class="nav-btn rounded-lg px-3 py-1.5 text-sm font-medium text-slate-300 hover:bg-slate-800/80">Quickstart</button>
+        <button type="button" data-nav="playground" class="nav-btn rounded-lg px-3 py-1.5 text-sm font-medium text-slate-300 hover:bg-slate-800/80">Playground</button>
+        <button type="button" data-nav="crates" class="nav-btn rounded-lg px-3 py-1.5 text-sm font-medium text-slate-300 hover:bg-slate-800/80">Crates (19)</button>
+        <button type="button" data-nav="wiki" class="nav-btn rounded-lg px-3 py-1.5 text-sm font-medium text-slate-300 hover:bg-slate-800/80">Wiki</button>
+      </nav>
+
+      <div class="flex items-center gap-2">
+        <button type="button" id="mobile-menu-btn" class="rounded-lg border border-slate-800 p-2 text-slate-300 hover:bg-slate-800 md:hidden" aria-label="Toggle menu">
+          <i data-lucide="menu" class="h-5 w-5"></i>
+        </button>
+        <button type="button" data-nav="quickstart" class="hidden rounded-lg bg-sky-500 px-3.5 py-1.5 text-sm font-semibold text-slate-950 transition hover:bg-sky-400 sm:inline-flex sm:items-center sm:gap-1.5">
+          <span>Get Started</span>
+          <i data-lucide="arrow-right" class="h-4 w-4"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile nav -->
+    <div id="mobile-menu" class="hidden border-t border-slate-800 bg-slate-900/95 px-4 py-3 md:hidden">
+      <div class="flex flex-col gap-1">
+        <button type="button" data-nav="home" class="rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-200 hover:bg-slate-800">Overview</button>
+        <button type="button" data-nav="quickstart" class="rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-200 hover:bg-slate-800">Quickstart &amp; Feature Builder</button>
+        <button type="button" data-nav="playground" class="rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-200 hover:bg-slate-800">Interactive Playground</button>
+        <button type="button" data-nav="crates" class="rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-200 hover:bg-slate-800">Workspace Crates (19)</button>
+        <button type="button" data-nav="wiki" class="rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-200 hover:bg-slate-800">Developer Wiki</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+
+    <!-- ==================== VIEW: HOME / OVERVIEW ==================== -->
+    <section id="view-home" class="page-view space-y-16">
+      <!-- Hero -->
+      <div class="grid items-center gap-10 lg:grid-cols-12">
+        <div class="space-y-6 lg:col-span-7">
+          <div class="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300">
+            <i data-lucide="cpu" class="h-3.5 w-3.5"></i>
+            <span>Rust Edition 2024 · MSRV 1.85 · Apache-2.0 / MIT</span>
+          </div>
+          <h1 class="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-[54px] lg:leading-[1.08]">
+            Build reactive, zero-copy Rust UIs backed by <span class="bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">Tej-DB</span>.
+          </h1>
+          <p class="max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
+            <strong class="text-white">tej-ui</strong> pairs 8-byte <code class="rounded bg-slate-800 px-1.5 py-0.5 text-sm text-sky-300">Copy</code> topological signals, a flat Structure-of-Arrays (SoA) layout engine, instanced <code class="rounded bg-slate-800 px-1.5 py-0.5 text-sm text-sky-300">wgpu</code> 24 rendering, and direct ACID commit hooks for <code class="rounded bg-slate-800 px-1.5 py-0.5 text-sm text-emerald-300">tej-db</code>.
+          </p>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <button type="button" data-nav="quickstart" class="inline-flex items-center gap-2 rounded-lg bg-sky-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-sky-400">
+              <span>Start Building</span>
+              <i data-lucide="terminal" class="h-4 w-4"></i>
+            </button>
+            <button type="button" data-nav="playground" class="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-5 py-2.5 text-sm font-semibold text-slate-100 transition hover:border-slate-500 hover:bg-slate-800">
+              <i data-lucide="play" class="h-4 w-4 text-sky-400"></i>
+              <span>Try Interactive Playground</span>
+            </button>
+            <button type="button" id="copy-cargo-add" class="inline-flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/80 px-4 py-2.5 font-mono text-xs text-slate-300 transition hover:border-sky-500/50 hover:text-white">
+              <span>$ cargo add tej-ui</span>
+              <i data-lucide="copy" class="h-3.5 w-3.5 text-slate-400"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Hero Code Card -->
+        <div class="lg:col-span-5">
+          <div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 bg-slate-900/90 px-4 py-2.5">
+              <div class="flex items-center gap-2">
+                <span class="h-2.5 w-2.5 rounded-full bg-rose-500/80"></span>
+                <span class="h-2.5 w-2.5 rounded-full bg-amber-500/80"></span>
+                <span class="h-2.5 w-2.5 rounded-full bg-emerald-500/80"></span>
+                <span class="ml-2 font-mono text-xs text-slate-400">src/main.rs</span>
+              </div>
+              <button type="button" id="copy-hero-code" class="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-slate-400 hover:bg-slate-800 hover:text-white">
+                <i data-lucide="copy" class="h-3.5 w-3.5"></i>
+                <span>Copy</span>
+              </button>
+            </div>
+            <pre class="overflow-x-auto p-4 text-xs leading-relaxed text-slate-200"><code id="hero-code-block"><span class="code-kw">use</span> tej_ui::prelude::*;
+
+<span class="code-kw">fn</span> <span class="code-fn">counter_app</span>() -&gt; <span class="code-kw">impl</span> <span class="code-ty">View</span> {
+    <span class="code-kw">let</span> count = <span class="code-ty">Signal</span>::new(<span class="code-num">0i32</span>);
+    <span class="code-kw">let</span> label = <span class="code-ty">Memo</span>::new(<span class="code-kw">move</span> || {
+        format!(<span class="code-str">"Count: {}"</span>, count.get())
+    });
+
+    <span class="code-ty">VStack</span>::new((
+        <span class="code-ty">Text</span>::new(<span class="code-str">"Hello from tej-ui"</span>),
+        <span class="code-ty">Text</span>::reactive(label.as_signal()),
+        <span class="code-ty">HStack</span>::new((
+            <span class="code-ty">Button</span>::new(<span class="code-ty">Text</span>::new(<span class="code-str">"+1"</span>))
+                .on_click(<span class="code-kw">move</span> || count.update(|c| *c += <span class="code-num">1</span>)),
+            <span class="code-ty">Button</span>::new(<span class="code-ty">Text</span>::new(<span class="code-str">"-1"</span>))
+                .on_click(<span class="code-kw">move</span> || count.update(|c| *c -= <span class="code-num">1</span>)),
+        )).spacing(<span class="code-num">8.0</span>),
+    ))
+    .padding(<span class="code-num">24.0</span>)
+    .spacing(<span class="code-num">16.0</span>)
+}
+
+<span class="code-kw">fn</span> <span class="code-fn">main</span>() -&gt; <span class="code-ty">Result</span>&lt;(), <span class="code-ty">Box</span>&lt;<span class="code-kw">dyn</span> std::error::<span class="code-ty">Error</span>&gt;&gt; {
+    <span class="code-ty">App</span>::new(counter_app())
+        .window(<span class="code-ty">WindowConfig</span> {
+            title: <span class="code-str">"Counter"</span>.into(),
+            size: <span class="code-ty">Size</span>::new(<span class="code-num">480.0</span>, <span class="code-num">320.0</span>),
+            ..Default::default()
+        })
+        .run()?;
+    <span class="code-ty">Ok</span>(())
+}</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Core Pillars -->
+      <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-6 transition hover:border-sky-500/40">
+          <div class="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-sky-500/10 text-sky-400">
+            <i data-lucide="git-branch" class="h-5 w-5"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-white">Glitch-Free 8-Byte Signals</h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate-400">Generational <code class="text-sky-300">Signal&lt;T&gt;</code> handles are <code class="text-sky-300">Copy</code> even when <code class="text-sky-300">T</code> is not <code class="text-sky-300">Clone</code>, backed by topological BFS wave propagation, RAII panic guards, and explicit <code class="text-sky-300">dispose()</code>.</p>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-6 transition hover:border-sky-500/40">
+          <div class="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400">
+            <i data-lucide="layout-grid" class="h-5 w-5"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-white">Flat SoA Layout Engine</h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate-400">Structure-of-Arrays <code class="text-indigo-300">LayoutArena</code> supports Flexbox alignment, margins, wrapping, and 2D CSS Grid <code class="text-indigo-300">row_span</code> with cycle-safe tree ops and capacity-retaining reuse.</p>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-6 transition hover:border-sky-500/40">
+          <div class="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+            <i data-lucide="database" class="h-5 w-5"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-white">Direct Tej-DB Integration</h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate-400">Connects directly to <code class="text-emerald-300">tej-db 0.1.0</code> via <code class="text-emerald-300">DbSyncHook</code> commit triggers, zero-copy <code class="text-emerald-300">DbRowLens</code> slice views, and single-transaction snapshot-isolated secondary queries.</p>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-6 transition hover:border-sky-500/40">
+          <div class="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400">
+            <i data-lucide="sparkles" class="h-5 w-5"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-white">Instanced wgpu 24 + 128 Icons</h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate-400">Storage-buffer instanced quad, glyph, and Lyon vector pipelines with sRGB-to-linear decoding, HiDPI scaling, and a full SVG 1.1 arc/Bézier parser covering all 128 Lucide icons.</p>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-6 transition hover:border-sky-500/40">
+          <div class="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-rose-500/10 text-rose-400">
+            <i data-lucide="shield-check" class="h-5 w-5"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-white">Hardened Security &amp; A11y</h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate-400">Fail-closed <code class="text-rose-300">SignatureVerifier</code> OTA checks with SemVer downgrade protection, drop-zeroized <code class="text-rose-300">SecureKeyStore</code>, escaped ARIA attributes, and zero fabricated <code class="text-rose-300">unsafe</code> handles.</p>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-6 transition hover:border-sky-500/40">
+          <div class="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400">
+            <i data-lucide="terminal-square" class="h-5 w-5"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-white">CLI &amp; Headless TestHarness</h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate-400">Scaffold projects with <code class="text-cyan-300">tej-ui new my-app</code> and run deterministic CI UI tests using <code class="text-cyan-300">TestHarness</code>, <code class="text-cyan-300">MockClock</code>, and <code class="text-cyan-300">SnapshotComparator</code>.</p>
+        </div>
+      </div>
+
+      <!-- Architecture Flow Banner -->
+      <div class="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-950 p-6 sm:p-8">
+        <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <h2 class="text-2xl font-bold text-white">Layered Zero-Circular-Dependency Architecture</h2>
+            <p class="mt-1 text-sm text-slate-400">Every subsystem compiles independently and composes cleanly through the <code class="text-sky-300">tej-ui</code> facade.</p>
+          </div>
+          <button type="button" data-nav="crates" class="inline-flex items-center gap-1.5 text-sm font-medium text-sky-400 hover:text-sky-300">
+            <span>Inspect all 19 crates</span>
+            <i data-lucide="arrow-right" class="h-4 w-4"></i>
+          </button>
+        </div>
+
+        <div class="mt-6 grid gap-3 sm:grid-cols-5">
+          <div class="rounded-lg border border-sky-500/30 bg-sky-500/5 p-3.5">
+            <div class="font-mono text-[11px] text-sky-400">Layer 1 · State</div>
+            <div class="mt-1 font-semibold text-white">tej-ui-core</div>
+            <p class="mt-1 text-xs text-slate-400">Signals, Memos, Effects, Stores, Workers</p>
+          </div>
+          <div class="rounded-lg border border-indigo-500/30 bg-indigo-500/5 p-3.5">
+            <div class="font-mono text-[11px] text-indigo-400">Layer 2 · Geometry</div>
+            <div class="mt-1 font-semibold text-white">layout &amp; text</div>
+            <p class="mt-1 text-xs text-slate-400">SoA Flex/Grid, Fontique, Swash, BiDi</p>
+          </div>
+          <div class="rounded-lg border border-violet-500/30 bg-violet-500/5 p-3.5">
+            <div class="font-mono text-[11px] text-violet-400">Layer 3 · Views</div>
+            <div class="mt-1 font-semibold text-white">view &amp; widgets</div>
+            <p class="mt-1 text-xs text-slate-400">Zero-vtable tuples, DataGrid, Editor, Forms</p>
+          </div>
+          <div class="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3.5">
+            <div class="font-mono text-[11px] text-emerald-400">Layer 4 · Data &amp; 3D</div>
+            <div class="mt-1 font-semibold text-white">db-sync &amp; 3d</div>
+            <p class="mt-1 text-xs text-slate-400">Tej-DB hooks, RLE, VisBuffer 3D</p>
+          </div>
+          <div class="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3.5">
+            <div class="font-mono text-[11px] text-amber-400">Layer 5 · GPU/OS</div>
+            <div class="mt-1 font-semibold text-white">hal &amp; platforms</div>
+            <p class="mt-1 text-xs text-slate-400">wgpu 24 pipelines, target-gated OS shells</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW: QUICKSTART & FEATURE BUILDER ==================== -->
+    <section id="view-quickstart" class="page-view hidden space-y-10">
+      <div>
+        <h1 class="text-3xl font-bold text-white sm:text-4xl">Quickstart &amp; Cargo Feature Builder</h1>
+        <p class="mt-2 max-w-2xl text-slate-300">Configure your exact <code class="text-sky-300">tej-ui</code> feature set below, scaffold a new workspace with the CLI, and run the verification gates.</p>
+      </div>
+
+      <!-- Interactive Feature Builder -->
+      <div class="grid gap-6 lg:grid-cols-12">
+        <div class="space-y-4 rounded-xl border border-slate-800 bg-slate-900/70 p-6 lg:col-span-6">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-white">Select Feature Flags</h2>
+            <button type="button" id="reset-features" class="text-xs font-medium text-sky-400 hover:text-sky-300">Reset to Default</button>
+          </div>
+          <div id="feature-checkboxes" class="grid gap-2.5 sm:grid-cols-2"></div>
+        </div>
+
+        <div class="flex flex-col justify-between rounded-xl border border-slate-800 bg-slate-900 p-6 lg:col-span-6">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="font-mono text-xs text-slate-400">Cargo.toml</span>
+              <button type="button" id="copy-feature-toml" class="inline-flex items-center gap-1 rounded bg-slate-800 px-2.5 py-1 text-xs text-slate-200 hover:bg-slate-700">
+                <i data-lucide="copy" class="h-3.5 w-3.5"></i>
+                <span>Copy</span>
+              </button>
+            </div>
+            <pre id="feature-toml-output" class="mt-3 overflow-x-auto rounded-lg bg-slate-950 p-4 font-mono text-xs leading-relaxed text-emerald-300"></pre>
+          </div>
+
+          <div class="mt-5 border-t border-slate-800 pt-4">
+            <div class="text-xs font-semibold uppercase tracking-wider text-slate-400">Included Crates</div>
+            <div id="feature-crate-pills" class="mt-2 flex flex-wrap gap-1.5"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step-by-Step Guide -->
+      <div class="grid gap-6 md:grid-cols-3">
+        <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
+          <div class="font-mono text-xs text-sky-400">Step 1 · Install CLI</div>
+          <h3 class="mt-1 text-base font-semibold text-white">Scaffold a New Project</h3>
+          <pre class="mt-3 overflow-x-auto rounded-lg bg-slate-950 p-3 font-mono text-xs text-slate-200">cargo install tej-ui-cli
+tej-ui new invoice-app
+cd invoice-app</pre>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
+          <div class="font-mono text-xs text-emerald-400">Step 2 · Run &amp; Test</div>
+          <h3 class="mt-1 text-base font-semibold text-white">Verify Locally</h3>
+          <pre class="mt-3 overflow-x-auto rounded-lg bg-slate-950 p-3 font-mono text-xs text-slate-200">cargo fmt --all -- --check
+cargo clippy --all-targets
+cargo test --workspace</pre>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
+          <div class="font-mono text-xs text-indigo-400">Step 3 · Tej-DB Sync</div>
+          <h3 class="mt-1 text-base font-semibold text-white">Attach Embedded ACID DB</h3>
+          <pre class="mt-3 overflow-x-auto rounded-lg bg-slate-950 p-3 font-mono text-xs text-slate-200">let db = Database::open_memory()?;
+let hook = DbSyncHook::new();
+let ver = hook.subscribe_prefix("tasks:");</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW: INTERACTIVE PLAYGROUND ==================== -->
+    <section id="view-playground" class="page-view hidden space-y-10">
+      <div>
+        <h1 class="text-3xl font-bold text-white sm:text-4xl">Interactive Reactivity &amp; Layout Playground</h1>
+        <p class="mt-2 max-w-2xl text-slate-300">Experiment with Tej-UI's glitch-free diamond signal propagation and SoA Flexbox layout parameters, and copy the generated Rust view code directly into your app.</p>
+      </div>
+
+      <div class="grid gap-8 lg:grid-cols-12">
+        <!-- Diamond DAG Simulator -->
+        <div class="space-y-4 rounded-xl border border-slate-800 bg-slate-900/70 p-6 lg:col-span-5">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-white">1. Diamond Signal DAG</h2>
+            <span class="rounded-full bg-emerald-500/15 px-2.5 py-0.5 font-mono text-[11px] text-emerald-300">0 Glitches</span>
+          </div>
+          <p class="text-xs text-slate-400">Adjust root <code class="text-sky-300">Signal&lt;i32&gt;</code> <strong class="text-white">A</strong>. Memos <strong class="text-white">B = A × 2</strong> and <strong class="text-white">C = A + 10</strong> update before downstream <strong class="text-white">D = B + C</strong> evaluates exactly once.</p>
+
+          <div class="flex items-center gap-3 rounded-lg bg-slate-950 p-3">
+            <label for="sig-a-slider" class="font-mono text-xs text-sky-300">Signal A:</label>
+            <input id="sig-a-slider" type="range" min="1" max="50" value="5" class="flex-1 accent-sky-500" />
+            <span id="sig-a-val" class="w-8 text-right font-mono text-sm font-bold text-white">5</span>
+          </div>
+
+          <!-- DAG Nodes Visual -->
+          <div class="grid grid-cols-2 gap-3 pt-1 font-mono text-xs">
+            <div class="col-span-2 rounded-lg border border-sky-500/40 bg-sky-500/10 p-3 text-center">
+              <div class="text-sky-300">Depth 0 · Signal A</div>
+              <div id="dag-a" class="mt-1 text-lg font-bold text-white">5</div>
+            </div>
+            <div class="rounded-lg border border-indigo-500/40 bg-indigo-500/10 p-3 text-center">
+              <div class="text-indigo-300">Depth 1 · Memo B (A×2)</div>
+              <div id="dag-b" class="mt-1 text-lg font-bold text-white">10</div>
+            </div>
+            <div class="rounded-lg border border-indigo-500/40 bg-indigo-500/10 p-3 text-center">
+              <div class="text-indigo-300">Depth 1 · Memo C (A+10)</div>
+              <div id="dag-c" class="mt-1 text-lg font-bold text-white">15</div>
+            </div>
+            <div class="col-span-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-center">
+              <div class="text-emerald-300">Depth 2 · Memo D (B + C)</div>
+              <div id="dag-d" class="mt-1 text-lg font-bold text-white">25</div>
+              <div id="dag-evals" class="mt-1 text-[11px] text-emerald-300/80">D evaluations: 1 (0 glitches)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Flexbox SoA Layout Simulator -->
+        <div class="space-y-4 rounded-xl border border-slate-800 bg-slate-900/70 p-6 lg:col-span-7">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-white">2. SoA Flexbox Layout &amp; Code Generator</h2>
+            <button type="button" id="copy-layout-code" class="inline-flex items-center gap-1 rounded bg-slate-800 px-2.5 py-1 text-xs text-slate-200 hover:bg-slate-700">
+              <i data-lucide="copy" class="h-3.5 w-3.5"></i>
+              <span>Copy Rust</span>
+            </button>
+          </div>
+
+          <div class="grid gap-3 sm:grid-cols-4">
+            <div>
+              <label for="lay-dir" class="block text-xs text-slate-400">Direction</label>
+              <select id="lay-dir" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-white">
+                <option value="row">HStack (Row)</option>
+                <option value="col">VStack (Column)</option>
+              </select>
+            </div>
+            <div>
+              <label for="lay-justify" class="block text-xs text-slate-400">JustifyContent</label>
+              <select id="lay-justify" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-white">
+                <option value="flex-start">FlexStart</option>
+                <option value="center">Center</option>
+                <option value="flex-end">FlexEnd</option>
+                <option value="space-between">SpaceBetween</option>
+              </select>
+            </div>
+            <div>
+              <label for="lay-align" class="block text-xs text-slate-400">AlignItems</label>
+              <select id="lay-align" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-white">
+                <option value="center">Center</option>
+                <option value="flex-start">FlexStart</option>
+                <option value="flex-end">FlexEnd</option>
+                <option value="stretch">Stretch</option>
+              </select>
+            </div>
+            <div>
+              <label for="lay-gap" class="block text-xs text-slate-400">Spacing (<span id="lay-gap-val">12</span>px)</label>
+              <input id="lay-gap" type="range" min="0" max="32" value="12" class="mt-2.5 w-full accent-sky-500" />
+            </div>
+          </div>
+
+          <!-- Live Preview Stage -->
+          <div id="layout-stage" class="flex min-h-[150px] rounded-lg border border-dashed border-sky-500/40 bg-slate-950 p-4 transition-all" style="flex-direction: row; justify-content: flex-start; align-items: center; gap: 12px;">
+            <div class="rounded-md bg-sky-500/20 px-4 py-2.5 font-mono text-xs font-semibold text-sky-200 ring-1 ring-sky-500/50">Card A</div>
+            <div class="rounded-md bg-indigo-500/20 px-4 py-4 font-mono text-xs font-semibold text-indigo-200 ring-1 ring-indigo-500/50">Card B</div>
+            <div class="rounded-md bg-emerald-500/20 px-4 py-2 font-mono text-xs font-semibold text-emerald-200 ring-1 ring-emerald-500/50">Card C</div>
+          </div>
+
+          <pre id="layout-code-output" class="overflow-x-auto rounded-lg bg-slate-950 p-3.5 font-mono text-xs leading-relaxed text-sky-200"></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW: CRATES EXPLORER ==================== -->
+    <section id="view-crates" class="page-view hidden space-y-8">
+      <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div>
+          <h1 class="text-3xl font-bold text-white sm:text-4xl">Workspace Crate Explorer</h1>
+          <p class="mt-2 text-slate-300">All 19 publishable crates in <code class="text-sky-300">tej-ui v0.1.0</code> with honest maturity ratings and responsibilities.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <input id="crate-search" type="search" placeholder="Filter crates..." class="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none" />
+          <div class="flex rounded-lg border border-slate-800 bg-slate-900 p-0.5 text-xs">
+            <button type="button" data-status="all" class="status-filter rounded-md bg-slate-800 px-2.5 py-1 font-medium text-white">All</button>
+            <button type="button" data-status="Production-Ready" class="status-filter rounded-md px-2.5 py-1 font-medium text-slate-400 hover:text-white">Ready</button>
+            <button type="button" data-status="Beta" class="status-filter rounded-md px-2.5 py-1 font-medium text-slate-400 hover:text-white">Beta</button>
+            <button type="button" data-status="Preview" class="status-filter rounded-md px-2.5 py-1 font-medium text-slate-400 hover:text-white">Preview</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="crates-grid" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"></div>
+    </section>
+
+    <!-- ==================== VIEW: DEVELOPER WIKI ==================== -->
+    <section id="view-wiki" class="page-view hidden space-y-8">
+      <div>
+        <h1 class="text-3xl font-bold text-white sm:text-4xl">Developer Wiki</h1>
+        <p class="mt-2 text-slate-300">Comprehensive engineering guides synchronized with <code class="text-sky-300">docs/wiki/</code> in the repository.</p>
+      </div>
+
+      <div class="grid gap-6 lg:grid-cols-12">
+        <aside class="lg:col-span-3">
+          <div id="wiki-sidebar" class="flex flex-row gap-1.5 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible"></div>
+        </aside>
+        <article id="wiki-content" class="rounded-xl border border-slate-800 bg-slate-900/70 p-6 sm:p-8 lg:col-span-9"></article>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="mt-16 border-t border-slate-800/80 py-8 text-center text-xs text-slate-500">
+    <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 sm:flex-row sm:px-6 lg:px-8">
+      <div>tej-ui v0.1.0 · Dual-licensed under MIT OR Apache-2.0 · Rust Edition 2024 (MSRV 1.85.0)</div>
+      <div class="flex items-center gap-4">
+        <button type="button" data-nav="wiki" class="hover:text-slate-300">Wiki Guides</button>
+        <button type="button" data-nav="crates" class="hover:text-slate-300">Crate Status</button>
+        <button type="button" data-nav="quickstart" class="hover:text-slate-300">Cargo Builder</button>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ---------- Data ----------
+    const FEATURES = [
+      { id: 'widgets', label: 'widgets', defaultOn: true, desc: 'DataGrid, RichTextEditor, TreeView, Forms, Overlays', crate: 'tej-ui-widgets' },
+      { id: 'a11y', label: 'a11y', defaultOn: true, desc: 'AccessKit semantic tree, ARIA shadow builder, roles', crate: 'tej-ui-a11y' },
+      { id: 'animation', label: 'animation', defaultOn: true, desc: 'Symplectic Euler springs, keyframes, morphing', crate: 'tej-ui-animation' },
+      { id: 'icons', label: 'icons', defaultOn: true, desc: '128 Lucide icons with full SVG 1.1 arc/Bézier parser', crate: 'tej-ui-icons' },
+      { id: 'db-sync', label: 'db-sync', defaultOn: false, desc: 'Tej-DB 0.1.0 commit hooks, zero-copy lenses, RLE', crate: 'tej-ui-db-sync' },
+      { id: '3d', label: '3d', defaultOn: false, desc: 'Cached 64-bit VisBuffer 3D viewport & Nanite meshlets', crate: 'tej-ui-3d' },
+      { id: 'services', label: 'services', defaultOn: false, desc: 'Fail-closed OTA verifier, zeroized keychain, persistence', crate: 'tej-ui-services' },
+      { id: 'devtools', label: 'devtools', defaultOn: false, desc: 'Widget inspector, dirty-rect HUD, DAG exporter', crate: 'tej-ui-devtools' },
+    ];
+
+    const CRATES = [
+      { name: 'tej-ui', status: 'Beta', layer: 'Umbrella', desc: 'Unified facade, prelude, App::run() epoch-driven loop, target-gated OS backends.' },
+      { name: 'tej-ui-core', status: 'Production-Ready', layer: 'State', desc: '8-byte Copy Signal<T>, glitch-free topological DAG, RAII guards, Store, WorkerBridge.' },
+      { name: 'tej-ui-view', status: 'Beta', layer: 'Views', desc: 'Zero-vtable View trait, tuple combinators, Styled borders, ErrorBoundary, TestHarness.' },
+      { name: 'tej-ui-layout', status: 'Production-Ready', layer: 'Layout', desc: 'Flat SoA LayoutArena with Flexbox alignment, margins, Column wrap, and Grid row_span.' },
+      { name: 'tej-ui-text', status: 'Beta', layer: 'Text', desc: 'Fontique font DB, Swash OpenType shaper, content-hashed TextMeasurer, capped rasterizer.' },
+      { name: 'tej-ui-animation', status: 'Production-Ready', layer: 'Motion', desc: 'Symplectic Euler springs with NaN/Inf guards, momentum-preserving AnimatedValue.' },
+      { name: 'tej-ui-hal', status: 'Beta', layer: 'GPU', desc: 'Instanced wgpu 24 quad/text/vector pipelines, sRGB decoding, HiDPI scaling, VramAtlas.' },
+      { name: 'tej-ui-icons', status: 'Production-Ready', layer: 'Icons', desc: '128 Lucide icons with full SVG 1.1 A/C/S/Q/T arc & curve flattening.' },
+      { name: 'tej-ui-widgets', status: 'Beta', layer: 'Widgets', desc: 'DataGrid, RichTextEditor (caret/selection/undo), UTF-8 InputMask, Modal, Tabs, TreeView.' },
+      { name: 'tej-ui-a11y', status: 'Beta', layer: 'A11y', desc: 'AccessKit diffing, enterprise roles, hidden filtering, HTML-escaped WebAriaShadowNode.' },
+      { name: 'tej-ui-db-sync', status: 'Beta', layer: 'Data', desc: 'Direct tej-db 0.1.0 commit hooks, checked DbRowLens, snapshot-isolated secondary queries.' },
+      { name: 'tej-ui-3d', status: 'Preview', layer: '3D', desc: 'Cached CPU 64-bit VisBuffer rasterizer, rotation_z, Reversed-Z ray picking, meshlet packer.' },
+      { name: 'tej-ui-services', status: 'Preview', layer: 'OS', desc: 'Fail-closed SignatureVerifier OTA, drop-zeroized SecureKeyStore, disk persistence.' },
+      { name: 'tej-ui-devtools', status: 'Preview', layer: 'Tools', desc: 'LayoutArena WidgetInspector, DirtyHudOverlay, Graphviz ReactiveDagInspector.' },
+      { name: 'tej-ui-cli', status: 'Beta', layer: 'CLI', desc: 'Executable `tej-ui` CLI binary for project scaffolding (`new`), `check`, and `info`.' },
+      { name: 'tej-ui-platform-linux', status: 'Beta', layer: 'Platform', desc: 'minifb software windowing, partial dirty-rect clearing, alpha-blended fontdue text.' },
+      { name: 'tej-ui-platform-windows', status: 'Preview', layer: 'Platform', desc: 'Win32 kinetic scroll & snap layout state models; safe Unavailable raw handle fallback.' },
+      { name: 'tej-ui-platform-macos', status: 'Preview', layer: 'Platform', desc: 'macOS elastic rubber-banding & Retina metrics; safe Unavailable raw handle fallback.' },
+      { name: 'tej-ui-platform-web', status: 'Preview', layer: 'Platform', desc: 'WASM32 viewport & event state abstractions; safe Unavailable raw handle fallback.' },
+    ];
+
+    const WIKI_PAGES = [
+      {
+        id: 'reactivity',
+        title: 'Reactivity & Signals',
+        badge: 'tej-ui-core',
+        summary: 'How 8-byte generational signals, glitch-free topological waves, disposal, and panic-safe RAII guards work.',
+        body: `
+          <p class="text-sm leading-relaxed text-slate-300">Every reactive cell in <code>tej-ui-core</code> is referenced by an 8-byte <code>SignalId { index: u32, generation: u32 }</code>. Because <code>Signal&lt;T&gt;</code> is <code>Copy</code>, you can move it into multiple event closures without <code>Rc::clone</code> boilerplate.</p>
+          <h4 class="mt-5 text-sm font-semibold text-white">Glitch-Free Diamond Propagation</h4>
+          <p class="mt-1.5 text-sm text-slate-300">When a root signal changes, <code>DependencyGraph</code> traverses transitive subscribers in ascending topological depth order. Downstream memos never observe half-updated parent states and skip propagation when <code>PartialEq</code> confirms the value did not change.</p>
+          <pre class="mt-3 overflow-x-auto rounded-lg bg-slate-950 p-4 font-mono text-xs text-sky-200">let price = Signal::new(100);
+let tax = Memo::new(move || price.get() / 10);
+let total = Memo::new(move || price.get() + tax.get());
+
+// Updating price evaluates `tax` (depth 1) before `total` (depth 2) — 0 glitches.
+price.set(200);
+assert_eq!(total.get(), 220);
+
+// Explicitly reclaim slots when tearing down dynamic views:
+total.dispose();
+tax.dispose();
+price.dispose();</pre>
+        `
+      },
+      {
+        id: 'layout',
+        title: 'Layout & Styling',
+        badge: 'tej-ui-layout',
+        summary: 'Flat Structure-of-Arrays Flexbox/Grid layout, alignment, margins, and container queries.',
+        body: `
+          <p class="text-sm leading-relaxed text-slate-300"><code>LayoutArena</code> stores node styles, bounds, parents, and children in flat contiguous vectors for cache locality. Stacks (<code>VStack</code>, <code>HStack</code>, <code>Grid</code>) allocate dedicated container nodes so child styles are never overwritten.</p>
+          <ul class="mt-3 list-disc space-y-1.5 pl-5 text-sm text-slate-300">
+            <li><strong>Flexbox:</strong> Supports <code>FlexDirection</code>, <code>AlignItems</code>, <code>JustifyContent</code>, <code>EdgeInsets</code> margins/padding, <code>flex_grow</code> alongside <code>Auto</code> siblings, and row/column <code>FlexWrap::Wrap</code>.</li>
+            <li><strong>CSS Grid:</strong> 2D occupancy placement with <code>col_span</code> and <code>row_span</code>.</li>
+            <li><strong>Cycle Safety:</strong> <code>LayoutArena::add_child</code> rejects self/ancestor cycles and cleanly detaches previous parents.</li>
+          </ul>
+          <pre class="mt-3 overflow-x-auto rounded-lg bg-slate-950 p-4 font-mono text-xs text-sky-200">HStack::new((
+    Text::new("Status").styled().padding(8.0),
+    Badge::new("Healthy"),
+))
+.spacing(12.0)
+.align_items(AlignItems::Center)
+.justify_content(JustifyContent::SpaceBetween)</pre>
+        `
+      },
+      {
+        id: 'widgets',
+        title: 'Widgets, Forms & A11y',
+        badge: 'tej-ui-widgets',
+        summary: 'Interactive widgets, UTF-8 safe input masking, RichTextEditor undo/caret, and AccessKit semantics.',
+        body: `
+          <p class="text-sm leading-relaxed text-slate-300">Enable the default <code>widgets</code> and <code>a11y</code> features for enterprise UI controls:</p>
+          <ul class="mt-3 list-disc space-y-1.5 pl-5 text-sm text-slate-300">
+            <li><strong>DataGrid:</strong> Virtualized visible row/column calculation with pinned left/right column offsets and full header/row rendering.</li>
+            <li><strong>RichTextEditor:</strong> Atomic transaction undo/redo for insertions and deletions, trailing newline preservation, and visual caret + selection highlight rendering.</li>
+            <li><strong>InputMask &amp; Validators:</strong> Character-indexed UTF-8 safe masking (no multi-byte panics) and <code>chars().count()</code> length validation.</li>
+            <li><strong>AccessKit &amp; ARIA:</strong> Enterprise roles (<code>Menu</code>, <code>Tree</code>, <code>Grid</code>, <code>ComboBox</code>, <code>Alert</code>, <code>Tooltip</code>), node removal via <code>A11yTree::remove_node</code>, and HTML-escaped ARIA attributes.</li>
+          </ul>
+        `
+      },
+      {
+        id: 'db-sync',
+        title: 'Zero-Copy Tej-DB Sync',
+        badge: 'tej-ui-db-sync',
+        summary: 'Binding UI views directly to embedded tej-db 0.1.0 ACID transactions without cloning strings.',
+        body: `
+          <p class="text-sm leading-relaxed text-slate-300"><code>tej-ui-db-sync</code> depends directly on <code>tej-db = "0.1.0"</code> and <code>tej-db-core = "0.1.0"</code> from crates.io. Register <code>DbSyncHook</code> on your database to automatically bump version signals whenever matching key prefixes commit.</p>
+          <pre class="mt-3 overflow-x-auto rounded-lg bg-slate-950 p-4 font-mono text-xs text-emerald-300">use tej_ui::prelude::*;
+use mydb::Database;
+
+let db = Database::open_memory()?;
+let hook = DbSyncHook::new();
+let orders_version = hook.subscribe_prefix("orders:");
+
+// Snapshot-isolated secondary index reads run in a single read tx.
+// Call `hook.unsubscribe_prefix("orders:")` when tearing down views.</pre>
+          <p class="mt-3 text-xs text-slate-400">Safety guarantees: <code>DbSyncHook::after_commit</code> drops its read lock before updating signals (preventing re-entrant deadlocks), and <code>DbRowLens</code> uses checked arithmetic on all slice offsets.</p>
+        `
+      },
+      {
+        id: 'gpu',
+        title: 'GPU HAL, Icons & 3D',
+        badge: 'tej-ui-hal',
+        summary: 'Instanced wgpu 24 shaders, sRGB linear colors, 128 Lucide SVG icons, and cached 3D viewports.',
+        body: `
+          <p class="text-sm leading-relaxed text-slate-300"><code>tej-ui-hal</code> provides three instanced <code>wgpu</code> 24 pipelines (<code>ui_quad.wgsl</code>, <code>ui_text.wgsl</code>, <code>ui_vector.wgsl</code>) with automatic scissor-rect resets before vector rendering, IEC 61966-2-1 sRGB-to-linear decoding in <code>PremulColor::from_rgba8</code>, per-side border widths, and drop-shadow spread.</p>
+          <p class="mt-2.5 text-sm leading-relaxed text-slate-300"><code>tej-ui-icons</code> ships 128 Lucide icons parsed through a complete SVG 1.1 path engine supporting <code>A/a</code> elliptical arcs, <code>C/c/S/s/Q/q/T/t</code> Bézier curves, implicit coordinate repeats, and closed subpath stroking.</p>
+        `
+      },
+      {
+        id: 'publishing',
+        title: 'Crates.io & Security',
+        badge: 'Release Ops',
+        summary: 'Publishing order, CI verification gates, fail-closed OTA signatures, and zeroized key storage.',
+        body: `
+          <p class="text-sm leading-relaxed text-slate-300">All 19 workspace crates declare <code>version = "0.1.0"</code>, dual <code>MIT OR Apache-2.0</code> licenses, Rust Edition 2024 with <code>resolver = "3"</code>, and target-gated OS dependencies.</p>
+          <ul class="mt-3 list-disc space-y-1.5 pl-5 text-sm text-slate-300">
+            <li><strong>CI Matrix:</strong> <code>.github/workflows/ci.yml</code> runs <code>cargo fmt</code>, <code>cargo clippy --all-targets</code> (with pedantic lints), cross-OS tests (Ubuntu, macOS, Windows), feature-matrix builds, and <code>cargo package --list</code>.</li>
+            <li><strong>Security Boundaries:</strong> <code>OtaUpdater</code> requires an explicit <code>SignatureVerifier</code> and blocks SemVer downgrades; <code>SecureKeyStore</code> zeroizes secrets on <code>Drop</code> and <code>delete_secret</code> and requires a <code>BiometricVerifier</code>.</li>
+          </ul>
+        `
+      }
+    ];
+
+    // ---------- State ----------
+    const state = {
+      activeView: 'home',
+      features: Object.fromEntries(FEATURES.map(f => [f.id, f.defaultOn])),
+      sigA: 5,
+      dagEvals: 1,
+      crateSearch: '',
+      crateStatus: 'all',
+      wikiId: 'reactivity',
+    };
+
+    // ---------- Helpers ----------
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      document.getElementById('toast-msg').textContent = msg;
+      el.classList.remove('hidden');
+      el.classList.add('flex');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => {
+        el.classList.add('hidden');
+        el.classList.remove('flex');
+      }, 2000);
+    }
+
+    function copyText(text, label) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => showToast(label || 'Copied to clipboard')).catch(() => fallbackCopy(text, label));
+      } else {
+        fallbackCopy(text, label);
+      }
+    }
+
+    function fallbackCopy(text, label) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (_) {}
+      document.body.removeChild(ta);
+      showToast(label || 'Copied to clipboard');
+    }
+
+    // ---------- Navigation ----------
+    function switchView(viewId) {
+      state.activeView = viewId;
+      document.querySelectorAll('.page-view').forEach(sec => {
+        sec.classList.toggle('hidden', sec.id !== 'view-' + viewId);
+      });
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        const active = btn.getAttribute('data-nav') === viewId;
+        btn.classList.toggle('bg-slate-800', active);
+        btn.classList.toggle('text-sky-300', active);
+      });
+      document.getElementById('mobile-menu').classList.add('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    document.querySelectorAll('[data-nav]').forEach(btn => {
+      btn.addEventListener('click', () => switchView(btn.getAttribute('data-nav')));
+    });
+
+    document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+      document.getElementById('mobile-menu').classList.toggle('hidden');
+    });
+
+    // ---------- Hero Copy Buttons ----------
+    document.getElementById('copy-cargo-add').addEventListener('click', () => {
+      copyText('cargo add tej-ui', 'Copied: cargo add tej-ui');
+    });
+    document.getElementById('copy-hero-code').addEventListener('click', () => {
+      copyText(document.getElementById('hero-code-block').innerText, 'Copied Rust quickstart');
+    });
+
+    // ---------- Feature Builder ----------
+    function renderFeatureBuilder() {
+      const container = document.getElementById('feature-checkboxes');
+      container.innerHTML = '';
+      FEATURES.forEach(f => {
+        const checked = !!state.features[f.id];
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `flex items-start gap-3 rounded-lg border p-3 text-left transition ${checked ? 'border-sky-500/60 bg-sky-500/10' : 'border-slate-800 bg-slate-950/60 hover:border-slate-700'}`;
+        btn.innerHTML = `
+          <span class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${checked ? 'border-sky-400 bg-sky-500 text-slate-950' : 'border-slate-600'} text-[10px] font-bold">${checked ? '✓' : ''}</span>
+          <span>
+            <span class="block font-mono text-xs font-semibold text-white">${f.label}</span>
+            <span class="mt-0.5 block text-[11px] leading-snug text-slate-400">${f.desc}</span>
+          </span>`;
+        btn.addEventListener('click', () => {
+          state.features[f.id] = !state.features[f.id];
+          renderFeatureBuilder();
+        });
+        container.appendChild(btn);
+      });
+
+      const active = FEATURES.filter(f => state.features[f.id]);
+      const isDefault = FEATURES.every(f => state.features[f.id] === f.defaultOn);
+      let toml = '[dependencies]\n';
+      if (isDefault) {
+        toml += 'tej-ui = "0.1.0"';
+      } else if (active.length === 0) {
+        toml += 'tej-ui = { version = "0.1.0", default-features = false }';
+      } else {
+        const list = active.map(f => `"${f.id}"`).join(', ');
+        toml += `tej-ui = { version = "0.1.0", default-features = false, features = [${list}] }`;
+      }
+      document.getElementById('feature-toml-output').textContent = toml;
+
+      const pills = ['tej-ui-core', 'tej-ui-view', 'tej-ui-layout', 'tej-ui-text', 'tej-ui-hal', ...active.map(f => f.crate)];
+      document.getElementById('feature-crate-pills').innerHTML = pills.map(c =>
+        `<span class="rounded bg-slate-800 px-2 py-0.5 font-mono text-[11px] text-sky-200">${c}</span>`
+      ).join('');
+    }
+
+    document.getElementById('reset-features').addEventListener('click', () => {
+      FEATURES.forEach(f => { state.features[f.id] = f.defaultOn; });
+      renderFeatureBuilder();
+    });
+    document.getElementById('copy-feature-toml').addEventListener('click', () => {
+      copyText(document.getElementById('feature-toml-output').textContent, 'Copied Cargo.toml snippet');
+    });
+
+    // ---------- Playground: Diamond DAG ----------
+    const sigSlider = document.getElementById('sig-a-slider');
+    function updateDag() {
+      const a = Number(sigSlider.value);
+      const b = a * 2;
+      const c = a + 10;
+      const d = b + c;
+      if (a !== state.sigA) {
+        state.sigA = a;
+        state.dagEvals += 1;
+      }
+      document.getElementById('sig-a-val').textContent = a;
+      document.getElementById('dag-a').textContent = a;
+      document.getElementById('dag-b').textContent = b;
+      document.getElementById('dag-c').textContent = c;
+      document.getElementById('dag-d').textContent = d;
+      document.getElementById('dag-evals').textContent = `D evaluations: ${state.dagEvals} (0 glitches)`;
+    }
+    sigSlider.addEventListener('input', updateDag);
+
+    // ---------- Playground: Flexbox Layout ----------
+    const layDir = document.getElementById('lay-dir');
+    const layJustify = document.getElementById('lay-justify');
+    const layAlign = document.getElementById('lay-align');
+    const layGap = document.getElementById('lay-gap');
+
+    function updateLayoutPlayground() {
+      const dir = layDir.value;
+      const justify = layJustify.value;
+      const align = layAlign.value;
+      const gap = layGap.value;
+      document.getElementById('lay-gap-val').textContent = gap;
+
+      const stage = document.getElementById('layout-stage');
+      stage.style.flexDirection = dir === 'row' ? 'row' : 'column';
+      stage.style.justifyContent = justify;
+      stage.style.alignItems = align;
+      stage.style.gap = gap + 'px';
+
+      const stackName = dir === 'row' ? 'HStack' : 'VStack';
+      const jMap = { 'flex-start': 'FlexStart', 'center': 'Center', 'flex-end': 'FlexEnd', 'space-between': 'SpaceBetween' };
+      const aMap = { 'center': 'Center', 'flex-start': 'FlexStart', 'flex-end': 'FlexEnd', 'stretch': 'Stretch' };
+      const code = `${stackName}::new((\n    Card::new(Text::new("Card A")),\n    Card::new(Text::new("Card B")),\n    Card::new(Text::new("Card C")),\n))\n.spacing(${gap}.0)\n.justify_content(JustifyContent::${jMap[justify]})\n.align_items(AlignItems::${aMap[align]})`;
+      document.getElementById('layout-code-output').textContent = code;
+    }
+
+    [layDir, layJustify, layAlign, layGap].forEach(el => el.addEventListener('input', updateLayoutPlayground));
+    document.getElementById('copy-layout-code').addEventListener('click', () => {
+      copyText(document.getElementById('layout-code-output').textContent, 'Copied layout Rust code');
+    });
+
+    // ---------- Crates Explorer ----------
+    function renderCrates() {
+      const q = state.crateSearch.trim().toLowerCase();
+      const filtered = CRATES.filter(c => {
+        const matchStatus = state.crateStatus === 'all' || c.status === state.crateStatus;
+        const matchQuery = !q || c.name.toLowerCase().includes(q) || c.desc.toLowerCase().includes(q) || c.layer.toLowerCase().includes(q);
+        return matchStatus && matchQuery;
+      });
+      const badgeStyle = {
+        'Production-Ready': 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
+        'Beta': 'border-sky-500/40 bg-sky-500/10 text-sky-300',
+        'Preview': 'border-amber-500/40 bg-amber-500/10 text-amber-300',
+      };
+      const grid = document.getElementById('crates-grid');
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div class="col-span-full rounded-xl border border-slate-800 p-8 text-center text-sm text-slate-400">No crates match your filter.</div>';
+        return;
+      }
+      grid.innerHTML = filtered.map(c => `
+        <div class="flex flex-col justify-between rounded-xl border border-slate-800 bg-slate-900/60 p-5 transition hover:border-slate-700">
+          <div>
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-mono text-sm font-semibold text-white">${c.name}</span>
+              <span class="rounded-full border px-2 py-0.5 text-[11px] font-medium ${badgeStyle[c.status]}">${c.status}</span>
+            </div>
+            <p class="mt-2.5 text-xs leading-relaxed text-slate-400">${c.desc}</p>
+          </div>
+          <div class="mt-4 flex items-center justify-between border-t border-slate-800/80 pt-3 font-mono text-[11px] text-slate-500">
+            <span>Layer: ${c.layer}</span>
+            <span>v0.1.0</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    document.getElementById('crate-search').addEventListener('input', e => {
+      state.crateSearch = e.target.value;
+      renderCrates();
+    });
+    document.querySelectorAll('.status-filter').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.crateStatus = btn.getAttribute('data-status');
+        document.querySelectorAll('.status-filter').forEach(b => {
+          const active = b === btn;
+          b.classList.toggle('bg-slate-800', active);
+          b.classList.toggle('text-white', active);
+          b.classList.toggle('text-slate-400', !active);
+        });
+        renderCrates();
+      });
+    });
+
+    // ---------- Wiki ----------
+    function renderWiki() {
+      const sidebar = document.getElementById('wiki-sidebar');
+      sidebar.innerHTML = '';
+      WIKI_PAGES.forEach(p => {
+        const active = p.id === state.wikiId;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `shrink-0 rounded-lg border px-3.5 py-2.5 text-left text-sm font-medium transition ${active ? 'border-sky-500/50 bg-sky-500/10 text-sky-200' : 'border-transparent text-slate-400 hover:bg-slate-900 hover:text-slate-200'}`;
+        btn.textContent = p.title;
+        btn.addEventListener('click', () => {
+          state.wikiId = p.id;
+          renderWiki();
+        });
+        sidebar.appendChild(btn);
+      });
+
+      const page = WIKI_PAGES.find(p => p.id === state.wikiId) || WIKI_PAGES[0];
+      document.getElementById('wiki-content').innerHTML = `
+        <div class="flex flex-wrap items-center gap-2.5">
+          <h2 class="text-2xl font-bold text-white">${page.title}</h2>
+          <span class="rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-0.5 font-mono text-xs text-sky-300">${page.badge}</span>
+        </div>
+        <p class="mt-2 text-sm text-slate-400">${page.summary}</p>
+        <div class="mt-6 border-t border-slate-800 pt-5">${page.body}</div>
+      `;
+    }
+
+    // ---------- Init ----------
+    renderFeatureBuilder();
+    updateDag();
+    updateLayoutPlayground();
+    renderCrates();
+    renderWiki();
+    if (window.lucide) { window.lucide.createIcons(); }
+  </script>
+</body>
+</html>

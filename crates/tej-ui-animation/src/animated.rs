@@ -98,13 +98,25 @@ impl<T: Lerp + Clone + Send + Sync + 'static> AnimatedValue<T> {
         &self.target_value
     }
 
-    /// Retarget to new value, smoothly beginning a new spring transition from the current state.
+    /// Current velocity of the underlying spring progress.
+    #[must_use]
+    pub const fn velocity(&self) -> f32 {
+        self.progress.velocity
+    }
+
+    /// Retarget to new value, smoothly beginning a new spring transition from the current state
+    /// while preserving existing velocity momentum if currently in motion.
     pub fn set_target(&mut self, new_target: T) {
+        let preserved_velocity = if self.progress.is_at_rest() {
+            0.0
+        } else {
+            self.progress.velocity
+        };
         self.start_value = self.get();
         self.target_value = new_target;
         self.progress.current = 0.0;
         self.progress.target = 1.0;
-        self.progress.velocity = 0.0;
+        self.progress.velocity = preserved_velocity;
     }
 
     /// Check if the value animation has completed and is at rest.
@@ -113,9 +125,9 @@ impl<T: Lerp + Clone + Send + Sync + 'static> AnimatedValue<T> {
         self.progress.is_at_rest()
     }
 
-    /// Advance animation by `dt` seconds and update signal.
+    /// Advance animation by `dt` seconds and update signal without clamping spring overshoot.
     pub fn step(&mut self, dt: f32) -> T {
-        let t = self.progress.step(dt).clamp(0.0, 1.0);
+        let t = self.progress.step(dt);
         let interpolated = self.start_value.lerp(&self.target_value, t);
         self.signal.set(interpolated.clone());
         interpolated

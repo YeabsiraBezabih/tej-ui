@@ -27,7 +27,7 @@ pub use dialogs::{FileDialog, FileDialogProvider, FileFilter};
 pub use dnd::{DragDropEvent, DropPayload};
 pub use dnd_protocol::{DragPreview, DragSession, DropAction, MimeNegotiator};
 pub use error::{Result, ServiceError};
-pub use keychain::{BiometricAuthResult, BiometricPromptConfig, SecureKeyStore};
+pub use keychain::{BiometricAuthResult, BiometricPromptConfig, BiometricVerifier, SecureKeyStore};
 pub use l10n::{L10nManager, Locale, MessageCatalog, MessageEntry, PluralCategory};
 pub use menu::{AppBadgeController, MenuBar, MenuItem, MenuItemRole, TaskbarState};
 pub use notification::{
@@ -43,4 +43,7 @@ pub use shortcuts::{
 };
 pub use telemetry::{CrashReport, CrashReporter, TelemetrySpan};
 pub use tray::{TrayEvent, TrayIcon};
-pub use updater::{OtaUpdater, ReleaseChannel, UpdateManifest, UpdateState};
+pub use updater::{
+    Ed25519Sha256Verifier, OtaUpdater, ReleaseChannel, SignatureVerifier, UpdateManifest,
+    UpdateState, parse_semver,
+};

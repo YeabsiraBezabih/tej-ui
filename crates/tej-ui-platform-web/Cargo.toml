@@ -5,6 +5,13 @@ edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
+description = "WebAssembly Canvas/DOM windowing, event bridge, and surface compositor backend for tej-ui."
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/tej-ui-platform-web"
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [dependencies]
 tej-ui-hal.workspace = true

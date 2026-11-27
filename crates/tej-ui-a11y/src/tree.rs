@@ -6,12 +6,18 @@ use std::collections::{HashMap, HashSet};
 use tej_ui_layout::Rect;
 
 /// Semantic accessibility tree bridge for platform screen readers.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct A11yTree {
     root_id: Option<A11yId>,
     nodes: HashMap<A11yId, A11yNode>,
     dirty_nodes: HashSet<A11yId>,
     next_id: u32,
+}
+
+impl Default for A11yTree {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl A11yTree {
@@ -41,6 +47,28 @@ impl A11yTree {
         let id = node.id;
         self.nodes.insert(id, node);
         self.dirty_nodes.insert(id);
+    }
+
+    /// Remove a node from the tree, detaching it from any parent's children list
+    /// and clearing its dirty flag to prevent memory leaks.
+    pub fn remove_node(&mut self, id: A11yId) -> Option<A11yNode> {
+        let removed = self.nodes.remove(&id)?;
+        self.dirty_nodes.remove(&id);
+        if self.root_id == Some(id) {
+            self.root_id = None;
+        }
+        let mut modified_parents = Vec::new();
+        for (&parent_id, parent) in &mut self.nodes {
+            let before = parent.children.len();
+            parent.children.retain(|child| *child != id);
+            if parent.children.len() != before {
+                modified_parents.push(parent_id);
+            }
+        }
+        for parent_id in modified_parents {
+            self.dirty_nodes.insert(parent_id);
+        }
+        Some(removed)
     }
 
     /// Explicitly mark a node as dirty.

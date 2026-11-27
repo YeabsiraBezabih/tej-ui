@@ -117,23 +117,22 @@ impl<V: View> View for Grid<V> {
     }
 
     fn layout(&self, state: &mut Self::State, arena: &mut tej_ui_layout::LayoutArena) -> u32 {
-        let child_node = self.children.layout(&mut state.child_state, arena);
-        arena.styles[child_node as usize].display = DisplayMode::Grid;
-        arena.styles[child_node as usize].grid_columns = self.columns;
-        arena.styles[child_node as usize].grid_column_gap = self.column_gap;
-        arena.styles[child_node as usize].grid_row_gap = self.row_gap;
-        arena.styles[child_node as usize].padding = tej_ui_layout::Insets::all(self.padding as f32);
-        if self.width != Dimension::Auto {
-            arena.styles[child_node as usize].width = self.width;
-        }
-        if self.height != Dimension::Auto {
-            arena.styles[child_node as usize].height = self.height;
-        }
-        if self.flex_grow > 0.0 {
-            arena.styles[child_node as usize].flex_grow = self.flex_grow;
-        }
-        state.node = child_node;
-        child_node
+        let style = tej_ui_layout::LayoutStyle {
+            display: DisplayMode::Grid,
+            grid_columns: self.columns,
+            grid_column_gap: self.column_gap,
+            grid_row_gap: self.row_gap,
+            padding: tej_ui_layout::Insets::all(self.padding as f32),
+            width: self.width,
+            height: self.height,
+            flex_grow: self.flex_grow,
+            ..Default::default()
+        };
+        let container = arena.allocate_node(style);
+        self.children
+            .layout_children(&mut state.child_state, arena, container);
+        state.node = container;
+        container
     }
 
     fn paint(&self, state: &Self::State, ctx: &mut crate::paint::PaintContext<'_>) {
@@ -147,5 +146,30 @@ impl<V: View> View for Grid<V> {
     ) {
         self.children
             .register_events(&state.child_state, dispatcher);
+    }
+
+    fn accessibility(
+        &self,
+        state: &Self::State,
+        arena: &tej_ui_layout::LayoutArena,
+        tree: &mut tej_ui_a11y::A11yTree,
+        parent: Option<tej_ui_a11y::A11yId>,
+    ) {
+        let id = tree.allocate_id();
+        let bounds = arena
+            .computed_bounds
+            .get(state.node as usize)
+            .copied()
+            .unwrap_or(tej_ui_layout::Rect::ZERO);
+        let node = tej_ui_a11y::A11yNode::new(id, tej_ui_a11y::A11yRole::Grid).with_bounds(bounds);
+        tree.insert_node(node);
+        if let Some(parent_id) = parent {
+            if let Some(p) = tree.get_node_mut(parent_id) {
+                p.children.push(id);
+            }
+            tree.mark_dirty(parent_id);
+        }
+        self.children
+            .accessibility(&state.child_state, arena, tree, Some(id));
     }
 }

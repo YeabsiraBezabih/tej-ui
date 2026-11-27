@@ -19,9 +19,10 @@ struct VertexOutput {
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
     var out: VertexOutput;
-    // Map screen-space pixel coordinates to NDC [-1, 1] with Y down
-    let ndc_x = (in.position.x / viewport.viewport_size.x) * 2.0 - 1.0;
-    let ndc_y = 1.0 - (in.position.y / viewport.viewport_size.y) * 2.0;
+    // Scale logical coordinates by display scale_factor before converting to NDC [-1, 1] with Y down
+    let phys_pos = in.position * viewport.scale_factor;
+    let ndc_x = (phys_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
+    let ndc_y = 1.0 - (phys_pos.y / viewport.viewport_size.y) * 2.0;
     out.clip_position = vec4<f32>(ndc_x, ndc_y, 0.0, 1.0);
     out.color = in.color;
     return out;

@@ -122,4 +122,29 @@ impl View for Checkbox {
             }),
         );
     }
+
+    fn accessibility(
+        &self,
+        state: &Self::State,
+        arena: &tej_ui_layout::LayoutArena,
+        tree: &mut tej_ui_a11y::A11yTree,
+        parent: Option<tej_ui_a11y::A11yId>,
+    ) {
+        let id = tree.allocate_id();
+        let bounds = arena
+            .computed_bounds
+            .get(state.node as usize)
+            .copied()
+            .unwrap_or(tej_ui_layout::Rect::ZERO);
+        let mut node =
+            tej_ui_a11y::A11yNode::new(id, tej_ui_a11y::A11yRole::Checkbox).with_bounds(bounds);
+        node.is_checked = Some(state.is_checked);
+        tree.insert_node(node);
+        if let Some(parent_id) = parent {
+            if let Some(p) = tree.get_node_mut(parent_id) {
+                p.children.push(id);
+            }
+            tree.mark_dirty(parent_id);
+        }
+    }
 }

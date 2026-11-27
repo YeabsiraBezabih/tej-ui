@@ -1,18 +1,44 @@
 use std::fmt::Debug;
+use tej_ui_core::ReactiveRuntime;
 use tej_ui_hal::{DirtyRectTracker, PlatformWindow, SurfaceCompositor, WindowConfig};
 use tej_ui_layout::{LayoutArena, LayoutEngine};
 use tej_ui_view::View;
 
-#[cfg(target_os = "windows")]
+#[cfg(target_arch = "wasm32")]
+use tej_ui_platform_web::{WebSurfaceCompositor as NativeSurface, WebWindow as NativeWindow};
+
+#[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
 use tej_ui_platform_windows::{
     DirectCompositionSurface as NativeSurface, WindowsWindow as NativeWindow,
 };
 
-#[cfg(target_os = "macos")]
+#[cfg(all(not(target_arch = "wasm32"), target_os = "macos"))]
 use tej_ui_platform_macos::{MacosWindow as NativeWindow, MetalSurfaceCompositor as NativeSurface};
 
-#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    not(any(target_os = "windows", target_os = "macos"))
+))]
 use tej_ui_platform_linux::{LinuxSurface as NativeSurface, LinuxWindow as NativeWindow};
+
+#[cfg(target_arch = "wasm32")]
+fn create_native_surface(size: tej_ui_layout::Size) -> NativeSurface {
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    NativeSurface::new(size.width.max(1.0) as u32, size.height.max(1.0) as u32)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn create_native_surface(size: tej_ui_layout::Size) -> NativeSurface {
+    NativeSurface::from_size(size)
+}
+
+#[cfg(target_arch = "wasm32")]
+fn present_native_surface(_window: &NativeWindow, _surface: &NativeSurface) {}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn present_native_surface(window: &NativeWindow, surface: &NativeSurface) {
+    window.present(surface);
+}
 
 /// High-level application runner coordinating windowing, reactive updates, layout, and presentation.
 pub struct App<V: View> {
@@ -44,6 +70,41 @@ impl<V: View> App<V> {
         self
     }
 
+    /// Run the production desktop GPU event loop (`winit` 0.30 + `wgpu` 24 `GpuCompositor`)
+    /// with `ControlFlow::Wait` for 0.0% idle CPU usage.
+    #[cfg(all(feature = "native-gpu", not(target_arch = "wasm32")))]
+    pub fn run_native(self) -> Result<(), Box<dyn std::error::Error>> {
+        crate::native_runner::run_native_app(self.config, self.root_view)
+    }
+
+    /// Render a single frame of this application directly into a caller-provided `SurfaceCompositor`
+    /// (such as `GpuSurfaceBridge` for headless GPU verification).
+    pub fn run_frame_on_surface<S: SurfaceCompositor>(self, surface: &mut S) -> V::State {
+        let mut layout_arena = LayoutArena::new();
+        let mut dirty_tracker = DirtyRectTracker::new();
+
+        let mut state = self.root_view.build();
+        let root_node = self.root_view.layout(&mut state, &mut layout_arena);
+        LayoutEngine::compute_layout(&mut layout_arena, root_node, self.config.size);
+
+        let theme = tej_ui_view::use_theme();
+        dirty_tracker.mark_full_dirty();
+        surface.begin_frame(dirty_tracker.rects());
+        surface.fill_rect(
+            tej_ui_layout::Rect::new(0.0, 0.0, self.config.size.width, self.config.size.height),
+            theme.colors.background,
+        );
+
+        let mut paint_ctx =
+            tej_ui_view::PaintContext::new(surface, &layout_arena, &theme, dirty_tracker.rects());
+        self.root_view.paint(&state, &mut paint_ctx);
+
+        surface.end_frame();
+        dirty_tracker.reset();
+
+        state
+    }
+
     /// Run the interactive event loop coordinating windowing, events, layout, and rendering.
     pub fn run(self) -> Result<(), Box<dyn std::error::Error>> {
         let mut window = NativeWindow::from_config(self.config);
@@ -51,7 +112,7 @@ impl<V: View> App<V> {
             return Ok(());
         }
 
-        let mut surface = NativeSurface::from_size(window.size());
+        let mut surface = create_native_surface(window.size());
         let mut layout_arena = LayoutArena::new();
         let mut dirty_tracker = DirtyRectTracker::new();
         let mut dispatcher = tej_ui_view::EventDispatcher::new();
@@ -64,6 +125,7 @@ impl<V: View> App<V> {
 
         dirty_tracker.mark_full_dirty();
         let mut scroll_offset_y: f32 = 0.0;
+        let mut last_reactive_epoch = ReactiveRuntime::epoch();
 
         while window.is_open() {
             let events = window.poll_events();
@@ -83,11 +145,8 @@ impl<V: View> App<V> {
                         dirty_tracker.mark_full_dirty();
                     }
                     tej_ui_hal::UiEvent::MouseMove { position } => {
-                        let adj_pos = if position.x >= 220.0 && position.y >= 50.0 {
-                            tej_ui_layout::Point::new(position.x, position.y + scroll_offset_y)
-                        } else {
-                            *position
-                        };
+                        let adj_pos =
+                            tej_ui_layout::Point::new(position.x, position.y + scroll_offset_y);
                         let adj_event = tej_ui_hal::UiEvent::MouseMove { position: adj_pos };
                         let res = dispatcher.dispatch(&adj_event, &layout_arena, root_node);
                         if res.handled || res.needs_repaint {
@@ -96,11 +155,8 @@ impl<V: View> App<V> {
                         }
                     }
                     tej_ui_hal::UiEvent::MouseDown { button, position } => {
-                        let adj_pos = if position.x >= 220.0 && position.y >= 50.0 {
-                            tej_ui_layout::Point::new(position.x, position.y + scroll_offset_y)
-                        } else {
-                            *position
-                        };
+                        let adj_pos =
+                            tej_ui_layout::Point::new(position.x, position.y + scroll_offset_y);
                         let adj_event = tej_ui_hal::UiEvent::MouseDown {
                             button: *button,
                             position: adj_pos,
@@ -116,11 +172,8 @@ impl<V: View> App<V> {
                         }
                     }
                     tej_ui_hal::UiEvent::MouseUp { button, position } => {
-                        let adj_pos = if position.x >= 220.0 && position.y >= 50.0 {
-                            tej_ui_layout::Point::new(position.x, position.y + scroll_offset_y)
-                        } else {
-                            *position
-                        };
+                        let adj_pos =
+                            tej_ui_layout::Point::new(position.x, position.y + scroll_offset_y);
                         let adj_event = tej_ui_hal::UiEvent::MouseUp {
                             button: *button,
                             position: adj_pos,
@@ -147,6 +200,15 @@ impl<V: View> App<V> {
                         }
                     }
                 }
+            }
+
+            // Detect external or background reactive signal mutations via epoch delta
+            let current_epoch = ReactiveRuntime::epoch();
+            if current_epoch != last_reactive_epoch {
+                last_reactive_epoch = current_epoch;
+                needs_relayout = true;
+                needs_repaint = true;
+                dirty_tracker.mark_full_dirty();
             }
 
             if needs_repaint || needs_relayout || dirty_tracker.has_dirty() {
@@ -176,7 +238,7 @@ impl<V: View> App<V> {
                     &cur_theme,
                     dirty_tracker.rects(),
                 )
-                .with_scroll(scroll_offset_y, 220.0)
+                .with_scroll(scroll_offset_y, 0.0)
                 .with_interaction(
                     dispatcher.focused_node,
                     dispatcher.hovered_node,
@@ -184,13 +246,12 @@ impl<V: View> App<V> {
                 );
                 self.root_view.paint(&state, &mut paint_ctx);
                 surface.end_frame();
-                window.present(&surface);
+                present_native_surface(&window, &surface);
                 dirty_tracker.reset();
                 // When actively rendering, run at standard ~120Hz tick pacing
                 std::thread::sleep(std::time::Duration::from_millis(8));
             } else {
-                window.present(&surface);
-                // When idle with no mutations, sleep longer (16ms) to eliminate CPU wakeups
+                // Idle: skip redundant presentation and sleep longer to minimize CPU wakeups
                 std::thread::sleep(std::time::Duration::from_millis(16));
             }
         }
@@ -201,7 +262,7 @@ impl<V: View> App<V> {
     /// Run the single-frame execution or event loop.
     pub fn run_headless_frame(self) -> V::State {
         let window = NativeWindow::from_config(self.config);
-        let mut surface = NativeSurface::from_size(window.size());
+        let mut surface = create_native_surface(window.size());
         let mut layout_arena = LayoutArena::new();
         let mut dirty_tracker = DirtyRectTracker::new();
 

@@ -60,6 +60,12 @@ impl Breakpoint {
     }
 }
 
+/// Largest `f32` strictly less than `480.0`, avoiding any dead zone or overlap with `>= 480.0`.
+const COMPACT_MAX_WIDTH: f32 = f32::from_bits(480.0_f32.to_bits() - 1);
+
+/// Largest `f32` strictly less than `840.0`, avoiding any dead zone or overlap with `>= 840.0`.
+const MEDIUM_MAX_WIDTH: f32 = f32::from_bits(840.0_f32.to_bits() - 1);
+
 /// A container query specifying dimension constraints and adaptive style overrides.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct ContainerQuery {
@@ -100,32 +106,32 @@ impl ContainerQuery {
         }
     }
 
-    /// Creates a query targeting compact container widths (< 480pt).
+    /// Creates a query targeting compact container widths (`width < 480pt`).
     #[must_use]
     pub const fn compact() -> Self {
-        Self::new().max_width(479.9)
+        Self::new().max_width(COMPACT_MAX_WIDTH)
     }
 
-    /// Creates a query targeting medium container widths (< 840pt).
+    /// Creates a query targeting medium container widths (`480pt <= width < 840pt`).
     #[must_use]
     pub const fn medium() -> Self {
-        Self::new().max_width(839.9)
+        Self::new().min_width(480.0).max_width(MEDIUM_MAX_WIDTH)
     }
 
-    /// Creates a query targeting expanded container widths (>= 840pt).
+    /// Creates a query targeting expanded container widths (`width >= 840pt`).
     #[must_use]
     pub const fn expanded() -> Self {
         Self::new().min_width(840.0)
     }
 
-    /// Sets maximum container width constraint (e.g. `< 500.0`).
+    /// Sets maximum container width constraint (inclusive).
     #[must_use]
     pub const fn max_width(mut self, max: f32) -> Self {
         self.max_width = Some(max);
         self
     }
 
-    /// Sets minimum container width constraint (e.g. `>= 800.0`).
+    /// Sets minimum container width constraint (inclusive).
     #[must_use]
     pub const fn min_width(mut self, min: f32) -> Self {
         self.min_width = Some(min);

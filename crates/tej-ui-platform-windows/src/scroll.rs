@@ -34,6 +34,8 @@ impl Win32ScrollPhysics {
 
     /// Handles a `WM_MOUSEWHEEL` (vertical) or `WM_MOUSEHWHEEL` (horizontal) message.
     pub fn handle_wheel_message(&mut self, raw_delta: f32, is_horizontal: bool) -> f32 {
+        self.accumulated_wheel_delta += raw_delta;
+
         // High-precision smooth scrolling (fractional WHEEL_DELTA)
         let normalized = raw_delta / WHEEL_DELTA;
         let pixel_delta = normalized * self.scroll_lines_per_click * self.line_height_pixels;

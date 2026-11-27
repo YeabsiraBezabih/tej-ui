@@ -40,7 +40,7 @@ pub enum TransformStyle {
 }
 
 /// Motion, transition, transform, and keyframe animation properties.
-#[derive(Clone, PartialEq, Debug, Default)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct MotionProps {
     pub transition_duration_ms: u32,
     pub transition_delay_ms: u32,
@@ -63,4 +63,32 @@ pub struct MotionProps {
     pub transform_style: TransformStyle,
     pub backface_visible: bool,
     pub scroll_driven_progress: bool,
+}
+
+impl Default for MotionProps {
+    fn default() -> Self {
+        Self {
+            transition_duration_ms: 0,
+            transition_delay_ms: 0,
+            transition_timing: TimingFunction::default(),
+            transform_translate_x: 0.0,
+            transform_translate_y: 0.0,
+            transform_scale: 1.0,
+            transform_rotate_deg: 0.0,
+            transform_origin_x: 0.0,
+            transform_origin_y: 0.0,
+            animation_name: None,
+            animation_duration_ms: 0,
+            animation_delay_ms: 0,
+            animation_timing: TimingFunction::default(),
+            animation_iterations: 0,
+            animation_direction: AnimationDirection::default(),
+            animation_fill_mode: AnimationFillMode::default(),
+            animation_play_state: AnimationPlayState::default(),
+            perspective: None,
+            transform_style: TransformStyle::default(),
+            backface_visible: false,
+            scroll_driven_progress: false,
+        }
+    }
 }

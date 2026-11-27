@@ -79,6 +79,36 @@ impl<T: Clone + PartialEq + Send + Sync + 'static> RadioGroup<T> {
     }
 }
 
+fn step_radio_selection<T: Clone + PartialEq + Send + Sync + 'static>(
+    items: &[RadioItem<T>],
+    sig: Signal<T>,
+    on_change: &RadioCallback<T>,
+    delta: isize,
+) {
+    let enabled_indices: Vec<usize> = items
+        .iter()
+        .enumerate()
+        .filter_map(|(i, it)| (!it.disabled).then_some(i))
+        .collect();
+    if enabled_indices.is_empty() {
+        return;
+    }
+
+    let current_val = sig.get();
+    let cur_pos = enabled_indices
+        .iter()
+        .position(|&idx| items[idx].value == current_val)
+        .unwrap_or(0);
+    let len = enabled_indices.len() as isize;
+    let next_pos = (cur_pos as isize + delta).rem_euclid(len) as usize;
+    let target_idx = enabled_indices[next_pos];
+    let val = items[target_idx].value.clone();
+    sig.set(val.clone());
+    if let Some(cb) = on_change {
+        cb(&val);
+    }
+}
+
 impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> View for RadioGroup<T> {
     type State = RadioGroupState;
 
@@ -210,6 +240,19 @@ impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> View for Ra
     }
 
     fn register_events(&self, state: &Self::State, dispatcher: &mut tej_ui_view::EventDispatcher) {
+        // Root keyboard handler for ArrowUp/Left/Down/Right
+        let items_root = self.items.clone();
+        let sig_root = self.selected;
+        let on_change_root = self.on_change.clone();
+        dispatcher.register_key_down(
+            state.node,
+            Arc::new(move |key_code| match key_code {
+                37 | 38 => step_radio_selection(&items_root, sig_root, &on_change_root, -1),
+                39 | 40 => step_radio_selection(&items_root, sig_root, &on_change_root, 1),
+                _ => {}
+            }),
+        );
+
         for (i, item) in self.items.iter().enumerate() {
             if !item.disabled {
                 if let Some(&item_node) = state.item_nodes.get(i) {
@@ -223,6 +266,30 @@ impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> View for Ra
                             if let Some(cb) = &on_change {
                                 cb(&val);
                             }
+                        }),
+                    );
+
+                    // Keyboard navigation on each radio item (Space/Enter/Arrows)
+                    let items_item = self.items.clone();
+                    let item_val = item.value.clone();
+                    let sig_key = self.selected;
+                    let on_change_key = self.on_change.clone();
+                    dispatcher.register_key_down(
+                        item_node,
+                        Arc::new(move |key_code| match key_code {
+                            13 | 32 => {
+                                sig_key.set(item_val.clone());
+                                if let Some(cb) = &on_change_key {
+                                    cb(&item_val);
+                                }
+                            }
+                            37 | 38 => {
+                                step_radio_selection(&items_item, sig_key, &on_change_key, -1);
+                            }
+                            39 | 40 => {
+                                step_radio_selection(&items_item, sig_key, &on_change_key, 1);
+                            }
+                            _ => {}
                         }),
                     );
                 }

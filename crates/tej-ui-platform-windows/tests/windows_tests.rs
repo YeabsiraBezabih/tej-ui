@@ -40,11 +40,19 @@ fn test_windows_non_client_hit_testing_and_snap_layouts() {
 fn test_windows_scroll_physics_and_precision_touchpad() {
     let mut scroll = Win32ScrollPhysics::new();
     assert!(scroll.is_at_rest());
+    assert_eq!(scroll.accumulated_wheel_delta(), 0.0);
 
     // Single detent wheel scroll (120 units)
     let delta = scroll.handle_wheel_message(120.0, false);
     assert_eq!(delta, 60.0); // 1.0 * 3 lines * 20px
+    assert_eq!(scroll.accumulated_wheel_delta(), 120.0);
     assert!(!scroll.is_at_rest());
+
+    // Fractional high-precision wheel scroll accumulates properly
+    let _ = scroll.handle_wheel_message(60.0, false);
+    assert_eq!(scroll.accumulated_wheel_delta(), 180.0);
+    let _ = scroll.handle_wheel_message(-30.0, true);
+    assert_eq!(scroll.accumulated_wheel_delta(), 150.0);
 
     // Step physics
     let step1 = scroll.step(0.016);
@@ -83,7 +91,7 @@ fn test_windows_direct_composition_surface_rasterization() {
 
 #[test]
 fn test_windows_window_host_and_ime() {
-    use raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle};
+    use raw_window_handle::{HandleError, HasDisplayHandle, HasWindowHandle};
     use tej_ui_hal::{
         CursorIcon, ImeCursorArea, PlatformWindow, TejWindowHost, UiEvent, WindowConfig,
     };
@@ -97,13 +105,15 @@ fn test_windows_window_host_and_ime() {
 
     assert_eq!(window.title(), "Windows Test Window");
 
-    let win_handle = window.window_handle().expect("valid win32 window handle");
-    assert!(matches!(win_handle.as_raw(), RawWindowHandle::Win32(_)));
-
-    let disp_handle = window
-        .display_handle()
-        .expect("valid windows display handle");
-    assert!(matches!(disp_handle.as_raw(), RawDisplayHandle::Windows(_)));
+    // Raw OS handles must safely return Err(Unavailable) without fabricating pointers
+    assert!(matches!(
+        window.window_handle(),
+        Err(HandleError::Unavailable)
+    ));
+    assert!(matches!(
+        window.display_handle(),
+        Err(HandleError::Unavailable)
+    ));
 
     window.set_cursor(CursorIcon::Crosshair);
     assert_eq!(window.cursor(), CursorIcon::Crosshair);

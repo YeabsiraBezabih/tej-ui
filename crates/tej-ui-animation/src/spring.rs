@@ -76,13 +76,14 @@ impl SpringConfig {
     /// - $\zeta > 1.0$: Overdamped (sluggish decay without oscillating).
     #[must_use]
     pub fn damping_ratio(&self) -> f32 {
-        self.damping / (2.0 * (self.mass * self.stiffness).sqrt())
+        let denom = 2.0 * (self.mass.max(f32::EPSILON) * self.stiffness.max(f32::EPSILON)).sqrt();
+        self.damping / denom
     }
 
     /// Undamped angular frequency $\omega_n = \sqrt{k/m}$ in radians per second.
     #[must_use]
     pub fn natural_frequency(&self) -> f32 {
-        (self.stiffness / self.mass).sqrt()
+        (self.stiffness.max(0.0) / self.mass.max(f32::EPSILON)).sqrt()
     }
 }
 
@@ -127,6 +128,16 @@ impl SpringSimulation {
 
     /// Advance the simulation by delta time `dt` seconds using symplectic Euler integration.
     pub fn step(&mut self, dt: f32) -> f32 {
+        if !dt.is_finite() || dt <= 0.0 {
+            return self.current;
+        }
+
+        if !self.config.mass.is_finite() || self.config.mass <= 0.0 {
+            self.current = self.target;
+            self.velocity = 0.0;
+            return self.current;
+        }
+
         if self.is_at_rest() {
             self.current = self.target;
             self.velocity = 0.0;
@@ -147,6 +158,12 @@ impl SpringSimulation {
             // Semi-implicit Euler integration preserves energy characteristics
             self.velocity += acceleration * step_dt;
             self.current += self.velocity * step_dt;
+
+            if !self.current.is_finite() || !self.velocity.is_finite() {
+                self.current = self.target;
+                self.velocity = 0.0;
+                return self.current;
+            }
 
             remaining -= step_dt;
         }

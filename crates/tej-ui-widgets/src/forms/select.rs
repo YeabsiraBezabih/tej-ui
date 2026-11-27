@@ -90,6 +90,26 @@ impl<T: Clone + PartialEq + Send + Sync + 'static> Select<T> {
     }
 }
 
+fn step_select_option<T: Clone + PartialEq + Send + Sync + 'static>(
+    options: &[SelectOption<T>],
+    selected: Signal<T>,
+    on_change: &SelectCallback<T>,
+    delta: isize,
+) {
+    if options.is_empty() {
+        return;
+    }
+    let cur_val = selected.get();
+    let cur_idx = options.iter().position(|o| o.value == cur_val).unwrap_or(0);
+    let len = options.len() as isize;
+    let next_idx = (cur_idx as isize + delta).rem_euclid(len) as usize;
+    let next_val = options[next_idx].value.clone();
+    selected.set(next_val.clone());
+    if let Some(cb) = on_change {
+        cb(&next_val);
+    }
+}
+
 impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> View for Select<T> {
     type State = SelectState;
 
@@ -267,6 +287,30 @@ impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> View for Se
             }),
         );
 
+        // Keyboard accessibility on trigger: Space/Enter toggles open, Escape closes, Arrows cycle options
+        let opts_key = self.options.clone();
+        let sel_key = self.selected;
+        let is_open_key = self.is_open;
+        let on_change_key = self.on_change.clone();
+        dispatcher.register_key_down(
+            state.node,
+            Arc::new(move |key_code| match key_code {
+                13 | 32 => {
+                    is_open_key.set(!is_open_key.get());
+                }
+                27 => {
+                    is_open_key.set(false);
+                }
+                37 | 38 => {
+                    step_select_option(&opts_key, sel_key, &on_change_key, -1);
+                }
+                39 | 40 => {
+                    step_select_option(&opts_key, sel_key, &on_change_key, 1);
+                }
+                _ => {}
+            }),
+        );
+
         if state.is_open {
             for (i, opt) in self.options.iter().enumerate() {
                 if let Some(&opt_node) = state.option_nodes.get(i) {
@@ -282,6 +326,34 @@ impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> View for Se
                             if let Some(cb) = &on_change {
                                 cb(&val);
                             }
+                        }),
+                    );
+
+                    let opts_opt = self.options.clone();
+                    let val_opt = opt.value.clone();
+                    let sig_opt = self.selected;
+                    let is_open_opt = self.is_open;
+                    let on_change_opt = self.on_change.clone();
+                    dispatcher.register_key_down(
+                        opt_node,
+                        Arc::new(move |key_code| match key_code {
+                            13 | 32 => {
+                                sig_opt.set(val_opt.clone());
+                                is_open_opt.set(false);
+                                if let Some(cb) = &on_change_opt {
+                                    cb(&val_opt);
+                                }
+                            }
+                            27 => {
+                                is_open_opt.set(false);
+                            }
+                            37 | 38 => {
+                                step_select_option(&opts_opt, sig_opt, &on_change_opt, -1);
+                            }
+                            39 | 40 => {
+                                step_select_option(&opts_opt, sig_opt, &on_change_opt, 1);
+                            }
+                            _ => {}
                         }),
                     );
                 }

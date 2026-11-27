@@ -36,8 +36,9 @@ pub struct Rasterizer3D {
     pub width: usize,
     pub height: usize,
     pub color_buffer: Vec<u32>, // 0xAARRGGBB
-    pub depth_buffer: Vec<f32>, // Reversed-Z [1.0 near .. 0.0 far]
+    pub depth_buffer: Vec<f32>, // Reversed-Z [1.0 near .. 0.0 far] or Standard [-1.0 near .. 1.0 far]
     pub vis_buffer: VisBuffer,  // 64-bit Visibility Buffer
+    reversed_z: bool,
     scene_triangles: Vec<ResolvedTriangle>,
     dirty_min_x: usize,
     dirty_min_y: usize,
@@ -55,8 +56,9 @@ impl Rasterizer3D {
             width,
             height,
             color_buffer: vec![0xFF1E1E24; size], // Background dark gray
-            depth_buffer: vec![0.0; size],        // Reversed-Z: 0.0 is farthest (cleared)
+            depth_buffer: vec![0.0; size],        // Reversed-Z default: 0.0 is farthest
             vis_buffer: VisBuffer::new(width, height),
+            reversed_z: true,
             scene_triangles: Vec::with_capacity(1024),
             dirty_min_x: 0,
             dirty_min_y: 0,
@@ -72,19 +74,22 @@ impl Rasterizer3D {
             self.width = width;
             self.height = height;
             let size = width * height;
+            let clear_depth = if self.reversed_z { 0.0 } else { 1.0 };
             self.color_buffer.resize(size, 0xFF1E1E24);
-            self.depth_buffer.resize(size, 0.0);
+            self.depth_buffer.resize(size, clear_depth);
             self.vis_buffer.resize(width, height);
             self.has_dirty_rect = false;
         }
     }
 
-    /// Clears color and depth buffers (Reversed-Z: depth cleared to 0.0).
+    /// Clears color and depth buffers using the active depth convention
+    /// (`0.0` for Reversed-Z, `1.0` for standard depth).
     pub fn clear(&mut self, clear_color: Color) {
         let packed = ((clear_color.a as u32) << 24)
             | ((clear_color.r as u32) << 16)
             | ((clear_color.g as u32) << 8)
             | (clear_color.b as u32);
+        let clear_depth = if self.reversed_z { 0.0 } else { 1.0 };
 
         if self.has_dirty_rect {
             let min_x = self.dirty_min_x;
@@ -97,14 +102,14 @@ impl Rasterizer3D {
                 for x in min_x..=max_x {
                     let idx = row_idx + x;
                     self.color_buffer[idx] = packed;
-                    self.depth_buffer[idx] = 0.0;
+                    self.depth_buffer[idx] = clear_depth;
                     self.vis_buffer.clear_pixel(x, y);
                 }
             }
             self.has_dirty_rect = false;
         } else {
             self.color_buffer.fill(packed);
-            self.depth_buffer.fill(0.0);
+            self.depth_buffer.fill(clear_depth);
             self.vis_buffer.clear();
         }
         self.scene_triangles.clear();
@@ -118,6 +123,13 @@ impl Rasterizer3D {
     ///   lighting and normal interpolation **exactly once per visible pixel** (zero overdraw cost).
     pub fn render_scene(&mut self, scene: &Scene, camera: &PerspectiveCamera) {
         self.scene_triangles.clear();
+        if self.reversed_z != camera.reversed_z {
+            self.reversed_z = camera.reversed_z;
+            let clear_depth = if self.reversed_z { 0.0 } else { 1.0 };
+            self.depth_buffer.fill(clear_depth);
+            self.vis_buffer.clear();
+            self.has_dirty_rect = false;
+        }
         let vp = camera.view_projection_matrix();
 
         let w_f32 = self.width as f32;
@@ -155,21 +167,6 @@ impl Rasterizer3D {
             let obj = &scene.objects[obj_idx];
             let model = obj.transform.matrix();
             let mvp = vp.mul_mat(&model);
-
-            // Coarse Early-Z rejection for occluded objects in front-to-back scenes
-            let center_clip = mvp.transform_point4(Vec3::ZERO);
-            if center_clip[3] > 0.01 {
-                let inv_w = 1.0 / center_clip[3];
-                let center_depth = center_clip[2] * inv_w;
-                let cx = ((center_clip[0] * inv_w + 1.0) * 0.5 * w_f32) as usize;
-                let cy = ((1.0 - center_clip[1] * inv_w) * 0.5 * h_f32) as usize;
-                if cx < self.width && cy < self.height {
-                    let existing_depth = self.depth_buffer[cy * self.width + cx];
-                    if existing_depth > 0.0 && center_depth < existing_depth {
-                        continue;
-                    }
-                }
-            }
 
             let indices = &obj.mesh.indices;
             let vertices = &obj.mesh.vertices;
@@ -322,10 +319,21 @@ impl Rasterizer3D {
                                 let idx = row_idx + x;
                                 let depth = w0 * sz0 + w1 * sz1 + w2 * sz2;
 
-                                if depth > self.depth_buffer[idx] {
+                                let is_closer = if camera.reversed_z {
+                                    depth > self.depth_buffer[idx]
+                                } else {
+                                    depth < self.depth_buffer[idx]
+                                };
+
+                                if is_closer {
                                     self.depth_buffer[idx] = depth;
+                                    let vis_depth = if camera.reversed_z {
+                                        depth
+                                    } else {
+                                        ((1.0 - depth) * 0.5).clamp(1e-5, 1.0)
+                                    };
                                     self.vis_buffer
-                                        .write_pixel_unchecked(idx, depth, slot, local_tri);
+                                        .write_pixel_unchecked(idx, vis_depth, slot, local_tri);
                                 }
                             }
 

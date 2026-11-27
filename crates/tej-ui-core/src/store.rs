@@ -27,6 +27,10 @@ impl<S: Clone> StoreHistory<S> {
     }
 
     fn push_undo(&mut self, state: S) {
+        if self.max_history == 0 {
+            self.redo_stack.clear();
+            return;
+        }
         if self.undo_stack.len() >= self.max_history {
             self.undo_stack.remove(0);
         }
@@ -112,10 +116,17 @@ impl<S: Clone + Send + Sync + 'static, A: Send + Sync + 'static> Store<S, A> {
     ///
     /// Returns `true` if an undo was executed, or `false` if history is empty.
     pub fn undo(&self) -> bool {
-        let mut hist = self.history.lock();
-        if let Some(prev) = hist.undo_stack.pop() {
-            let current = self.state.get();
-            hist.redo_stack.push(current);
+        let prev = {
+            let mut hist = self.history.lock();
+            if let Some(prev) = hist.undo_stack.pop() {
+                let current = self.state.untracked_get();
+                hist.redo_stack.push(current);
+                Some(prev)
+            } else {
+                None
+            }
+        };
+        if let Some(prev) = prev {
             self.state.set(prev);
             true
         } else {
@@ -127,10 +138,17 @@ impl<S: Clone + Send + Sync + 'static, A: Send + Sync + 'static> Store<S, A> {
     ///
     /// Returns `true` if a redo was executed, or `false` if redo history is empty.
     pub fn redo(&self) -> bool {
-        let mut hist = self.history.lock();
-        if let Some(next) = hist.redo_stack.pop() {
-            let current = self.state.get();
-            hist.undo_stack.push(current);
+        let next = {
+            let mut hist = self.history.lock();
+            if let Some(next) = hist.redo_stack.pop() {
+                let current = self.state.untracked_get();
+                hist.undo_stack.push(current);
+                Some(next)
+            } else {
+                None
+            }
+        };
+        if let Some(next) = next {
             self.state.set(next);
             true
         } else {

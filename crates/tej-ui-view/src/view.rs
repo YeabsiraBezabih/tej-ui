@@ -25,6 +25,16 @@ pub trait View: Debug {
         arena.allocate_node(LayoutStyle::default())
     }
 
+    /// Layout this view's node(s) and attach them directly as children of `parent` in `arena`.
+    ///
+    /// Container views (`VStack`, `HStack`, `Grid`) allocate their own dedicated container node
+    /// and call `layout_children` so tuple views attach each item directly without overwriting
+    /// child styles in place.
+    fn layout_children(&self, state: &mut Self::State, arena: &mut LayoutArena, parent: u32) {
+        let child_node = self.layout(state, arena);
+        arena.add_child(parent, child_node);
+    }
+
     /// Render visual elements onto the platform compositor surface.
     fn paint(&self, _state: &Self::State, _ctx: &mut PaintContext<'_>) {}
 
@@ -33,6 +43,16 @@ pub trait View: Debug {
         &self,
         _state: &Self::State,
         _dispatcher: &mut crate::events::EventDispatcher,
+    ) {
+    }
+
+    /// Emit semantic accessibility nodes for this view subtree into `tree`.
+    fn accessibility(
+        &self,
+        _state: &Self::State,
+        _arena: &LayoutArena,
+        _tree: &mut tej_ui_a11y::A11yTree,
+        _parent: Option<tej_ui_a11y::A11yId>,
     ) {
     }
 }
@@ -100,6 +120,18 @@ impl<V: View> View for Option<V> {
     ) {
         if let (Some(view), Some(s)) = (self, state.as_ref()) {
             view.register_events(s, dispatcher);
+        }
+    }
+
+    fn accessibility(
+        &self,
+        state: &Self::State,
+        arena: &LayoutArena,
+        tree: &mut tej_ui_a11y::A11yTree,
+        parent: Option<tej_ui_a11y::A11yId>,
+    ) {
+        if let (Some(view), Some(s)) = (self, state.as_ref()) {
+            view.accessibility(s, arena, tree, parent);
         }
     }
 }

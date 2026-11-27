@@ -178,6 +178,18 @@ impl Mat4 {
         m
     }
 
+    /// Rotation matrix around Z axis.
+    #[must_use]
+    pub fn rotation_z(radians: f32) -> Self {
+        let (sin, cos) = radians.sin_cos();
+        let mut m = Self::IDENTITY;
+        m.cols[0][0] = cos;
+        m.cols[0][1] = sin;
+        m.cols[1][0] = -sin;
+        m.cols[1][1] = cos;
+        m
+    }
+
     /// Perspective projection matrix (OpenGL / WebGPU compatible).
     #[must_use]
     pub fn perspective(fov_y_radians: f32, aspect: f32, near: f32, far: f32) -> Self {
@@ -215,7 +227,8 @@ impl Mat4 {
         }
     }
 
-    /// Orthographic projection matrix for directional light shadow mapping.
+    /// Right-handed orthographic projection matrix (`-Z` forward matching [`Mat4::look_at`]),
+    /// mapping view-space depth `[-near, -far]` into `[0.0, 1.0]`.
     #[must_use]
     pub fn orthographic(left: f32, right: f32, bottom: f32, top: f32, near: f32, far: f32) -> Self {
         let r_l = right - left;
@@ -226,7 +239,7 @@ impl Mat4 {
             cols: [
                 [2.0 / r_l, 0.0, 0.0, 0.0],
                 [0.0, 2.0 / t_b, 0.0, 0.0],
-                [0.0, 0.0, 1.0 / f_n, 0.0],
+                [0.0, 0.0, -1.0 / f_n, 0.0],
                 [
                     -(right + left) / r_l,
                     -(top + bottom) / t_b,

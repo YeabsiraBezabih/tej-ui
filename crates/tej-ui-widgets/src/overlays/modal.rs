@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::sync::Arc;
 use tej_ui_core::Signal;
 use tej_ui_view::View;
 
@@ -111,6 +112,15 @@ impl<V: View> View for Modal<V> {
 
     fn register_events(&self, state: &Self::State, dispatcher: &mut tej_ui_view::EventDispatcher) {
         if state.is_open {
+            let is_open = self.is_open;
+            dispatcher.register_key_down(
+                state.node,
+                Arc::new(move |key_code| {
+                    if key_code == 27 {
+                        is_open.set(false);
+                    }
+                }),
+            );
             if let Some(cs) = state.content_state.as_ref() {
                 self.content.register_events(cs, dispatcher);
             }

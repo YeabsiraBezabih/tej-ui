@@ -104,23 +104,22 @@ impl<V: View> View for VStack<V> {
     }
 
     fn layout(&self, state: &mut Self::State, arena: &mut tej_ui_layout::LayoutArena) -> u32 {
-        let child_node = self.children.layout(&mut state.child_state, arena);
-        arena.styles[child_node as usize].direction = tej_ui_layout::FlexDirection::Column;
-        arena.styles[child_node as usize].flex_wrap = self.flex_wrap;
-        arena.styles[child_node as usize].container_query = self.container_query;
-        arena.styles[child_node as usize].spacing = self.spacing as f32;
-        arena.styles[child_node as usize].padding = tej_ui_layout::Insets::all(self.padding as f32);
-        if self.width != tej_ui_layout::Dimension::Auto {
-            arena.styles[child_node as usize].width = self.width;
-        }
-        if self.height != tej_ui_layout::Dimension::Auto {
-            arena.styles[child_node as usize].height = self.height;
-        }
-        if self.flex_grow > 0.0 {
-            arena.styles[child_node as usize].flex_grow = self.flex_grow;
-        }
-        state.node = child_node;
-        child_node
+        let style = tej_ui_layout::LayoutStyle {
+            direction: tej_ui_layout::FlexDirection::Column,
+            flex_wrap: self.flex_wrap,
+            container_query: self.container_query,
+            spacing: self.spacing as f32,
+            padding: tej_ui_layout::Insets::all(self.padding as f32),
+            width: self.width,
+            height: self.height,
+            flex_grow: self.flex_grow,
+            ..Default::default()
+        };
+        let container = arena.allocate_node(style);
+        self.children
+            .layout_children(&mut state.child_state, arena, container);
+        state.node = container;
+        container
     }
 
     fn paint(&self, state: &Self::State, ctx: &mut crate::paint::PaintContext<'_>) {
@@ -134,6 +133,32 @@ impl<V: View> View for VStack<V> {
     ) {
         self.children
             .register_events(&state.child_state, dispatcher);
+    }
+
+    fn accessibility(
+        &self,
+        state: &Self::State,
+        arena: &tej_ui_layout::LayoutArena,
+        tree: &mut tej_ui_a11y::A11yTree,
+        parent: Option<tej_ui_a11y::A11yId>,
+    ) {
+        let id = tree.allocate_id();
+        let bounds = arena
+            .computed_bounds
+            .get(state.node as usize)
+            .copied()
+            .unwrap_or(tej_ui_layout::Rect::ZERO);
+        let node =
+            tej_ui_a11y::A11yNode::new(id, tej_ui_a11y::A11yRole::Generic).with_bounds(bounds);
+        tree.insert_node(node);
+        if let Some(parent_id) = parent {
+            if let Some(p) = tree.get_node_mut(parent_id) {
+                p.children.push(id);
+            }
+            tree.mark_dirty(parent_id);
+        }
+        self.children
+            .accessibility(&state.child_state, arena, tree, Some(id));
     }
 }
 
@@ -231,23 +256,22 @@ impl<V: View> View for HStack<V> {
     }
 
     fn layout(&self, state: &mut Self::State, arena: &mut tej_ui_layout::LayoutArena) -> u32 {
-        let child_node = self.children.layout(&mut state.child_state, arena);
-        arena.styles[child_node as usize].direction = tej_ui_layout::FlexDirection::Row;
-        arena.styles[child_node as usize].flex_wrap = self.flex_wrap;
-        arena.styles[child_node as usize].container_query = self.container_query;
-        arena.styles[child_node as usize].spacing = self.spacing as f32;
-        arena.styles[child_node as usize].padding = tej_ui_layout::Insets::all(self.padding as f32);
-        if self.width != tej_ui_layout::Dimension::Auto {
-            arena.styles[child_node as usize].width = self.width;
-        }
-        if self.height != tej_ui_layout::Dimension::Auto {
-            arena.styles[child_node as usize].height = self.height;
-        }
-        if self.flex_grow > 0.0 {
-            arena.styles[child_node as usize].flex_grow = self.flex_grow;
-        }
-        state.node = child_node;
-        child_node
+        let style = tej_ui_layout::LayoutStyle {
+            direction: tej_ui_layout::FlexDirection::Row,
+            flex_wrap: self.flex_wrap,
+            container_query: self.container_query,
+            spacing: self.spacing as f32,
+            padding: tej_ui_layout::Insets::all(self.padding as f32),
+            width: self.width,
+            height: self.height,
+            flex_grow: self.flex_grow,
+            ..Default::default()
+        };
+        let container = arena.allocate_node(style);
+        self.children
+            .layout_children(&mut state.child_state, arena, container);
+        state.node = container;
+        container
     }
 
     fn paint(&self, state: &Self::State, ctx: &mut crate::paint::PaintContext<'_>) {
@@ -261,5 +285,31 @@ impl<V: View> View for HStack<V> {
     ) {
         self.children
             .register_events(&state.child_state, dispatcher);
+    }
+
+    fn accessibility(
+        &self,
+        state: &Self::State,
+        arena: &tej_ui_layout::LayoutArena,
+        tree: &mut tej_ui_a11y::A11yTree,
+        parent: Option<tej_ui_a11y::A11yId>,
+    ) {
+        let id = tree.allocate_id();
+        let bounds = arena
+            .computed_bounds
+            .get(state.node as usize)
+            .copied()
+            .unwrap_or(tej_ui_layout::Rect::ZERO);
+        let node =
+            tej_ui_a11y::A11yNode::new(id, tej_ui_a11y::A11yRole::Generic).with_bounds(bounds);
+        tree.insert_node(node);
+        if let Some(parent_id) = parent {
+            if let Some(p) = tree.get_node_mut(parent_id) {
+                p.children.push(id);
+            }
+            tree.mark_dirty(parent_id);
+        }
+        self.children
+            .accessibility(&state.child_state, arena, tree, Some(id));
     }
 }

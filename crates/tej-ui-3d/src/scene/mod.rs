@@ -28,15 +28,16 @@ impl Default for Transform3D {
 }
 
 impl Transform3D {
-    /// Computes local 4x4 model matrix $M = T \times R_y \times R_x \times S$.
+    /// Computes local 4x4 model matrix $M = T \times R_z \times R_y \times R_x \times S$.
     #[must_use]
     pub fn matrix(&self) -> Mat4 {
         let t = Mat4::translation(self.position);
+        let rz = Mat4::rotation_z(self.rotation.z);
         let ry = Mat4::rotation_y(self.rotation.y);
         let rx = Mat4::rotation_x(self.rotation.x);
         let s = Mat4::scale(self.scale);
 
-        t.mul_mat(&ry).mul_mat(&rx).mul_mat(&s)
+        t.mul_mat(&rz).mul_mat(&ry).mul_mat(&rx).mul_mat(&s)
     }
 }
 

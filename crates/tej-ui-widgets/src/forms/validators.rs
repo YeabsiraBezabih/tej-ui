@@ -33,13 +33,13 @@ pub fn required_option<T: Send + Sync + 'static>(
     })
 }
 
-/// Validates that a string's character length is at least `min`.
+/// Validates that a string's Unicode character length is at least `min`.
 #[must_use]
 pub fn min_length(min: usize, error_msg: impl Into<String>) -> ValidatorFn<String> {
     let msg = error_msg.into();
     Arc::new(move |val: &String| {
         let trimmed = val.trim();
-        if !trimmed.is_empty() && trimmed.len() < min {
+        if !trimmed.is_empty() && trimmed.chars().count() < min {
             Some(msg.clone())
         } else {
             None
@@ -47,12 +47,12 @@ pub fn min_length(min: usize, error_msg: impl Into<String>) -> ValidatorFn<Strin
     })
 }
 
-/// Validates that a string's character length is at most `max`.
+/// Validates that a string's Unicode character length is at most `max`.
 #[must_use]
 pub fn max_length(max: usize, error_msg: impl Into<String>) -> ValidatorFn<String> {
     let msg = error_msg.into();
     Arc::new(move |val: &String| {
-        if val.len() > max {
+        if val.chars().count() > max {
             Some(msg.clone())
         } else {
             None

@@ -70,13 +70,29 @@ impl VirtualizedTreeIndex {
         viewport_height: f32,
         overscan: usize,
     ) -> Range<usize> {
-        if self.items.is_empty() || row_height <= 0.0 {
+        if self.items.is_empty() || row_height <= 0.0 || !row_height.is_finite() {
             return 0..0;
         }
 
-        let first_row = ((scroll_y / row_height).floor() as usize).saturating_sub(overscan);
-        let visible_count = ((viewport_height / row_height).ceil() as usize) + (overscan * 2);
-        let end_row = (first_row + visible_count).min(self.items.len());
+        let safe_scroll_y = if scroll_y.is_finite() {
+            scroll_y.max(0.0)
+        } else {
+            0.0
+        };
+        let safe_viewport = if viewport_height.is_finite() {
+            viewport_height.max(0.0)
+        } else {
+            0.0
+        };
+
+        let first_row = ((safe_scroll_y / row_height).floor() as usize)
+            .saturating_sub(overscan)
+            .min(self.items.len());
+        let visible_count = ((safe_viewport / row_height).ceil() as usize)
+            .saturating_add(overscan.saturating_mul(2));
+        let end_row = first_row
+            .saturating_add(visible_count)
+            .min(self.items.len());
 
         first_row..end_row
     }

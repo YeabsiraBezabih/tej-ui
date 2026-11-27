@@ -5,6 +5,13 @@ edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
+description = "Enterprise widget library for tej-ui including DataGrid, RichTextEditor, TreeView, FormController, CommandPalette, Tabs, Modal, and Pickers."
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/tej-ui-widgets"
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [dependencies]
 tej-ui-core.workspace = true

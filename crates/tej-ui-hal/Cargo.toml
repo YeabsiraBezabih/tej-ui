@@ -5,6 +5,13 @@ edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
+description = "Hardware abstraction layer, wgpu/software compositor traits, dirty-rect tracking, monitor registry, and windowing interfaces for tej-ui."
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/tej-ui-hal"
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [features]
 default = ["gpu"]

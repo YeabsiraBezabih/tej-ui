@@ -83,6 +83,11 @@ impl<T: Any + Send + Sync + 'static> Signal<T> {
         self.set(val);
     }
 
+    /// Dispose of this signal, freeing its arena slot and clearing its dependency graph edges.
+    pub fn dispose(self) {
+        ReactiveRuntime::dispose_signal(self.id);
+    }
+
     /// Get underlying generational `SignalId`.
     #[inline]
     #[must_use]

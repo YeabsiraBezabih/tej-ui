@@ -1,10 +1,8 @@
 //! AppKit `NSWindow` / `NSView` wrapper and event loop bridge.
 
 use crate::style::MacosWindowAttributes;
-use core::ptr::NonNull;
 use raw_window_handle::{
-    AppKitDisplayHandle, AppKitWindowHandle, DisplayHandle, HandleError, HasDisplayHandle,
-    HasWindowHandle, RawDisplayHandle, RawWindowHandle, WindowHandle,
+    DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle, WindowHandle,
 };
 use std::sync::atomic::{AtomicU64, Ordering};
 use tej_ui_hal::{
@@ -148,21 +146,18 @@ impl PlatformWindow for MacosWindow {
 }
 
 impl HasWindowHandle for MacosWindow {
+    /// Returns [`HandleError::Unavailable`] because real OS handles require native AppKit
+    /// `NSWindow`/`NSView` creation rather than synthetic window IDs.
     fn window_handle(&self) -> Result<WindowHandle<'_>, HandleError> {
-        // Construct NSView pointer representation
-        let ptr = NonNull::new((self.id.0 as usize) as *mut core::ffi::c_void)
-            .unwrap_or(NonNull::dangling());
-        let raw = RawWindowHandle::AppKit(AppKitWindowHandle::new(ptr));
-        // SAFETY: The NSView pointer remains valid across window lifetime.
-        unsafe { Ok(WindowHandle::borrow_raw(raw)) }
+        Err(HandleError::Unavailable)
     }
 }
 
 impl HasDisplayHandle for MacosWindow {
+    /// Returns [`HandleError::Unavailable`] because real OS display handles require an
+    /// active native AppKit `NSApplication` session.
     fn display_handle(&self) -> Result<DisplayHandle<'_>, HandleError> {
-        let raw = RawDisplayHandle::AppKit(AppKitDisplayHandle::new());
-        // SAFETY: AppKit display handle is valid for the running NSApplication.
-        unsafe { Ok(DisplayHandle::borrow_raw(raw)) }
+        Err(HandleError::Unavailable)
     }
 }
 

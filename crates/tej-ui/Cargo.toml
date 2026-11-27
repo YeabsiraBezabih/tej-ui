@@ -5,6 +5,13 @@ edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
+description = "Modular, reactive, zero-copy cross-platform UI framework for Rust with flat SoA layout, GPU/software rendering, and tej-db integration."
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/tej-ui"
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [features]
 default = [
@@ -12,6 +19,7 @@ default = [
     "a11y",
     "animation",
     "icons",
+    "native-gpu",
 ]
 widgets = ["dep:tej-ui-widgets"]
 a11y = ["dep:tej-ui-a11y"]
@@ -21,6 +29,7 @@ services = ["dep:tej-ui-services"]
 3d = ["dep:tej-ui-3d"]
 db-sync = ["dep:tej-ui-db-sync"]
 devtools = ["dep:tej-ui-devtools"]
+native-gpu = ["dep:winit"]
 full = [
     "default",
     "services",
@@ -35,10 +44,6 @@ tej-ui-view.workspace = true
 tej-ui-layout.workspace = true
 tej-ui-text.workspace = true
 tej-ui-hal.workspace = true
-tej-ui-platform-linux.workspace = true
-tej-ui-platform-windows.workspace = true
-tej-ui-platform-macos.workspace = true
-tej-ui-platform-web.workspace = true
 tej-ui-a11y = { workspace = true, optional = true }
 tej-ui-db-sync = { workspace = true, optional = true }
 tej-ui-widgets = { workspace = true, optional = true }
@@ -47,6 +52,19 @@ tej-ui-devtools = { workspace = true, optional = true }
 tej-ui-3d = { workspace = true, optional = true }
 tej-ui-icons = { workspace = true, optional = true }
 tej-ui-animation = { workspace = true, optional = true }
+winit = { workspace = true, optional = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+tej-ui-platform-linux.workspace = true
+
+[target.'cfg(target_os = "windows")'.dependencies]
+tej-ui-platform-windows.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+tej-ui-platform-macos.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+tej-ui-platform-web.workspace = true
 
 [lints]
 workspace = true

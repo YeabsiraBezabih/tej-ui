@@ -4,8 +4,7 @@ use crate::surface::LinuxSurface;
 use minifb::{MouseButton as MfbMouseButton, MouseMode, Scale, Window, WindowOptions};
 use parking_lot::Mutex;
 use raw_window_handle::{
-    DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle, RawDisplayHandle,
-    RawWindowHandle, WindowHandle, XlibDisplayHandle, XlibWindowHandle,
+    DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle, WindowHandle,
 };
 use std::fmt;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -19,11 +18,9 @@ static NEXT_WINDOW_ID: AtomicU64 = AtomicU64::new(1);
 
 struct NativeWindowHandle(Window);
 
-// SAFETY: `NativeWindowHandle` wraps an OS window. In Linux/X11/Wayland, window event polling
-// and buffer presentations are guarded by a Mutex, ensuring thread-safe synchronized access.
+// SAFETY: `NativeWindowHandle` is stored exclusively inside a `parking_lot::Mutex`,
+// which serializes all access to the underlying `minifb::Window` without requiring `Sync`.
 unsafe impl Send for NativeWindowHandle {}
-// SAFETY: Access to the window is serialized via `parking_lot::Mutex`, preventing concurrent mutation.
-unsafe impl Sync for NativeWindowHandle {}
 
 /// Native Linux window implementation supporting Wayland/X11 and headless test runners.
 pub struct LinuxWindow {
@@ -291,18 +288,18 @@ impl PlatformWindow for LinuxWindow {
 }
 
 impl HasWindowHandle for LinuxWindow {
+    /// Returns [`HandleError::Unavailable`] because real OS handles require native
+    /// Wayland or X11 window creation rather than synthetic window IDs.
     fn window_handle(&self) -> Result<WindowHandle<'_>, HandleError> {
-        let raw = RawWindowHandle::Xlib(XlibWindowHandle::new(self.id.0));
-        // SAFETY: The window ID identifies this OS window surface throughout its lifecycle.
-        unsafe { Ok(WindowHandle::borrow_raw(raw)) }
+        Err(HandleError::Unavailable)
     }
 }
 
 impl HasDisplayHandle for LinuxWindow {
+    /// Returns [`HandleError::Unavailable`] because real OS display handles require a live
+    /// Wayland or X11 display connection.
     fn display_handle(&self) -> Result<DisplayHandle<'_>, HandleError> {
-        let raw = RawDisplayHandle::Xlib(XlibDisplayHandle::new(None, 0));
-        // SAFETY: The display handle is valid for the entire duration of the process.
-        unsafe { Ok(DisplayHandle::borrow_raw(raw)) }
+        Err(HandleError::Unavailable)
     }
 }
 

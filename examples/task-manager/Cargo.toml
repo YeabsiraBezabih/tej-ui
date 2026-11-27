@@ -8,7 +8,7 @@ license.workspace = true
 publish = false
 
 [dependencies]
-tej-ui.workspace = true
+tej-ui = { workspace = true, features = ["db-sync"] }
 mydb.workspace = true
 mydb-core.workspace = true
 tracing.workspace = true

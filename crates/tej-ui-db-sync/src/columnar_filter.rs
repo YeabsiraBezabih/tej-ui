@@ -27,13 +27,28 @@ impl<T: Copy + Eq> RleColumn<T> {
     }
 
     /// Appends a run of consecutive identical values.
+    ///
+    /// Splits into a new run if merging into the previous run would overflow `u32::MAX`.
     pub fn push_run(&mut self, value: T, count: u32) {
         if count == 0 {
             return;
         }
         if let Some(last) = self.runs.last_mut() {
             if last.value == value {
-                last.count += count;
+                if let Some(sum) = last.count.checked_add(count) {
+                    last.count = sum;
+                    self.total_elements += count as usize;
+                    return;
+                }
+                let remaining = u32::MAX - last.count;
+                last.count = u32::MAX;
+                let overflow = count - remaining;
+                if overflow > 0 {
+                    self.runs.push(RleRun {
+                        value,
+                        count: overflow,
+                    });
+                }
                 self.total_elements += count as usize;
                 return;
             }

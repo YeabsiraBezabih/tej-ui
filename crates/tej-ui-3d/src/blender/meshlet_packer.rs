@@ -1,10 +1,19 @@
-//! Packs raw 3D mesh geometry into 64-vertex / 124-triangle 4 KiB Nanite meshlet pages.
+//! Packs raw 3D mesh geometry into 4 KiB Nanite meshlet pages.
 
 use crate::nanite::PackedMeshletVertex;
 use mydb::spatial_viewport::ClusterMetadata;
 use mydb_core::spatial::{Aabb3D, BoundingSphere, MeshletPageHeader};
 use mydb_core::{PAGE_MAGIC, PageId};
 use tej_ui_hal::Color;
+
+/// Byte offset where the vertex payload begins inside a 4096-byte meshlet page.
+const PAYLOAD_OFFSET: usize = 128;
+/// Total size of a meshlet page in bytes.
+const PAGE_SIZE: usize = 4096;
+/// Bytes per unindexed triangle vertex (3 x f32 or 12-byte quantized vertex).
+const BYTES_PER_VERTEX: usize = 12;
+/// Maximum triangles that fit cleanly inside the 3968-byte payload without truncation (110).
+const MAX_TRIS_PER_PAGE: usize = (PAGE_SIZE - PAYLOAD_OFFSET) / (3 * BYTES_PER_VERTEX);
 
 /// A packed 4 KiB meshlet page ready for database storage and zero-copy GPU uploads.
 #[derive(Debug, Clone)]
@@ -18,7 +27,7 @@ pub struct PackedMeshlet {
 pub struct MeshletPacker;
 
 impl MeshletPacker {
-    /// Partitions an indexed triangle mesh into standard Nanite clusters (<= 64 vertices, <= 124 triangles).
+    /// Partitions an indexed triangle mesh into 4 KiB Nanite cluster pages without dropping triangles.
     pub fn pack_geometry(
         vertices: &[[f32; 3]],
         triangles: &[[u32; 3]],
@@ -26,11 +35,10 @@ impl MeshletPacker {
         lod_error: f32,
     ) -> Vec<PackedMeshlet> {
         let mut result = Vec::new();
-        let max_tris_per_meshlet = 124;
 
-        for (cluster_id_usize, chunk) in triangles.chunks(max_tris_per_meshlet).enumerate() {
+        for (cluster_id_usize, chunk) in triangles.chunks(MAX_TRIS_PER_PAGE).enumerate() {
             let cluster_id = cluster_id_usize as u32;
-            let mut page_bytes = [0u8; 4096];
+            let mut page_bytes = [0u8; PAGE_SIZE];
             page_bytes[0..4].copy_from_slice(&PAGE_MAGIC);
 
             // 1. Calculate AABB and Bounding Sphere
@@ -73,15 +81,38 @@ impl MeshletPacker {
             let sphere = BoundingSphere::new(center, radius);
             let bounds = Aabb3D::new(min_pt, max_pt);
 
-            // 2. Build 64-byte aligned MeshletPageHeader
-            let vertex_count = (chunk.len() * 3).min(64) as u16;
-            let triangle_count = chunk.len() as u16;
+            // 2. Copy vertex coordinates into payload slice (offset 128)
+            let mut payload_offset = PAYLOAD_OFFSET;
+            let mut written_vertices: u16 = 0;
+            let mut written_triangles: u16 = 0;
+            for tri in chunk {
+                if let (Some(v0), Some(v1), Some(v2)) = (
+                    vertices.get(tri[0] as usize),
+                    vertices.get(tri[1] as usize),
+                    vertices.get(tri[2] as usize),
+                ) {
+                    if payload_offset + 3 * BYTES_PER_VERTEX <= PAGE_SIZE {
+                        for v in [v0, v1, v2] {
+                            page_bytes[payload_offset..payload_offset + 4]
+                                .copy_from_slice(&v[0].to_le_bytes());
+                            page_bytes[payload_offset + 4..payload_offset + 8]
+                                .copy_from_slice(&v[1].to_le_bytes());
+                            page_bytes[payload_offset + 8..payload_offset + 12]
+                                .copy_from_slice(&v[2].to_le_bytes());
+                            payload_offset += BYTES_PER_VERTEX;
+                            written_vertices += 1;
+                        }
+                        written_triangles += 1;
+                    }
+                }
+            }
 
+            // 3. Build 64-byte aligned MeshletPageHeader with exact written counts
             let header = MeshletPageHeader::new(
                 lod_level,
                 0, // flags
-                vertex_count,
-                triangle_count,
+                written_vertices,
+                written_triangles,
                 0, // material_id
                 [center[0], center[1], center[2], radius],
                 min_pt,
@@ -91,24 +122,6 @@ impl MeshletPacker {
 
             // Copy header into byte offset 64..128
             page_bytes[64..128].copy_from_slice(&header.to_bytes());
-
-            // 3. Copy vertex coordinates into payload slice (offset 128)
-            let mut payload_offset = 128;
-            for tri in chunk {
-                for &idx in tri {
-                    if let Some(v) = vertices.get(idx as usize) {
-                        if payload_offset + 12 <= 4096 {
-                            page_bytes[payload_offset..payload_offset + 4]
-                                .copy_from_slice(&v[0].to_le_bytes());
-                            page_bytes[payload_offset + 4..payload_offset + 8]
-                                .copy_from_slice(&v[1].to_le_bytes());
-                            page_bytes[payload_offset + 8..payload_offset + 12]
-                                .copy_from_slice(&v[2].to_le_bytes());
-                            payload_offset += 12;
-                        }
-                    }
-                }
-            }
 
             let metadata = ClusterMetadata::new(
                 cluster_id,
@@ -128,7 +141,7 @@ impl MeshletPacker {
         result
     }
 
-    /// Partitions an indexed triangle mesh into standard Nanite clusters using 12-byte quantized vertices.
+    /// Partitions an indexed triangle mesh into 4 KiB Nanite clusters using 12-byte quantized vertices.
     pub fn pack_geometry_quantized(
         vertices: &[[f32; 3]],
         normals: &[[f32; 3]],
@@ -138,11 +151,10 @@ impl MeshletPacker {
         lod_error: f32,
     ) -> Vec<PackedMeshlet> {
         let mut result = Vec::new();
-        let max_tris_per_meshlet = 124;
 
-        for (cluster_id_usize, chunk) in triangles.chunks(max_tris_per_meshlet).enumerate() {
+        for (cluster_id_usize, chunk) in triangles.chunks(MAX_TRIS_PER_PAGE).enumerate() {
             let cluster_id = cluster_id_usize as u32;
-            let mut page_bytes = [0u8; 4096];
+            let mut page_bytes = [0u8; PAGE_SIZE];
             page_bytes[0..4].copy_from_slice(&PAGE_MAGIC);
 
             let mut min_pt = [f32::INFINITY; 3];
@@ -189,14 +201,37 @@ impl MeshletPacker {
                 (max_pt[2] - min_pt[2]).max(1e-6),
             ];
 
-            let vertex_count = (chunk.len() * 3).min(64) as u16;
-            let triangle_count = chunk.len() as u16;
+            // Write 12-byte packed vertices into offset 128
+            let mut payload_offset = PAYLOAD_OFFSET;
+            let mut written_vertices: u16 = 0;
+            let mut written_triangles: u16 = 0;
+            for tri in chunk {
+                if tri.iter().all(|&idx| vertices.get(idx as usize).is_some())
+                    && payload_offset + 3 * BYTES_PER_VERTEX <= PAGE_SIZE
+                {
+                    for &idx in tri {
+                        let v = vertices[idx as usize];
+                        let n = normals
+                            .get(idx as usize)
+                            .copied()
+                            .unwrap_or([0.0, 1.0, 0.0]);
+                        let c = colors.get(idx as usize).copied().unwrap_or(Color::WHITE);
+                        let pv = PackedMeshletVertex::new(v, n, c, min_pt, scale_pt);
+
+                        page_bytes[payload_offset..payload_offset + BYTES_PER_VERTEX]
+                            .copy_from_slice(&pv.to_bytes());
+                        payload_offset += BYTES_PER_VERTEX;
+                        written_vertices += 1;
+                    }
+                    written_triangles += 1;
+                }
+            }
 
             let header = MeshletPageHeader::new(
                 lod_level,
                 1, // flag 1 indicates 12-byte quantized payload
-                vertex_count,
-                triangle_count,
+                written_vertices,
+                written_triangles,
                 0,
                 [center[0], center[1], center[2], radius],
                 min_pt,
@@ -205,27 +240,6 @@ impl MeshletPacker {
             );
 
             page_bytes[64..128].copy_from_slice(&header.to_bytes());
-
-            // Write 12-byte packed vertices into offset 128
-            let mut payload_offset = 128;
-            for tri in chunk {
-                for &idx in tri {
-                    if let Some(v) = vertices.get(idx as usize) {
-                        let n = normals
-                            .get(idx as usize)
-                            .copied()
-                            .unwrap_or([0.0, 1.0, 0.0]);
-                        let c = colors.get(idx as usize).copied().unwrap_or(Color::WHITE);
-                        let pv = PackedMeshletVertex::new(*v, n, c, min_pt, scale_pt);
-
-                        if payload_offset + 12 <= 4096 {
-                            page_bytes[payload_offset..payload_offset + 12]
-                                .copy_from_slice(&pv.to_bytes());
-                            payload_offset += 12;
-                        }
-                    }
-                }
-            }
 
             let metadata = ClusterMetadata::new(
                 cluster_id,

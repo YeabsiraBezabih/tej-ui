@@ -36,7 +36,9 @@ fn vs_main(
 
     var expansion: f32 = 1.0;
     if (prim_kind == 2u) {
-        expansion = max(1.0, ceil(inst.border_widths.x * 3.0));
+        let blur = max(inst.border_widths.x, 0.0);
+        let spread = max(inst.border_widths.y, 0.0);
+        expansion = max(1.0, ceil(blur * 3.0 + spread));
     }
 
     var uv = vec2<f32>(0.0, 0.0);
@@ -98,17 +100,36 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         color = inst.fill_color * alpha_factor;
     } else if (prim_kind == 1u) {
         let alpha_outer = clamp(0.5 - dist_phys, 0.0, 1.0);
-        let border_w = inst.border_widths.x;
-        let inner_half = max(half_size - vec2<f32>(border_w), vec2<f32>(0.0));
-        let inner_radii = max(inst.corner_radii - vec4<f32>(border_w), vec4<f32>(0.0));
-        let dist_inner_phys = sd_rounded_box(p, inner_half, inner_radii) * sf;
-        let alpha_inner = clamp(0.5 - dist_inner_phys, 0.0, 1.0);
+        let b_top = max(inst.border_widths.x, 0.0);
+        let b_right = max(inst.border_widths.y, 0.0);
+        let b_bottom = max(inst.border_widths.z, 0.0);
+        let b_left = max(inst.border_widths.w, 0.0);
+
+        let inner_size = in.rect_size - vec2<f32>(b_left + b_right, b_top + b_bottom);
+        var alpha_inner: f32 = 0.0;
+        if (inner_size.x > 0.0 && inner_size.y > 0.0) {
+            let inner_half = inner_size * 0.5;
+            let inner_center = vec2<f32>(b_left + inner_half.x, b_top + inner_half.y);
+            let inner_p = in.local_pos - inner_center;
+            let inner_radii = vec4<f32>(
+                max(inst.corner_radii.x - max(b_top, b_left), 0.0),
+                max(inst.corner_radii.y - max(b_top, b_right), 0.0),
+                max(inst.corner_radii.z - max(b_bottom, b_right), 0.0),
+                max(inst.corner_radii.w - max(b_bottom, b_left), 0.0),
+            );
+            let dist_inner_phys = sd_rounded_box(inner_p, inner_half, inner_radii) * sf;
+            alpha_inner = clamp(0.5 - dist_inner_phys, 0.0, 1.0);
+        }
 
         let border_factor = clamp(alpha_outer - alpha_inner, 0.0, 1.0);
         color = inst.border_color * border_factor + inst.fill_color * alpha_inner;
     } else if (prim_kind == 2u) {
         let blur = max(inst.border_widths.x, 0.5);
-        let shadow_alpha = exp(-max(dist_logical, 0.0) / blur);
+        let spread = inst.border_widths.y;
+        let shadow_half = max(half_size + vec2<f32>(spread), vec2<f32>(0.0));
+        let shadow_radii = max(inst.corner_radii + vec4<f32>(spread), vec4<f32>(0.0));
+        let shadow_dist = sd_rounded_box(p, shadow_half, shadow_radii);
+        let shadow_alpha = exp(-max(shadow_dist, 0.0) / blur);
         color = inst.fill_color * shadow_alpha;
     }
 

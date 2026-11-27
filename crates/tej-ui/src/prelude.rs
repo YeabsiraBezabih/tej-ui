@@ -1,9 +1,9 @@
 //! Ergonomic unified prelude for `tej-ui` developers.
 
 pub use tej_ui_core::{
-    Effect, Epoch, Memo, NodeId, ReadSignal, Resource, ResourceState, Signal, SignalId, Store,
-    WriteSignal, batch, clear_context_stack, create_effect, provide_context, use_context,
-    with_context,
+    Effect, Epoch, Memo, NodeId, ReactiveRuntime, ReadSignal, Resource, ResourceState, Signal,
+    SignalId, Store, WriteSignal, batch, clear_context_stack, create_effect, provide_context,
+    use_context, with_context,
 };
 
 pub use tej_ui_view::{
@@ -34,11 +34,21 @@ pub use tej_ui_hal::{
     SurfaceCompositor, UiEvent, WindowConfig, WindowId, WindowRegistry,
 };
 
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    not(any(target_os = "windows", target_os = "macos"))
+))]
 pub use tej_ui_platform_linux::{LinuxSurface, LinuxWindow};
+
+#[cfg(all(not(target_arch = "wasm32"), target_os = "macos"))]
 pub use tej_ui_platform_macos::{
     MacosWindow, MacosWindowAttributes, MacosWindowStyle, MetalSurfaceCompositor,
 };
+
+#[cfg(target_arch = "wasm32")]
 pub use tej_ui_platform_web::{WebEventBridge, WebSurfaceCompositor, WebWindow};
+
+#[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
 pub use tej_ui_platform_windows::{
     DirectCompositionSurface, DwmAttributes, WindowBackdrop, WindowsWindow,
 };
@@ -102,3 +112,6 @@ pub use tej_ui_animation::{
 };
 
 pub use crate::app::App;
+
+#[cfg(all(feature = "native-gpu", not(target_arch = "wasm32")))]
+pub use crate::native_runner::{GpuSurfaceBridge, NativeWinitApp};

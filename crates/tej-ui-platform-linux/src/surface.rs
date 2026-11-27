@@ -6,6 +6,8 @@ use std::sync::Arc;
 use tej_ui_hal::{Color, SurfaceCompositor};
 use tej_ui_layout::{Point, Rect, Size};
 
+const DEFAULT_CLEAR_PIXEL: u32 = 0xFFEF_EEEA;
+
 /// 2D surface rasterizer for Linux platform backends with 32-bit pixel buffer.
 #[derive(Debug)]
 pub struct LinuxSurface {
@@ -36,7 +38,7 @@ impl LinuxSurface {
         let width = (size.width.max(1.0) as usize).min(8192);
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let height = (size.height.max(1.0) as usize).min(8192);
-        let pixels = vec![0xFFEF_EEEA; width * height]; // Default warm sand canvas background
+        let pixels = vec![DEFAULT_CLEAR_PIXEL; width * height]; // Default warm sand canvas background
 
         Self {
             size,
@@ -93,7 +95,7 @@ impl LinuxSurface {
         self.size = new_size;
         self.width = width;
         self.height = height;
-        self.pixels = vec![0xFFEF_EEEA; width * height];
+        self.pixels = vec![DEFAULT_CLEAR_PIXEL; width * height];
     }
 
     /// Number of draw calls executed in the current/last frame.
@@ -129,7 +131,30 @@ impl SurfaceCompositor for LinuxSurface {
         self.dirty_clip.clear();
         self.dirty_clip.extend_from_slice(dirty_rects);
         self.draw_calls_count = 0;
-        self.pixels.fill(0xFFEF_EEEA);
+
+        if dirty_rects.is_empty() {
+            self.pixels.fill(DEFAULT_CLEAR_PIXEL);
+        } else {
+            for rect in dirty_rects {
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let x0 = (rect.origin.x.max(0.0).floor() as usize).min(self.width);
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let y0 = (rect.origin.y.max(0.0).floor() as usize).min(self.height);
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let x1 =
+                    ((rect.origin.x + rect.size.width).max(0.0).ceil() as usize).min(self.width);
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let y1 =
+                    ((rect.origin.y + rect.size.height).max(0.0).ceil() as usize).min(self.height);
+
+                if x0 < x1 && y0 < y1 {
+                    for y in y0..y1 {
+                        let row_start = y * self.width;
+                        self.pixels[row_start + x0..row_start + x1].fill(DEFAULT_CLEAR_PIXEL);
+                    }
+                }
+            }
+        }
     }
 
     fn fill_rect(&mut self, rect: Rect, color: Color) {
@@ -340,6 +365,9 @@ impl SurfaceCompositor for LinuxSurface {
 
     fn draw_text(&mut self, text: &str, origin: Point, font_size: f32, color: Color) {
         self.draw_calls_count += 1;
+        if color.a == 0 {
+            return;
+        }
 
         if self.font_engine.has_vector_font() {
             let line_height = font_size * 1.35;
@@ -388,10 +416,16 @@ impl SurfaceCompositor for LinuxSurface {
                             if x < 0 || (x as usize) >= self.width {
                                 continue;
                             }
-                            let alpha = glyph.bitmap[bmp_row + col];
-                            if alpha > 0 {
-                                let idx = row_offset + (x as usize);
-                                self.pixels[idx] = blend_pixel(self.pixels[idx], color, alpha);
+                            let glyph_alpha = glyph.bitmap[bmp_row + col];
+                            if glyph_alpha > 0 {
+                                let eff_alpha = ((u16::from(glyph_alpha) * u16::from(color.a)
+                                    + 127)
+                                    / 255) as u8;
+                                if eff_alpha > 0 {
+                                    let idx = row_offset + (x as usize);
+                                    self.pixels[idx] =
+                                        blend_pixel(self.pixels[idx], color, eff_alpha);
+                                }
                             }
                         }
                     }
@@ -444,7 +478,12 @@ impl SurfaceCompositor for LinuxSurface {
                                     let px_x = cur_x + col_idx * scale + dx;
                                     let px_y = cur_y + row_idx * scale + dy;
                                     if px_x < self.width && px_y < self.height {
-                                        self.pixels[px_y * self.width + px_x] = px;
+                                        let idx = px_y * self.width + px_x;
+                                        self.pixels[idx] = if color.a == 255 {
+                                            px
+                                        } else {
+                                            blend_pixel(self.pixels[idx], color, color.a)
+                                        };
                                     }
                                 }
                             }

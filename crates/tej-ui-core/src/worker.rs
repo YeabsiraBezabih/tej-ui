@@ -183,23 +183,34 @@ impl<
 
     /// Poll pending messages from the background worker and update reactive signals on the caller's thread.
     pub fn poll(&self) {
-        if let Some(rx) = self.receiver.lock().as_ref() {
-            while let Ok(msg) = rx.try_recv() {
-                match msg {
-                    WorkerMessage::Progress(p) => {
-                        self.progress.set(Some(p));
-                    }
-                    WorkerMessage::Completed(val) => {
-                        self.result.set(Some(Ok(val.clone())));
-                        self.status.set(WorkerStatus::Completed(val));
-                    }
-                    WorkerMessage::Failed(err) => {
-                        self.result.set(Some(Err(err.clone())));
-                        self.status.set(WorkerStatus::Failed(err));
-                    }
-                    WorkerMessage::Cancelled => {
-                        self.status.set(WorkerStatus::Cancelled);
-                    }
+        let messages: Vec<WorkerMessage<T, P, E>> = {
+            let guard = self.receiver.lock();
+            if let Some(rx) = guard.as_ref() {
+                let mut drained = Vec::new();
+                while let Ok(msg) = rx.try_recv() {
+                    drained.push(msg);
+                }
+                drained
+            } else {
+                return;
+            }
+        };
+
+        for msg in messages {
+            match msg {
+                WorkerMessage::Progress(p) => {
+                    self.progress.set(Some(p));
+                }
+                WorkerMessage::Completed(val) => {
+                    self.result.set(Some(Ok(val.clone())));
+                    self.status.set(WorkerStatus::Completed(val));
+                }
+                WorkerMessage::Failed(err) => {
+                    self.result.set(Some(Err(err.clone())));
+                    self.status.set(WorkerStatus::Failed(err));
+                }
+                WorkerMessage::Cancelled => {
+                    self.status.set(WorkerStatus::Cancelled);
                 }
             }
         }

@@ -5,6 +5,13 @@ edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
+description = "Generational SlotMap arena, 8-byte Copy Signal<T>, glitch-free topological DAG reactivity, Memo, Effect, Resource, and Store primitives for tej-ui."
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/tej-ui-core"
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [dependencies]
 thiserror.workspace = true

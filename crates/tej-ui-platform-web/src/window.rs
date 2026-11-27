@@ -1,9 +1,7 @@
 //! Web browser WASM canvas window implementation and DOM bridge.
 
-use core::ptr::NonNull;
 use raw_window_handle::{
-    DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle, RawDisplayHandle,
-    RawWindowHandle, WebCanvasWindowHandle, WebDisplayHandle, WindowHandle,
+    DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle, WindowHandle,
 };
 use std::sync::atomic::{AtomicU64, Ordering};
 use tej_ui_hal::{
@@ -149,20 +147,18 @@ impl PlatformWindow for WebWindow {
 }
 
 impl HasWindowHandle for WebWindow {
+    /// Returns [`HandleError::Unavailable`] because real handles require binding to a live
+    /// DOM `HTMLCanvasElement` in a browser WASM environment rather than synthetic IDs.
     fn window_handle(&self) -> Result<WindowHandle<'_>, HandleError> {
-        let ptr = NonNull::new((self.id.0 as usize) as *mut core::ffi::c_void)
-            .unwrap_or(NonNull::dangling());
-        let raw = RawWindowHandle::WebCanvas(WebCanvasWindowHandle::new(ptr));
-        // SAFETY: The canvas pointer corresponds directly to this active DOM element.
-        unsafe { Ok(WindowHandle::borrow_raw(raw)) }
+        Err(HandleError::Unavailable)
     }
 }
 
 impl HasDisplayHandle for WebWindow {
+    /// Returns [`HandleError::Unavailable`] because real display handles require an active
+    /// browser DOM window context.
     fn display_handle(&self) -> Result<DisplayHandle<'_>, HandleError> {
-        let raw = RawDisplayHandle::Web(WebDisplayHandle::new());
-        // SAFETY: Web browser display handle is unconditionally valid in browser contexts.
-        unsafe { Ok(DisplayHandle::borrow_raw(raw)) }
+        Err(HandleError::Unavailable)
     }
 }
 

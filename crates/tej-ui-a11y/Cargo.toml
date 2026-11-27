@@ -5,6 +5,13 @@ edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
+description = "Accessibility semantic tree, AccessKit bridge, Web ARIA shadow adapter, and live announcement queue for tej-ui."
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/tej-ui-a11y"
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [dependencies]
 tej-ui-layout.workspace = true

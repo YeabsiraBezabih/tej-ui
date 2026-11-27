@@ -344,6 +344,10 @@ impl PathBuilder {
         });
     }
 
+    pub fn end(&mut self, close: bool) {
+        self.inner.end(close);
+    }
+
     pub fn close(&mut self) {
         self.inner.end(true);
     }

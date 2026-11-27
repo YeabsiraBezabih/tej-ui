@@ -172,6 +172,40 @@ impl View for Switch {
                     }
                 }),
             );
+
+            let sig_key = self.checked;
+            let on_change_key = self.on_change.clone();
+            dispatcher.register_key_down(
+                state.node,
+                Arc::new(move |key_code| match key_code {
+                    13 | 32 => {
+                        let next = !sig_key.get();
+                        sig_key.set(next);
+                        if let Some(cb) = &on_change_key {
+                            cb(next);
+                        }
+                    }
+                    37 | 40 => {
+                        // ArrowLeft / ArrowDown -> off
+                        if sig_key.get() {
+                            sig_key.set(false);
+                            if let Some(cb) = &on_change_key {
+                                cb(false);
+                            }
+                        }
+                    }
+                    38 | 39 => {
+                        // ArrowUp / ArrowRight -> on
+                        if !sig_key.get() {
+                            sig_key.set(true);
+                            if let Some(cb) = &on_change_key {
+                                cb(true);
+                            }
+                        }
+                    }
+                    _ => {}
+                }),
+            );
         }
     }
 }

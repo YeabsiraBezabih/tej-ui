@@ -364,15 +364,26 @@ fn test_native_os_services_batch() {
     );
 
     // 2. Hardware Enclave & Biometrics Keystore
+    struct AllowBio;
+    impl tej_ui_services::BiometricVerifier for AllowBio {
+        fn authenticate(
+            &self,
+            _prompt: &tej_ui_services::BiometricPromptConfig,
+        ) -> BiometricAuthResult {
+            BiometricAuthResult::Success
+        }
+    }
+
     let mut keystore = SecureKeyStore::new();
     keystore.store_secret("cloud_token", b"token_12345", true);
     keystore.store_secret("public_pref", b"pref_val", false);
 
-    // Accessing without biometrics returns None for protected key
+    // Accessing without a configured biometric verifier fails closed
     assert_eq!(keystore.retrieve_secret("cloud_token", None), None);
-    // Accessing with successful biometric auth returns the secret
+    // Accessing with a configured biometric verifier returning Success returns the secret
+    keystore.set_verifier(std::sync::Arc::new(AllowBio));
     assert_eq!(
-        keystore.retrieve_secret("cloud_token", Some(BiometricAuthResult::Success)),
+        keystore.retrieve_secret("cloud_token", None),
         Some(b"token_12345".as_slice())
     );
     // Non-protected key requires no auth
@@ -413,10 +424,25 @@ fn test_native_os_services_batch() {
 
 #[test]
 fn test_enterprise_domain_12_services() {
-    use tej_ui_services::{OtaUpdater, ReleaseChannel, UpdateManifest, UpdateState};
+    use std::sync::Arc;
+    use tej_ui_services::{
+        OtaUpdater, ReleaseChannel, SignatureVerifier, UpdateManifest, UpdateState,
+    };
+
+    struct MockVerifier;
+    impl SignatureVerifier for MockVerifier {
+        fn verify_ed25519(&self, pubkey_hex: &str, payload: &[u8], sig_hex: &str) -> bool {
+            pubkey_hex.len() == 64 && !payload.is_empty() && sig_hex.len() == 128
+        }
+        fn verify_sha256(&self, data: &[u8], expected_hex: &str) -> bool {
+            !data.is_empty() && expected_hex.len() == 64
+        }
+    }
 
     // 1. OTA Auto-Updater & Cryptographic Signature Verification
-    let mut updater = OtaUpdater::new("1.0.0", ReleaseChannel::Stable, "abcdef0123456789");
+    let pubkey_hex = "0123456789abcdef".repeat(4); // 32-byte hex Ed25519 public key
+    let mut updater = OtaUpdater::new("1.0.0", ReleaseChannel::Stable, pubkey_hex)
+        .with_verifier(Arc::new(MockVerifier));
     assert_eq!(updater.state(), UpdateState::Idle);
 
     let dummy_sig = "a".repeat(128); // 64-byte hex Ed25519 signature

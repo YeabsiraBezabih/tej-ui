@@ -46,7 +46,7 @@ pub enum BlendMode {
 }
 
 /// Border, radius, elevation shadow, and rasterization effects.
-#[derive(Clone, PartialEq, Debug, Default)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct BordersEffectsProps {
     pub border_top: BorderEdge,
     pub border_bottom: BorderEdge,
@@ -76,4 +76,39 @@ pub struct BordersEffectsProps {
     pub isolate: bool,
     pub will_change_transform: bool,
     pub content_visibility_auto: bool,
+}
+
+impl Default for BordersEffectsProps {
+    fn default() -> Self {
+        Self {
+            border_top: BorderEdge::default(),
+            border_bottom: BorderEdge::default(),
+            border_left: BorderEdge::default(),
+            border_right: BorderEdge::default(),
+            border_block_start: BorderEdge::default(),
+            border_block_end: BorderEdge::default(),
+            border_inline_start: BorderEdge::default(),
+            border_inline_end: BorderEdge::default(),
+            corner_radius_tl: 0.0,
+            corner_radius_tr: 0.0,
+            corner_radius_br: 0.0,
+            corner_radius_bl: 0.0,
+            corner_radius_start_start: 0.0,
+            corner_radius_end_end: 0.0,
+            outline_width: 0.0,
+            outline_style: BorderLineStyle::default(),
+            outline_color: Color::default(),
+            outline_offset: 0.0,
+            box_shadows: SmallVec::new(),
+            opacity: 1.0,
+            visibility: Visibility::default(),
+            mix_blend_mode: BlendMode::default(),
+            filter_blur: 0.0,
+            filter_grayscale: 0.0,
+            backdrop_blur: 0.0,
+            isolate: false,
+            will_change_transform: false,
+            content_visibility_auto: false,
+        }
+    }
 }

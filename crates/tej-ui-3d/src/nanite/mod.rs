@@ -19,7 +19,10 @@ pub use hiz::{
 };
 pub use meshlet_cache::GpuMeshletRing;
 pub use octahedral::{decode_oct_normal, encode_oct_normal};
-pub use picking::{pick_cluster, screen_point_to_ray};
+pub use picking::{
+    pick_cluster, screen_point_to_ray, screen_point_to_ray_for_camera,
+    screen_point_to_ray_with_depth,
+};
 pub use quantized::{
     PackedMeshletVertex, QuantizedMeshlet, dequantize_position, quantize_position,
 };

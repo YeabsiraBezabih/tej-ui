@@ -226,6 +226,15 @@ impl<V: View> View for Styled<V> {
             .copied()
             .unwrap_or(tej_ui_layout::Rect::ZERO);
 
+        let apply_opacity = |color: Color| -> Color {
+            if let Some(op) = self.style.opacity {
+                let factor = op.clamp(0.0, 1.0);
+                Color::rgba(color.r, color.g, color.b, ((color.a as f32) * factor) as u8)
+            } else {
+                color
+            }
+        };
+
         if let Some(shadow) = self.style.shadow {
             if shadow.blur > 0.0 || shadow.offset_x != 0.0 || shadow.offset_y != 0.0 {
                 let shadow_bounds = tej_ui_layout::Rect::new(
@@ -237,38 +246,86 @@ impl<V: View> View for Styled<V> {
                 ctx.fill_rounded_rect(
                     shadow_bounds,
                     self.style.corner_radius + shadow.blur * 0.5,
-                    shadow.color,
+                    apply_opacity(shadow.color),
                 );
             }
         }
 
-        if let Some(bg) = self.style.background {
-            let col = if let Some(op) = self.style.opacity {
-                Color::rgba(bg.r, bg.g, bg.b, ((bg.a as f32) * op) as u8)
-            } else {
-                bg
-            };
-            if self.style.corner_radius > 0.0 {
-                ctx.fill_rounded_rect(bounds, self.style.corner_radius, col);
-            } else {
-                ctx.fill_rect(bounds, col);
+        let has_border = self.style.border_width > 0.0 && self.style.border_color.is_some();
+
+        if has_border && self.style.background.is_some() && self.style.corner_radius > 0.0 {
+            // Rounded border + fill: draw outer border rounded rect, then inset interior fill
+            let border_col = apply_opacity(self.style.border_color.unwrap());
+            let bg_col = apply_opacity(self.style.background.unwrap());
+            let bw = self
+                .style
+                .border_width
+                .min(bounds.size.width * 0.5)
+                .min(bounds.size.height * 0.5)
+                .max(0.0);
+
+            ctx.fill_rounded_rect(bounds, self.style.corner_radius, border_col);
+
+            let inner_w = (bounds.size.width - 2.0 * bw).max(0.0);
+            let inner_h = (bounds.size.height - 2.0 * bw).max(0.0);
+            if inner_w > 0.0 && inner_h > 0.0 {
+                let inner_bounds = tej_ui_layout::Rect::new(
+                    bounds.origin.x + bw,
+                    bounds.origin.y + bw,
+                    inner_w,
+                    inner_h,
+                );
+                ctx.fill_rounded_rect(
+                    inner_bounds,
+                    (self.style.corner_radius - bw).max(0.0),
+                    bg_col,
+                );
             }
-        }
-        if self.style.border_width > 0.0 {
-            if let Some(border_col) = self.style.border_color {
-                let col = if let Some(op) = self.style.opacity {
-                    Color::rgba(
-                        border_col.r,
-                        border_col.g,
-                        border_col.b,
-                        ((border_col.a as f32) * op) as u8,
-                    )
+        } else {
+            if let Some(bg) = self.style.background {
+                let col = apply_opacity(bg);
+                if self.style.corner_radius > 0.0 {
+                    ctx.fill_rounded_rect(bounds, self.style.corner_radius, col);
                 } else {
-                    border_col
-                };
-                ctx.fill_rounded_rect(bounds, self.style.corner_radius, col);
+                    ctx.fill_rect(bounds, col);
+                }
+            }
+
+            if has_border {
+                let col = apply_opacity(self.style.border_color.unwrap());
+                let bw = self
+                    .style
+                    .border_width
+                    .min(bounds.size.width * 0.5)
+                    .min(bounds.size.height * 0.5)
+                    .max(0.0);
+                let x = bounds.origin.x;
+                let y = bounds.origin.y;
+                let w = bounds.size.width;
+                let h = bounds.size.height;
+
+                if bw > 0.0 && w > 0.0 && h > 0.0 {
+                    // Top edge
+                    ctx.fill_rect(tej_ui_layout::Rect::new(x, y, w, bw), col);
+                    // Bottom edge
+                    if h > bw {
+                        ctx.fill_rect(tej_ui_layout::Rect::new(x, y + h - bw, w, bw), col);
+                    }
+                    // Left & right edges (between top and bottom)
+                    let side_h = (h - 2.0 * bw).max(0.0);
+                    if side_h > 0.0 {
+                        ctx.fill_rect(tej_ui_layout::Rect::new(x, y + bw, bw, side_h), col);
+                        if w > bw {
+                            ctx.fill_rect(
+                                tej_ui_layout::Rect::new(x + w - bw, y + bw, bw, side_h),
+                                col,
+                            );
+                        }
+                    }
+                }
             }
         }
+
         self.inner.paint(&state.inner_state, ctx);
     }
 
@@ -278,5 +335,16 @@ impl<V: View> View for Styled<V> {
         dispatcher: &mut crate::events::EventDispatcher,
     ) {
         self.inner.register_events(&state.inner_state, dispatcher);
+    }
+
+    fn accessibility(
+        &self,
+        state: &Self::State,
+        arena: &tej_ui_layout::LayoutArena,
+        tree: &mut tej_ui_a11y::A11yTree,
+        parent: Option<tej_ui_a11y::A11yId>,
+    ) {
+        self.inner
+            .accessibility(&state.inner_state, arena, tree, parent);
     }
 }

@@ -5,6 +5,13 @@ edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
+description = "Zero-allocation vector icon geometry primitives and Lucide-compatible icon sets for tej-ui."
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/tej-ui-icons"
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [dependencies]
 tej-ui-core.workspace = true

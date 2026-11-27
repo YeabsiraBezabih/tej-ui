@@ -147,9 +147,48 @@ impl LayoutArena {
     }
 
     /// Add a child node to a parent container.
+    ///
+    /// Rejects self-parenting and ancestor cycles, and detaches `child` from any
+    /// previous parent before attaching it to `parent`.
     pub fn add_child(&mut self, parent: u32, child: u32) {
+        let len = self.styles.len();
+        if (parent as usize) >= len || (child as usize) >= len {
+            return;
+        }
+        if parent == child {
+            return;
+        }
+
+        // Cycle check: ensure `child` is not an ancestor of `parent`
+        let mut cursor = Some(parent);
+        let mut steps = 0usize;
+        while let Some(curr) = cursor {
+            if curr == child {
+                return;
+            }
+            steps += 1;
+            if steps > len {
+                return;
+            }
+            cursor = self.parents.get(curr as usize).copied().flatten();
+        }
+
+        // Detach from previous parent if already attached elsewhere
+        if let Some(old_parent) = self.parents[child as usize] {
+            if old_parent == parent {
+                self.mark_dirty(parent);
+                return;
+            }
+            if let Some(old_children) = self.children.get_mut(old_parent as usize) {
+                old_children.retain(|c| *c != child);
+            }
+            self.mark_dirty(old_parent);
+        }
+
         if let Some(children_vec) = self.children.get_mut(parent as usize) {
-            children_vec.push(child);
+            if !children_vec.contains(&child) {
+                children_vec.push(child);
+            }
         }
         if let Some(parent_slot) = self.parents.get_mut(child as usize) {
             *parent_slot = Some(parent);
@@ -159,9 +198,15 @@ impl LayoutArena {
 
     /// Mark a node and its ancestors dirty for re-layout.
     pub fn mark_dirty(&mut self, mut node: u32) {
+        let max_steps = self.styles.len();
+        let mut steps = 0usize;
         loop {
             if let Some(d) = self.dirty.get_mut(node as usize) {
                 *d = true;
+            }
+            steps += 1;
+            if steps > max_steps {
+                break;
             }
             if let Some(Some(parent)) = self.parents.get(node as usize) {
                 node = *parent;
@@ -221,9 +266,15 @@ impl LayoutArena {
     #[must_use]
     pub fn path_from_root(&self, target: u32) -> SmallVec<[u32; 16]> {
         let mut path = SmallVec::new();
+        let max_steps = self.styles.len();
         let mut curr = Some(target);
+        let mut steps = 0usize;
         while let Some(node) = curr {
+            if steps > max_steps {
+                break;
+            }
             path.push(node);
+            steps += 1;
             curr = self.parents.get(node as usize).copied().flatten();
         }
         path.reverse();

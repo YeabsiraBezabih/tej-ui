@@ -6,6 +6,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tej_ui_layout::Size;
 
+/// Maximum number of rasterized glyph masks retained in the in-memory cache.
+const MAX_GLYPH_CACHE_ENTRIES: usize = 4096;
+
 /// A rasterized glyph with 8-bit alpha coverage mask.
 #[derive(Clone, Debug)]
 pub struct RasterizedGlyph {
@@ -15,7 +18,7 @@ pub struct RasterizedGlyph {
     pub mask: Arc<[u8]>,
 }
 
-/// TTF/OTF font parser and rasterizer with subpixel positioning and LRU glyph caching.
+/// TTF/OTF font parser and rasterizer with subpixel positioning and bounded glyph caching.
 #[derive(Debug)]
 pub struct FontRasterizer {
     font: Font,
@@ -33,30 +36,50 @@ impl FontRasterizer {
         })
     }
 
+    /// Current number of cached glyph entries.
+    #[must_use]
+    pub fn cache_len(&self) -> usize {
+        self.glyph_cache.read().len()
+    }
+
+    /// Sanitize pixel size, clamping non-positive or non-finite values to `1.0`.
+    #[inline]
+    fn sanitize_size_px(size_px: f32) -> f32 {
+        if size_px.is_finite() && size_px > 0.0 {
+            size_px
+        } else {
+            1.0
+        }
+    }
+
     /// Rasterize or retrieve cached glyph mask at a given point size.
     pub fn rasterize(&self, ch: char, size_px: f32) -> RasterizedGlyph {
-        let size_key = (size_px * 10.0).round() as u32;
+        let safe_size = Self::sanitize_size_px(size_px);
+        let size_key = (safe_size * 10.0).round() as u32;
 
         if let Some(cached) = self.glyph_cache.read().get(&(ch, size_key)) {
             return cached.clone();
         }
 
-        let (metrics, mask) = self.font.rasterize(ch, size_px);
+        let (metrics, mask) = self.font.rasterize(ch, safe_size);
         let glyph = RasterizedGlyph {
             metrics,
             mask: Arc::from(mask.into_boxed_slice()),
         };
 
-        self.glyph_cache
-            .write()
-            .insert((ch, size_key), glyph.clone());
+        let mut cache = self.glyph_cache.write();
+        if cache.len() >= MAX_GLYPH_CACHE_ENTRIES {
+            cache.clear();
+        }
+        cache.insert((ch, size_key), glyph.clone());
         glyph
     }
 
     /// Measure accurate vector layout bounding box for a string slice.
     #[must_use]
     pub fn measure_text(&self, text: &str, size_px: f32) -> Size {
-        let line_height = size_px * 1.35;
+        let safe_size = Self::sanitize_size_px(size_px);
+        let line_height = safe_size * 1.35;
         let mut max_width: f32 = 0.0;
         let mut cur_width: f32 = 0.0;
         let mut lines = 1usize;
@@ -68,7 +91,7 @@ impl FontRasterizer {
                 lines += 1;
                 continue;
             }
-            let glyph = self.rasterize(ch, size_px);
+            let glyph = self.rasterize(ch, safe_size);
             cur_width += glyph.metrics.advance_width;
         }
 

@@ -179,6 +179,26 @@ impl SignalArena {
         }
     }
 
+    /// Remove and invalidate the slot at `id` without requiring the concrete type `T`.
+    ///
+    /// Returns `true` if the slot was active and removed, or `false` if already stale/absent.
+    pub fn remove_untyped(&mut self, id: SignalId) -> bool {
+        let Some(slot) = self.slots.get_mut(id.index as usize) else {
+            return false;
+        };
+
+        if slot.generation != id.generation || slot.value.is_none() {
+            return false;
+        }
+
+        slot.value = None;
+        slot.generation = slot.generation.wrapping_add(1);
+        slot.next_free = self.free_head;
+        self.free_head = Some(id.index);
+        self.active_count = self.active_count.saturating_sub(1);
+        true
+    }
+
     /// Check if a `SignalId` is currently valid in the arena.
     #[must_use]
     pub fn is_valid(&self, id: SignalId) -> bool {

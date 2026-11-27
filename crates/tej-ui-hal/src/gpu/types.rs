@@ -21,6 +21,12 @@ pub enum GpuError {
     #[error("Invalid dimensions for surface or texture: {width}x{height}")]
     InvalidDimensions { width: u32, height: u32 },
 
+    #[error("Invalid pixel buffer size: expected {expected} bytes, got {actual} bytes")]
+    InvalidBufferSize { expected: usize, actual: usize },
+
+    #[error("Atlas is full and could not allocate {width}x{height} glyph")]
+    AtlasFull { width: u32, height: u32 },
+
     #[error("GPU readback failed: {0}")]
     ReadbackFailed(String),
 
@@ -55,6 +61,17 @@ impl Default for BackendConfig {
     }
 }
 
+/// Converts a single normalized sRGB channel `[0.0, 1.0]` to linear light using
+/// the IEC 61966-2-1 sRGB transfer function.
+#[inline]
+fn srgb_to_linear(c: f32) -> f32 {
+    if c <= 0.04045 {
+        c / 12.92
+    } else {
+        ((c + 0.055) / 1.055).powf(2.4)
+    }
+}
+
 /// Premultiplied linear RGBA color vector `[r, g, b, a]`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Pod, Zeroable)]
@@ -73,19 +90,20 @@ impl PremulColor {
         channels: [1.0, 1.0, 1.0, 1.0],
     };
 
-    /// Create from straight 8-bit sRGB color channels.
+    /// Create from straight 8-bit sRGB color channels, decoding RGB into linear space
+    /// and premultiplying by linear alpha.
     #[must_use]
     pub fn from_rgba8(r: u8, g: u8, b: u8, a: u8) -> Self {
         let alpha = f32::from(a) / 255.0;
-        let r_f = (f32::from(r) / 255.0) * alpha;
-        let g_f = (f32::from(g) / 255.0) * alpha;
-        let b_f = (f32::from(b) / 255.0) * alpha;
+        let r_f = srgb_to_linear(f32::from(r) / 255.0) * alpha;
+        let g_f = srgb_to_linear(f32::from(g) / 255.0) * alpha;
+        let b_f = srgb_to_linear(f32::from(b) / 255.0) * alpha;
         Self {
             channels: [r_f, g_f, b_f, alpha],
         }
     }
 
-    /// Create from straight normalized f32 color channels.
+    /// Create from straight normalized f32 linear color channels.
     #[must_use]
     pub fn from_rgba_f32(r: f32, g: f32, b: f32, a: f32) -> Self {
         let alpha = a.clamp(0.0, 1.0);

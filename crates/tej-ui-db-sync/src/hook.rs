@@ -33,6 +33,23 @@ impl DbSyncHook {
         let mut subs = self.prefix_subscriptions.write();
         subs.entry(prefix).or_default().push(signal);
     }
+
+    /// Unregister a reactive signal from `prefix` notifications.
+    ///
+    /// Returns `true` if the signal was found and removed.
+    pub fn unsubscribe_prefix(&self, prefix: &[u8], signal: Signal<u64>) -> bool {
+        let mut subs = self.prefix_subscriptions.write();
+        let Some(signals) = subs.get_mut(prefix) else {
+            return false;
+        };
+        let before = signals.len();
+        signals.retain(|&s| s != signal);
+        let removed = signals.len() != before;
+        if signals.is_empty() {
+            subs.remove(prefix);
+        }
+        removed
+    }
 }
 
 impl std::fmt::Debug for DbSyncHook {
@@ -48,38 +65,43 @@ impl std::fmt::Debug for DbSyncHook {
 
 impl Hook for DbSyncHook {
     fn after_commit(&self, changes: &ChangeSet) {
-        let subs = self.prefix_subscriptions.read();
-        if subs.is_empty() {
-            return;
-        }
+        let notified_signals = {
+            let subs = self.prefix_subscriptions.read();
+            if subs.is_empty() {
+                return;
+            }
 
-        let mut notified_signals = Vec::new();
+            let mut signals_to_notify = Vec::new();
 
-        for (key, _) in &changes.writes {
-            for (prefix, signals) in subs.iter() {
-                if key.starts_with(prefix) {
-                    for &sig in signals {
-                        if !notified_signals.contains(&sig) {
-                            notified_signals.push(sig);
+            for (key, _) in &changes.writes {
+                for (prefix, signals) in subs.iter() {
+                    if key.starts_with(prefix) {
+                        for &sig in signals {
+                            if !signals_to_notify.contains(&sig) {
+                                signals_to_notify.push(sig);
+                            }
                         }
                     }
                 }
             }
-        }
 
-        for key in &changes.deletes {
-            for (prefix, signals) in subs.iter() {
-                if key.starts_with(prefix) {
-                    for &sig in signals {
-                        if !notified_signals.contains(&sig) {
-                            notified_signals.push(sig);
+            for key in &changes.deletes {
+                for (prefix, signals) in subs.iter() {
+                    if key.starts_with(prefix) {
+                        for &sig in signals {
+                            if !signals_to_notify.contains(&sig) {
+                                signals_to_notify.push(sig);
+                            }
                         }
                     }
                 }
             }
-        }
 
-        // Bump version signals to notify reactive UI observers
+            signals_to_notify
+        };
+
+        // Read guard is dropped before updating signals so re-entrant subscribers
+        // calling subscribe_prefix/unsubscribe_prefix cannot deadlock.
         for sig in notified_signals {
             sig.update(|v| *v = v.wrapping_add(1));
         }

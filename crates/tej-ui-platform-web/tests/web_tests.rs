@@ -1,6 +1,6 @@
 //! Integration tests for Web canvas window shell, DOM event translation, and `TejWindowHost`.
 
-use raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle};
+use raw_window_handle::{HandleError, HasDisplayHandle, HasWindowHandle};
 use tej_ui_hal::event::{MouseButton, UiEvent};
 use tej_ui_hal::{CursorIcon, ImeCursorArea, PlatformWindow, TejWindowHost, WindowConfig};
 use tej_ui_layout::Size;
@@ -21,16 +21,15 @@ fn test_web_window_creation_and_host_contract() {
     assert_eq!(window.scale_factor(), 1.0);
     assert!(window.is_open());
 
-    // Window handle check
-    let win_handle = window.window_handle().expect("valid web window handle");
-    match win_handle.as_raw() {
-        RawWindowHandle::WebCanvas(_) => {}
-        _ => panic!("Expected WebCanvasWindowHandle"),
-    }
-
-    // Display handle check
-    let disp_handle = window.display_handle().expect("valid web display handle");
-    assert!(matches!(disp_handle.as_raw(), RawDisplayHandle::Web(_)));
+    // Raw OS handles must safely return Err(Unavailable) without fabricating DOM pointers
+    assert!(matches!(
+        window.window_handle(),
+        Err(HandleError::Unavailable)
+    ));
+    assert!(matches!(
+        window.display_handle(),
+        Err(HandleError::Unavailable)
+    ));
 
     // Cursor switching
     window.set_cursor(CursorIcon::Pointer);

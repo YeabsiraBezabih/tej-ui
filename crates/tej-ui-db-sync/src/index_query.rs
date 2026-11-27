@@ -50,7 +50,8 @@ impl<S: Storage> ReactiveSecondaryQuery<S> {
         self.index.lookup_primary_keys(&rx, secondary_key)
     }
 
-    /// Stream resolved primary records matching `secondary_key` directly to visitor.
+    /// Stream resolved primary records matching `secondary_key` directly to visitor
+    /// within a single snapshot-isolated read transaction.
     pub fn scan_matching_records<F>(
         &self,
         secondary_key: &[u8],
@@ -60,8 +61,9 @@ impl<S: Storage> ReactiveSecondaryQuery<S> {
     where
         F: FnMut(ZeroCopyRow<'_>) -> bool,
     {
-        let primary_keys = self.lookup_primary_keys(secondary_key)?;
+        let _ = self.version_signal.get();
         let rx = self.db.begin_read()?;
+        let primary_keys = self.index.lookup_primary_keys(&rx, secondary_key)?;
 
         for pk in &primary_keys {
             let val = if let Some(tbl) = table_name {

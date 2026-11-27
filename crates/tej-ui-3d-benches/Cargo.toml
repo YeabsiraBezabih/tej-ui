@@ -9,9 +9,9 @@ publish = false
 
 [dependencies]
 tej-ui.workspace = true
-tej-ui-3d = { path = "../tej-ui-3d" }
-tej-ui-hal = { path = "../tej-ui-hal" }
-tej-ui-layout = { path = "../tej-ui-layout" }
+tej-ui-3d.workspace = true
+tej-ui-hal.workspace = true
+tej-ui-layout.workspace = true
 mydb.workspace = true
 mydb-core.workspace = true
 tempfile.workspace = true

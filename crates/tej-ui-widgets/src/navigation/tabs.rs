@@ -218,6 +218,36 @@ where
     }
 
     fn register_events(&self, state: &Self::State, dispatcher: &mut tej_ui_view::EventDispatcher) {
+        let tab_count = self.tabs.len();
+
+        // Root & header row arrow key navigation
+        for container_node in [state.node, state.header_row_node] {
+            let sig = self.active_tab;
+            dispatcher.register_key_down(
+                container_node,
+                Arc::new(move |key_code| {
+                    if tab_count == 0 {
+                        return;
+                    }
+                    let cur = sig.get();
+                    match key_code {
+                        37 | 38 => {
+                            // ArrowLeft / ArrowUp -> previous tab
+                            let prev = if cur == 0 { tab_count - 1 } else { cur - 1 };
+                            sig.set(prev);
+                        }
+                        39 | 40 => {
+                            // ArrowRight / ArrowDown -> next tab
+                            sig.set((cur + 1) % tab_count);
+                        }
+                        36 => sig.set(0),
+                        35 => sig.set(tab_count - 1),
+                        _ => {}
+                    }
+                }),
+            );
+        }
+
         for (i, _) in self.tabs.iter().enumerate() {
             if let Some(&tab_n) = state.tab_nodes.get(i) {
                 let sig = self.active_tab;
@@ -225,6 +255,30 @@ where
                     tab_n,
                     Arc::new(move || {
                         sig.set(i);
+                    }),
+                );
+
+                let sig_key = self.active_tab;
+                dispatcher.register_key_down(
+                    tab_n,
+                    Arc::new(move |key_code| {
+                        if tab_count == 0 {
+                            return;
+                        }
+                        let cur = sig_key.get();
+                        match key_code {
+                            13 | 32 => sig_key.set(i),
+                            37 | 38 => {
+                                let prev = if cur == 0 { tab_count - 1 } else { cur - 1 };
+                                sig_key.set(prev);
+                            }
+                            39 | 40 => {
+                                sig_key.set((cur + 1) % tab_count);
+                            }
+                            36 => sig_key.set(0),
+                            35 => sig_key.set(tab_count - 1),
+                            _ => {}
+                        }
                     }),
                 );
             }

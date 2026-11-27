@@ -25,9 +25,10 @@ fn test_cli_project_scaffolding() {
 
     let cargo_toml = files.get("Cargo.toml").unwrap();
     assert!(cargo_toml.contains("name = \"my-cool-app\""));
-    assert!(cargo_toml.contains("tej = \"0.1\""));
+    assert!(cargo_toml.contains("tej-ui = \"0.1.0\""));
 
     let main_rs = files.get("src/main.rs").unwrap();
     assert!(main_rs.contains("use tej_ui::prelude::*;"));
-    assert!(main_rs.contains("App::new()"));
+    assert!(main_rs.contains("App::new(app_view())"));
+    assert!(main_rs.contains("Button::new(Text::new(\"Click me\"))"));
 }

@@ -50,6 +50,9 @@ pub fn convert_a11y_node(node: &A11yNode) -> accesskit::Node {
     if node.is_disabled {
         ak_node.set_disabled();
     }
+    if node.is_hidden {
+        ak_node.set_hidden();
+    }
     if let Some(checked) = node.is_checked {
         ak_node.set_toggled(if checked {
             accesskit::Toggled::True
@@ -75,7 +78,7 @@ pub fn convert_a11y_node(node: &A11yNode) -> accesskit::Node {
 
     // Role-dependent default accessibility actions
     match node.role {
-        A11yRole::Button | A11yRole::Link => {
+        A11yRole::Button | A11yRole::Link | A11yRole::MenuItem | A11yRole::TreeItem => {
             ak_node.add_action(accesskit::Action::Click);
             ak_node.add_action(accesskit::Action::Focus);
         }
@@ -83,11 +86,11 @@ pub fn convert_a11y_node(node: &A11yNode) -> accesskit::Node {
             ak_node.add_action(accesskit::Action::Click);
             ak_node.add_action(accesskit::Action::Focus);
         }
-        A11yRole::TextInput => {
+        A11yRole::TextInput | A11yRole::ComboBox => {
             ak_node.add_action(accesskit::Action::Focus);
             ak_node.add_action(accesskit::Action::SetValue);
         }
-        A11yRole::ScrollArea | A11yRole::List => {
+        A11yRole::ScrollArea | A11yRole::List | A11yRole::Tree | A11yRole::Grid => {
             ak_node.add_action(accesskit::Action::ScrollDown);
             ak_node.add_action(accesskit::Action::ScrollUp);
         }

@@ -4,6 +4,7 @@ use crate::gpu::atlas::VramAtlas;
 use crate::gpu::buffer_ring::InstanceBufferPool;
 use crate::gpu::clip_stack::ClipStack;
 use crate::gpu::context::GpuContext;
+use crate::gpu::image_pipeline::{ImageInstance, ImagePipeline};
 use crate::gpu::quad_pipeline::{create_quad_bind_group, create_quad_pipeline};
 use crate::gpu::surface::RenderTarget;
 use crate::gpu::text_pipeline::{GlyphInstance, TextPipeline};
@@ -31,6 +32,7 @@ pub struct GpuCompositor {
     buffer_pool: InstanceBufferPool,
     text_pipeline: TextPipeline,
     vector_pipeline: VectorPipeline,
+    image_pipeline: ImagePipeline,
     clip_stack: ClipStack,
     clear_color: PremulColor,
     viewport_width_px: u32,
@@ -82,6 +84,8 @@ impl GpuCompositor {
 
         let vector_pipeline = VectorPipeline::new(ctx, target_format, &uniform_buffer);
 
+        let image_pipeline = ImagePipeline::new(ctx, target_format, &uniform_buffer, 64);
+
         Self {
             pipeline,
             bind_group_layout,
@@ -90,6 +94,7 @@ impl GpuCompositor {
             buffer_pool,
             text_pipeline,
             vector_pipeline,
+            image_pipeline,
             clip_stack: ClipStack::new(),
             clear_color: PremulColor::TRANSPARENT,
             viewport_width_px: 1,
@@ -118,6 +123,7 @@ impl GpuCompositor {
 
         self.buffer_pool.begin_frame();
         self.text_pipeline.begin_frame();
+        self.image_pipeline.begin_frame();
         self.clip_stack.reset(
             self.viewport_width_px,
             self.viewport_height_px,
@@ -208,6 +214,85 @@ impl GpuCompositor {
             is_color_emoji,
         );
         self.text_pipeline.push_glyph(inst, cur_clip.scissor);
+    }
+
+    /// Enqueue a textured image quad with logical bounds, UV rect, and opacity.
+    pub fn draw_textured_quad(&mut self, bounds: [f32; 4], uv_bounds: [f32; 4], opacity: f32) {
+        self.draw_image_instance(ImageInstance::new(bounds, uv_bounds, opacity));
+    }
+
+    /// Enqueue a raw `ImageInstance`, injecting active clipping bounds and scissor.
+    pub fn draw_image_instance(&mut self, mut instance: ImageInstance) {
+        if self.clip_stack.is_culled() {
+            return;
+        }
+
+        let cur_clip = self.clip_stack.current();
+        instance.clip_bounds = cur_clip.clip_bounds;
+        self.image_pipeline.push_image(instance, cur_clip.scissor);
+    }
+
+    /// Render queued textured quads bound to `texture_view` onto `target_view` using `LoadOp::Load`.
+    pub fn render_image_pass(
+        &mut self,
+        ctx: &GpuContext,
+        target_view: &wgpu::TextureView,
+        texture_view: &wgpu::TextureView,
+        sampler: Option<&wgpu::Sampler>,
+    ) {
+        if self.image_pipeline.batches().is_empty() {
+            return;
+        }
+
+        let uniform = ViewportUniform {
+            viewport_size: [
+                self.viewport_width_px as f32,
+                self.viewport_height_px as f32,
+            ],
+            scale_factor: self.scale_factor,
+            _pad: 0.0,
+        };
+        ctx.queue()
+            .write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
+
+        self.image_pipeline
+            .upload(ctx.device(), ctx.queue(), &self.uniform_buffer);
+
+        let tex_bind_group =
+            self.image_pipeline
+                .create_texture_bind_group(ctx.device(), texture_view, sampler);
+
+        let mut encoder = ctx
+            .device()
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("tej_image_pass_encoder"),
+            });
+
+        {
+            let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("tej_image_render_pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: target_view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Load,
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            });
+
+            self.image_pipeline.render(
+                &mut rpass,
+                &tex_bind_group,
+                self.viewport_width_px,
+                self.viewport_height_px,
+            );
+        }
+
+        ctx.queue().submit(Some(encoder.finish()));
     }
 
     /// Submits enqueued primitives to the target surface without an atlas.
@@ -305,7 +390,7 @@ impl GpuCompositor {
 
         let mut scissor_changes = 0u32;
         let batch_count =
-            (self.buffer_pool.batches().len() + self.text_pipeline.glyph_count().min(1)) as u32;
+            (self.buffer_pool.batches().len() + self.text_pipeline.batches().len()) as u32;
 
         {
             let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -349,6 +434,8 @@ impl GpuCompositor {
 
             if let Some(mesh) = vector_mesh {
                 if !mesh.is_empty() {
+                    // Reset scissor to full viewport so the last quad batch's scissor does not clip vectors.
+                    rpass.set_scissor_rect(0, 0, self.viewport_width_px, self.viewport_height_px);
                     self.vector_pipeline.render(
                         &mut rpass,
                         None,
@@ -404,5 +491,14 @@ impl GpuCompositor {
 
     pub fn vector_pipeline_mut(&mut self) -> &mut VectorPipeline {
         &mut self.vector_pipeline
+    }
+
+    #[must_use]
+    pub const fn image_pipeline(&self) -> &ImagePipeline {
+        &self.image_pipeline
+    }
+
+    pub fn image_pipeline_mut(&mut self) -> &mut ImagePipeline {
+        &mut self.image_pipeline
     }
 }

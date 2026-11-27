@@ -29,61 +29,66 @@ members = [
     "benches",
     "tests",
 ]
-resolver = "2"
+resolver = "3"
 
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.85.0"
+rust-version = "1.88.0"
 authors = ["Yeabsira Bezabih <ets1389@aastu.edu.et>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
+repository = "https://github.com/YeabsiraBezabih/tej-ui"
+homepage = "https://github.com/YeabsiraBezabih/tej-ui"
+documentation = "https://docs.rs/tej-ui"
+keywords = ["gui", "ui", "framework", "wgpu", "reactive"]
+categories = ["gui", "rendering"]
 
 [workspace.dependencies]
 # Canonical tej-ui workspace crates
-tej-ui-core = { package = "tej-ui-core", path = "crates/tej-ui-core" }
-tej-ui-view = { package = "tej-ui-view", path = "crates/tej-ui-view" }
-tej-ui-layout = { package = "tej-ui-layout", path = "crates/tej-ui-layout" }
-tej-ui-text = { package = "tej-ui-text", path = "crates/tej-ui-text" }
-tej-ui-hal = { package = "tej-ui-hal", path = "crates/tej-ui-hal" }
-tej-ui-platform-linux = { package = "tej-ui-platform-linux", path = "crates/tej-ui-platform-linux" }
-tej-ui-platform-windows = { package = "tej-ui-platform-windows", path = "crates/tej-ui-platform-windows" }
-tej-ui-platform-macos = { package = "tej-ui-platform-macos", path = "crates/tej-ui-platform-macos" }
-tej-ui-platform-web = { package = "tej-ui-platform-web", path = "crates/tej-ui-platform-web" }
-tej-ui-a11y = { package = "tej-ui-a11y", path = "crates/tej-ui-a11y" }
-tej-ui-db-sync = { package = "tej-ui-db-sync", path = "crates/tej-ui-db-sync" }
-tej-ui-widgets = { package = "tej-ui-widgets", path = "crates/tej-ui-widgets" }
-tej-ui-services = { package = "tej-ui-services", path = "crates/tej-ui-services" }
-tej-ui-devtools = { package = "tej-ui-devtools", path = "crates/tej-ui-devtools" }
-tej-ui-3d = { package = "tej-ui-3d", path = "crates/tej-ui-3d" }
-tej-ui-icons = { package = "tej-ui-icons", path = "crates/tej-ui-icons" }
-tej-ui-animation = { package = "tej-ui-animation", path = "crates/tej-ui-animation" }
-tej-ui-cli = { package = "tej-ui-cli", path = "crates/tej-ui-cli" }
-tej-ui = { package = "tej-ui", path = "crates/tej-ui" }
+tej-ui-core = { package = "tej-ui-core", version = "0.1.0", path = "crates/tej-ui-core" }
+tej-ui-view = { package = "tej-ui-view", version = "0.1.0", path = "crates/tej-ui-view" }
+tej-ui-layout = { package = "tej-ui-layout", version = "0.1.0", path = "crates/tej-ui-layout" }
+tej-ui-text = { package = "tej-ui-text", version = "0.1.0", path = "crates/tej-ui-text" }
+tej-ui-hal = { package = "tej-ui-hal", version = "0.1.0", path = "crates/tej-ui-hal" }
+tej-ui-platform-linux = { package = "tej-ui-platform-linux", version = "0.1.0", path = "crates/tej-ui-platform-linux" }
+tej-ui-platform-windows = { package = "tej-ui-platform-windows", version = "0.1.0", path = "crates/tej-ui-platform-windows" }
+tej-ui-platform-macos = { package = "tej-ui-platform-macos", version = "0.1.0", path = "crates/tej-ui-platform-macos" }
+tej-ui-platform-web = { package = "tej-ui-platform-web", version = "0.1.0", path = "crates/tej-ui-platform-web" }
+tej-ui-a11y = { package = "tej-ui-a11y", version = "0.1.0", path = "crates/tej-ui-a11y" }
+tej-ui-db-sync = { package = "tej-ui-db-sync", version = "0.1.0", path = "crates/tej-ui-db-sync" }
+tej-ui-widgets = { package = "tej-ui-widgets", version = "0.1.0", path = "crates/tej-ui-widgets" }
+tej-ui-services = { package = "tej-ui-services", version = "0.1.0", path = "crates/tej-ui-services" }
+tej-ui-devtools = { package = "tej-ui-devtools", version = "0.1.0", path = "crates/tej-ui-devtools" }
+tej-ui-3d = { package = "tej-ui-3d", version = "0.1.0", path = "crates/tej-ui-3d" }
+tej-ui-icons = { package = "tej-ui-icons", version = "0.1.0", path = "crates/tej-ui-icons" }
+tej-ui-animation = { package = "tej-ui-animation", version = "0.1.0", path = "crates/tej-ui-animation" }
+tej-ui-cli = { package = "tej-ui-cli", version = "0.1.0", path = "crates/tej-ui-cli" }
+tej-ui = { package = "tej-ui", version = "0.1.0", path = "crates/tej-ui" }
 
 # Aliases for backwards compatibility across internal crates
-tej-core = { package = "tej-ui-core", path = "crates/tej-ui-core" }
-tej-view = { package = "tej-ui-view", path = "crates/tej-ui-view" }
-tej-layout = { package = "tej-ui-layout", path = "crates/tej-ui-layout" }
-tej-text = { package = "tej-ui-text", path = "crates/tej-ui-text" }
-tej-hal = { package = "tej-ui-hal", path = "crates/tej-ui-hal" }
-tej-platform-linux = { package = "tej-ui-platform-linux", path = "crates/tej-ui-platform-linux" }
-tej-platform-windows = { package = "tej-ui-platform-windows", path = "crates/tej-ui-platform-windows" }
-tej-platform-macos = { package = "tej-ui-platform-macos", path = "crates/tej-ui-platform-macos" }
-tej-platform-web = { package = "tej-ui-platform-web", path = "crates/tej-ui-platform-web" }
-tej-a11y = { package = "tej-ui-a11y", path = "crates/tej-ui-a11y" }
-tej-db-sync = { package = "tej-ui-db-sync", path = "crates/tej-ui-db-sync" }
-tej-widgets = { package = "tej-ui-widgets", path = "crates/tej-ui-widgets" }
-tej-services = { package = "tej-ui-services", path = "crates/tej-ui-services" }
-tej-devtools = { package = "tej-ui-devtools", path = "crates/tej-ui-devtools" }
-tej-3d = { package = "tej-ui-3d", path = "crates/tej-ui-3d" }
-tej-icons = { package = "tej-ui-icons", path = "crates/tej-ui-icons" }
-tej-animation = { package = "tej-ui-animation", path = "crates/tej-ui-animation" }
-tej = { package = "tej-ui", path = "crates/tej-ui" }
+tej-core = { package = "tej-ui-core", version = "0.1.0", path = "crates/tej-ui-core" }
+tej-view = { package = "tej-ui-view", version = "0.1.0", path = "crates/tej-ui-view" }
+tej-layout = { package = "tej-ui-layout", version = "0.1.0", path = "crates/tej-ui-layout" }
+tej-text = { package = "tej-ui-text", version = "0.1.0", path = "crates/tej-ui-text" }
+tej-hal = { package = "tej-ui-hal", version = "0.1.0", path = "crates/tej-ui-hal" }
+tej-platform-linux = { package = "tej-ui-platform-linux", version = "0.1.0", path = "crates/tej-ui-platform-linux" }
+tej-platform-windows = { package = "tej-ui-platform-windows", version = "0.1.0", path = "crates/tej-ui-platform-windows" }
+tej-platform-macos = { package = "tej-ui-platform-macos", version = "0.1.0", path = "crates/tej-ui-platform-macos" }
+tej-platform-web = { package = "tej-ui-platform-web", version = "0.1.0", path = "crates/tej-ui-platform-web" }
+tej-a11y = { package = "tej-ui-a11y", version = "0.1.0", path = "crates/tej-ui-a11y" }
+tej-db-sync = { package = "tej-ui-db-sync", version = "0.1.0", path = "crates/tej-ui-db-sync" }
+tej-widgets = { package = "tej-ui-widgets", version = "0.1.0", path = "crates/tej-ui-widgets" }
+tej-services = { package = "tej-ui-services", version = "0.1.0", path = "crates/tej-ui-services" }
+tej-devtools = { package = "tej-ui-devtools", version = "0.1.0", path = "crates/tej-ui-devtools" }
+tej-3d = { package = "tej-ui-3d", version = "0.1.0", path = "crates/tej-ui-3d" }
+tej-icons = { package = "tej-ui-icons", version = "0.1.0", path = "crates/tej-ui-icons" }
+tej-animation = { package = "tej-ui-animation", version = "0.1.0", path = "crates/tej-ui-animation" }
+tej = { package = "tej-ui", version = "0.1.0", path = "crates/tej-ui" }
 
-# Database integration
-mydb = { package = "tej-db", path = "../tej-db/crates/tej-db" }
-mydb-core = { package = "tej-db-core", path = "../tej-db/crates/tej-db-core" }
+# Database integration (published crates.io versions)
+mydb = { package = "tej-db", version = "0.1.0" }
+mydb-core = { package = "tej-db-core", version = "0.1.0" }
 
 # Core utilities
 parking_lot = "0.12"
@@ -113,6 +118,16 @@ lyon_tessellation = "1.0"
 # Accessibility
 accesskit = "0.25"
 
+
+# Production desktop windowing, crypto, grapheme segmentation & dynamic loading
+winit = "0.30"
+ed25519-dalek = "2.1"
+sha2 = "0.10"
+hex = "0.4"
+zeroize = { version = "1.8", features = ["derive"] }
+libloading = "0.8"
+unicode-segmentation = "1.12"
+
 # Testing & Tempfile
 tempfile = "3.17"
 
@@ -135,6 +150,7 @@ rust_2018_idioms = { level = "warn", priority = -1 }
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
 missing_errors_doc = "allow"
 must_use_candidate = "allow"
 cast_possible_truncation = "allow"

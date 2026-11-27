@@ -19,11 +19,20 @@ macro_rules! impl_view_for_tuple {
 
             fn layout(&self, state: &mut Self::State, arena: &mut tej_ui_layout::LayoutArena) -> u32 {
                 let parent = arena.allocate_node(tej_ui_layout::LayoutStyle::default());
+                self.layout_children(state, arena, parent);
+                parent
+            }
+
+            fn layout_children(
+                &self,
+                state: &mut Self::State,
+                arena: &mut tej_ui_layout::LayoutArena,
+                parent: u32,
+            ) {
                 $(
                     let child_node = self.$idx.layout(&mut state.$idx, arena);
                     arena.add_child(parent, child_node);
                 )+
-                parent
             }
 
             fn paint(&self, state: &Self::State, ctx: &mut crate::paint::PaintContext<'_>) {
@@ -35,6 +44,18 @@ macro_rules! impl_view_for_tuple {
             fn register_events(&self, state: &Self::State, dispatcher: &mut crate::events::EventDispatcher) {
                 $(
                     self.$idx.register_events(&state.$idx, dispatcher);
+                )+
+            }
+
+            fn accessibility(
+                &self,
+                state: &Self::State,
+                arena: &tej_ui_layout::LayoutArena,
+                tree: &mut tej_ui_a11y::A11yTree,
+                parent: Option<tej_ui_a11y::A11yId>,
+            ) {
+                $(
+                    self.$idx.accessibility(&state.$idx, arena, tree, parent);
                 )+
             }
         }

@@ -1,9 +1,19 @@
 //! Verification tests for native OS subsystems: ClipboardProvider, FileDialogProvider, and SecureKeyStore.
 
 use std::path::PathBuf;
+use std::sync::Arc;
 use tej_ui_services::{
-    BiometricAuthResult, Clipboard, ClipboardProvider, FileDialog, SecureKeyStore,
+    BiometricAuthResult, BiometricPromptConfig, BiometricVerifier, Clipboard, ClipboardProvider,
+    FileDialog, SecureKeyStore,
 };
+
+struct StaticBiometricVerifier(BiometricAuthResult);
+
+impl BiometricVerifier for StaticBiometricVerifier {
+    fn authenticate(&self, _prompt: &BiometricPromptConfig) -> BiometricAuthResult {
+        self.0
+    }
+}
 
 #[test]
 fn test_clipboard_provider_rich_formats() {
@@ -78,24 +88,27 @@ fn test_secure_keystore_biometrics_and_memory_wipe() {
     // Store with biometrics
     store.store_secret("vault_master", b"super_secret_master_key", true);
 
-    // Access fails without success auth result
+    // Access fails closed without a configured verifier
     assert_eq!(store.retrieve_secret("vault_master", None), None);
-    assert_eq!(
-        store.retrieve_secret("vault_master", Some(BiometricAuthResult::UserCancelled)),
-        None
-    );
 
-    // Access succeeds with biometric success
+    // Access fails when verifier returns UserCancelled
+    store.set_verifier(Arc::new(StaticBiometricVerifier(
+        BiometricAuthResult::UserCancelled,
+    )));
+    assert_eq!(store.retrieve_secret("vault_master", None), None);
+
+    // Access succeeds when verifier returns Success
+    store.set_verifier(Arc::new(StaticBiometricVerifier(
+        BiometricAuthResult::Success,
+    )));
+    let prompt = BiometricPromptConfig::new("Unlock Vault");
     assert_eq!(
-        store.retrieve_secret("vault_master", Some(BiometricAuthResult::Success)),
+        store.retrieve_secret("vault_master", Some(&prompt)),
         Some(b"super_secret_master_key".as_slice())
     );
 
     // Secure volatile wipe of process memory
     store.wipe_memory();
     assert_eq!(store.retrieve_secret("app_token", None), None);
-    assert_eq!(
-        store.retrieve_secret("vault_master", Some(BiometricAuthResult::Success)),
-        None
-    );
+    assert_eq!(store.retrieve_secret("vault_master", Some(&prompt)), None);
 }

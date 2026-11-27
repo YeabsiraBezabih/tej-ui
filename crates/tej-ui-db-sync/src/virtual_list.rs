@@ -55,10 +55,23 @@ where
     /// Calculate visible range `(start_index, end_index)`.
     #[must_use]
     pub fn visible_range(&self) -> (usize, usize) {
-        let offset = self.scroll_offset.get().max(0.0);
+        if self.total_items == 0
+            || self.item_height <= 0.0
+            || !self.item_height.is_finite()
+            || !self.viewport_height.is_finite()
+        {
+            return (0, 0);
+        }
+        let raw_offset = self.scroll_offset.get();
+        let offset = if raw_offset.is_finite() {
+            raw_offset.max(0.0)
+        } else {
+            0.0
+        };
+        let viewport = self.viewport_height.max(0.0);
         let start = (offset / self.item_height).floor() as usize;
-        let visible_count = ((self.viewport_height / self.item_height).ceil() as usize) + 2; // +2 buffer
-        let end = (start + visible_count).min(self.total_items);
+        let visible_count = ((viewport / self.item_height).ceil() as usize).saturating_add(2); // +2 buffer
+        let end = start.saturating_add(visible_count).min(self.total_items);
         (start.min(self.total_items), end)
     }
 }
@@ -79,7 +92,7 @@ where
 
     fn build(&self) -> Self::State {
         let (start, end) = self.visible_range();
-        let mut visible_states = Vec::with_capacity(end - start);
+        let mut visible_states = Vec::with_capacity(end.saturating_sub(start));
         for idx in start..end {
             let row_view = (self.row_builder)(idx);
             visible_states.push((idx, row_view.build()));
@@ -93,7 +106,7 @@ where
 
     fn rebuild(&self, state: &mut Self::State) {
         let (start, end) = self.visible_range();
-        let mut new_states = Vec::with_capacity(end - start);
+        let mut new_states = Vec::with_capacity(end.saturating_sub(start));
         for idx in start..end {
             let row_view = (self.row_builder)(idx);
             if let Some(pos) = state.visible_states.iter().position(|(i, _)| *i == idx) {

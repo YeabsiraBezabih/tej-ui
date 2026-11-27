@@ -35,7 +35,8 @@ pub use nanite::{
     NaniteFrameStats, NaniteGizmoManager, NaniteRenderEngine, NaniteStreamer, PackedMeshletVertex,
     ProjectedTriangle, QuantizedMeshlet, cluster_debug_color, decode_oct_normal,
     dequantize_position, encode_oct_normal, pick_cluster, quantize_position,
-    sanitize_mesh_geometry, screen_point_to_ray,
+    sanitize_mesh_geometry, screen_point_to_ray, screen_point_to_ray_for_camera,
+    screen_point_to_ray_with_depth,
 };
 pub use rasterizer::{
     ClipVertex, ClippedTriangles, EdgeEquation, PerspectiveBarycentrics, ResolvedTriangle,

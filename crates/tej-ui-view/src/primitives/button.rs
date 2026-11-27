@@ -260,4 +260,31 @@ impl<V: View> View for Button<V> {
         }
         self.child.register_events(&state.child_state, dispatcher);
     }
+
+    fn accessibility(
+        &self,
+        state: &Self::State,
+        arena: &tej_ui_layout::LayoutArena,
+        tree: &mut tej_ui_a11y::A11yTree,
+        parent: Option<tej_ui_a11y::A11yId>,
+    ) {
+        let id = tree.allocate_id();
+        let bounds = arena
+            .computed_bounds
+            .get(state.node as usize)
+            .copied()
+            .unwrap_or(tej_ui_layout::Rect::ZERO);
+        let mut node =
+            tej_ui_a11y::A11yNode::new(id, tej_ui_a11y::A11yRole::Button).with_bounds(bounds);
+        node.is_disabled = self.disabled;
+        tree.insert_node(node);
+        if let Some(parent_id) = parent {
+            if let Some(p) = tree.get_node_mut(parent_id) {
+                p.children.push(id);
+            }
+            tree.mark_dirty(parent_id);
+        }
+        self.child
+            .accessibility(&state.child_state, arena, tree, Some(id));
+    }
 }

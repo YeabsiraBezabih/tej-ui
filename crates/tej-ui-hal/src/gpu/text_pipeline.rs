@@ -391,4 +391,9 @@ impl TextPipeline {
     pub fn glyph_count(&self) -> usize {
         self.buffer_pool.glyph_count()
     }
+
+    #[must_use]
+    pub fn batches(&self) -> &[TextBatch] {
+        self.buffer_pool.batches()
+    }
 }

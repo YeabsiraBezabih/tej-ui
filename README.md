@@ -2,84 +2,58 @@
 
 <div align="center">
 
-**A Zero-Copy, High-Performance, Native OS UI Framework in Rust**
+**A Modular, Reactive, Zero-Copy Cross-Platform UI Framework for Rust**
 
-[![Crates.io](https://img.shields.io/badge/crates.io-v0.1.0-orange.svg)](https://crates.io)
-[![Documentation](https://img.shields.io/badge/docs.rs-tej-blue.svg)](https://docs.rs/tej)
-[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
+[![Crates.io](https://img.shields.io/crates/v/tej-ui.svg)](https://crates.io/crates/tej-ui)
+[![Docs.rs](https://docs.rs/tej-ui/badge.svg)](https://docs.rs/tej-ui)
+[![MSRV](https://img.shields.io/badge/MSRV-1.88.0-blue.svg)](rust-toolchain.toml)
+[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE-MIT)
 
-*Glitch-Free Reactivity • Flat SoA Layout Engine • 0.0% Idle CPU • Deep Zero-Copy DBMS Integration • Authentic Native OS Controls*
+*Generational Arena Signals • Flat SoA Layout Engine • Compile-Time Static View Trees • Zero-Copy `tej-db` Integration*
 
 </div>
 
----
+`tej-ui` is a modular Rust UI framework organized as a 19-crate workspace. It combines an 8-byte `Copy` reactive signal graph, a data-oriented Structure-of-Arrays (SoA) Flexbox/Grid layout engine, static compile-time view trees, optional `wgpu` GPU rendering, and direct zero-copy integration with [`tej-db`](https://github.com/YeabsiraBezabih/tej-db).
 
-## Architecture Highlights
+## Installation
 
-`tej-ui` is engineered from first principles for mission-critical enterprise applications that demand sub-microsecond responsiveness, zero steady-state allocations, and minimal RAM footprint:
-
-- **Generational Arena Signals (`tej-core`)**: 8-byte `Copy` reactive signals (`Signal<T>`), glitch-free topological DAG updates, with throughput exceeding **670,000+ operations/second**.
-- **Data-Oriented Flat SoA Layout Engine (`tej-layout`)**: Structure-of-Arrays (SoA) layout arena with Flexbox and CSS Grid semantics. Computes 10,000 nodes in under **280 microseconds** with zero steady-state heap allocations.
-- **Deep ACID DBMS Integration (`tej-db-sync`)**:
-  - **Zero-Copy Row Lens (`DbRowLens`)**: Reads memory-mapped slotted pages (`&str`, `&[u8]`) directly from `MyDb` snapshots without cloning strings into UI memory.
-  - **Direct RLE Columnar Filtering (`DirectRleFilter`)**: Filters boolean flags and categories directly over compressed runs at **47.49 Billion rows/second** with zero row decompression.
-  - **1-Bit RaBitQ Semantic Palette (`SemanticPalette`)**: 64-bit quantized embedding signatures searched in **74 µs** across 10,000 actions using hardware SIMD popcount (`u64::count_ones`).
-  - **8-Byte COW Time-Travel Stack (`CowTimeTravelStack`)**: Stores 10,000 full database undo/redo states in **128 KB of RAM** with **5.66 ns** state pivot time.
-- **Authentic Native Platform Feel**:
-  - **Windows (`tej-platform-windows`)**: Windows 11 Snap Layouts flyouts, Precision Touchpad kinetic physics, DirectComposition BGRA surfaces.
-  - **macOS (`tej-platform-macos`)**: Apple traffic light buttons, nonlinear elastic rubber-banding ($d_{\text{eff}} = d \times 0.55$), Metal Retina 2.0x compositor.
-  - **Linux (`tej-platform-linux`)**: Adwaita CSD headerbars, Freedesktop Portal theme sync, libinput kinetic scroll inertia.
-
----
-
-## Workspace Crates
-
-| Crate | Description |
-| :--- | :--- |
-| [`tej`](crates/tej) | Unified ergonomic umbrella crate with comprehensive prelude and application builder. |
-| [`tej-core`](crates/tej-core) | Generational `SlotMap` arena, 8-byte `Copy` `Signal<T>`, dependency tracking graph, dirty bitsets. |
-| [`tej-view`](crates/tej-view) | Compile-time static view tree traits (`View`), tuple combinators, zero-vtable dispatch. |
-| [`tej-layout`](crates/tej-layout) | Flat Structure-of-Arrays (SoA) layout engine with Flexbox and Grid support. |
-| [`tej-text`](crates/tej-text) | Unicode BiDi algorithm (UAX #9), system font discovery, text measurement and shaping. |
-| [`tej-hal`](crates/tej-hal) | Hardware abstraction layer, event routing (tunneling/bubbling), dirty rect tracking, display pacing. |
-| [`tej-platform-linux`](crates/tej-platform-linux) | Linux Wayland/X11 platform integration, Adwaita CSD, portal theme sync. |
-| [`tej-platform-windows`](crates/tej-platform-windows) | Windows Win32, DirectComposition, Snap Layouts, Precision Touchpad. |
-| [`tej-platform-macos`](crates/tej-platform-macos) | macOS AppKit, Metal surface compositor, traffic lights, elastic rubber-banding. |
-| [`tej-a11y`](crates/tej-a11y) | Accessibility bridge (`AccessKit`), semantic node tree, live announcements. |
-| [`tej-db-sync`](crates/tej-db-sync) | Zero-copy `MyDb` ACID engine integration, mmap lenses, direct RLE filter, RaBitQ palette. |
-| [`tej-widgets`](crates/tej-widgets) | 2D DataGrid, RichTextEditor, TreeView, Form Engine, Pickers, Command Palette, Overlays. |
-| [`tej-animation`](crates/tej-animation) | Spring physics, keyframe morphing, interruptible transitions. |
-| [`tej-services`](crates/tej-services) | Native menus, system tray, keychain/biometrics, DnD protocol, PDF print spooling. |
-| [`tej-devtools`](crates/tej-devtools) | Dynamic library hot-reloading bridge, visual runtime inspector, dirty-rect flasher. |
-| [`tej-3d`](crates/tej-3d) | Software 3D rasterizer, camera raycasting, orbit controls, retained 3D view. |
-| [`tej-icons`](crates/tej-icons) | High-performance zero-allocation icon geometry primitives. |
-| [`tej-cli`](crates/tej-cli) | Scaffolding, asset bundling, and cross-compilation tooling. |
-
----
-
-## Quickstart
-
-Add `tej` to your `Cargo.toml`:
+Add `tej-ui` to your `Cargo.toml` (requires **Rust 1.88.0+** / Edition 2024):
 
 ```toml
 [dependencies]
-tej = "0.1.0"
+tej-ui = "0.1.0"
 ```
 
-### Minimal Application Example
+To enable zero-copy database synchronization with `tej-db`, 3D viewports, OS services, or runtime devtools, opt into the corresponding feature flags:
+
+```toml
+[dependencies]
+tej-ui = { version = "0.1.0", features = ["db-sync", "services"] }
+```
+
+## Quickstart
 
 ```rust
-use tej::prelude::*;
+use tej_ui::prelude::*;
 
 fn counter_app() -> impl View {
     let count = Signal::new(0i32);
 
+    // Derive a reactive string with Memo::new and bind it to Text::reactive
+    let label_memo = Memo::new(move || format!("Current Count: {}", count.get()));
+    let label_signal = Signal::new(label_memo.untracked_get());
+    let _sync = create_effect(move || {
+        label_signal.set(label_memo.get());
+    });
+
     VStack::new((
         Text::new("Hello from tej-ui!"),
-        Text::new(Memo::new(move || format!("Current Count: {}", count.get()))),
+        Text::reactive(label_signal),
         HStack::new((
-            Button::new("Increment", move || count.update(|c| *c += 1)),
-            Button::new("Decrement", move || count.update(|c| *c -= 1)),
+            Button::new(Text::new("Increment"))
+                .on_click(move || count.update(|c| *c += 1)),
+            Button::new(Text::new("Decrement"))
+                .on_click(move || count.update(|c| *c -= 1)),
         ))
         .spacing(8),
     ))
@@ -87,48 +61,113 @@ fn counter_app() -> impl View {
     .spacing(16)
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = App::new(counter_app()).window(WindowConfig {
         title: "Counter Application".into(),
         size: Size::new(400.0, 300.0),
         ..Default::default()
     });
 
-    app.run();
+    app.run()
 }
 ```
 
----
+## Feature Flags
 
-## Verification & Quality Gates
+| Feature | Enabled by Default | Pulls In | Description |
+| :--- | :---: | :--- | :--- |
+| `widgets` | Yes | `tej-ui-widgets` | Enterprise widgets (`DataGrid`, `RichTextEditor`, `TreeView`, `FormController`, `CommandPalette`, `Modal`, `Tabs`, `Card`, `Progress`, etc.). |
+| `a11y` | Yes | `tej-ui-a11y` | Semantic accessibility tree, `AccessKit` bridge, Web ARIA shadow adapter, and live announcements. |
+| `animation` | Yes | `tej-ui-animation` | Spring physics (`AnimatedSpring`), `AnimatedValue`, `Lerp`, and `VsyncTicker`. |
+| `icons` | Yes | `tej-ui-icons` | Zero-allocation vector icon primitives and Lucide-compatible icon sets. |
+| `db-sync` | No | `tej-ui-db-sync` | Zero-copy `tej-db` ACID database integration (`DbRowLens`, `DirectRleFilter`, `SemanticPalette`, `CowTimeTravelStack`, `VirtualList`). |
+| `services` | No | `tej-ui-services` | Clipboard, file dialogs, global shortcuts, system tray, drag-and-drop, and credential store. |
+| `3d` | No | `tej-ui-3d` | Retained 3D viewport (`Canvas3D`), software rasterizer, OBJ loader, orbit camera, and meshlet streamer. |
+| `devtools` | No | `tej-ui-devtools` | Reactive DAG inspector, dirty-rect HUD overlay, frame metrics, and dynamic hot-reload host. |
+| `full` | No | All of the above | Enables `default` plus `services`, `3d`, `db-sync`, and `devtools`. |
 
-On every change, three mandatory gates must pass:
+Platform backends (`tej-ui-platform-linux`, `tej-ui-platform-windows`, `tej-ui-platform-macos`, `tej-ui-platform-web`) are target-gated automatically via `[target.'cfg(...)'.dependencies]` so OS-specific crates (such as `minifb` on Linux) are never compiled on other platforms.
+
+## Workspace Crates (19 Publishable Crates)
+
+| Crate | Status | Description |
+| :--- | :--- | :--- |
+| [`tej-ui`](crates/tej-ui) | ![Beta](https://img.shields.io/badge/status-Beta-yellow) | Umbrella facade crate providing `prelude::*`, `App`, and feature-gated re-exports. |
+| [`tej-ui-core`](crates/tej-ui-core) | ![Production-Ready](https://img.shields.io/badge/status-Production--Ready-brightgreen) | Generational `SlotMap` arena, 8-byte `Copy` `Signal<T>`, `Memo<T>`, `Effect`, `Resource`, `Store`, and `batch`. |
+| [`tej-ui-layout`](crates/tej-ui-layout) | ![Production-Ready](https://img.shields.io/badge/status-Production--Ready-brightgreen) | Flat Structure-of-Arrays (SoA) Flexbox and CSS Grid layout engine (`LayoutArena`, `LayoutEngine`). |
+| [`tej-ui-view`](crates/tej-ui-view) | ![Production-Ready](https://img.shields.io/badge/status-Production--Ready-brightgreen) | Compile-time static `View` traits, tuple combinators, CSS stylesheet/tokens, theming, event dispatch, and core primitives. |
+| [`tej-ui-hal`](crates/tej-ui-hal) | ![Beta](https://img.shields.io/badge/status-Beta-yellow) | Hardware abstraction layer, `SurfaceCompositor`, `PlatformWindow`, dirty-rect tracking, and optional `wgpu` GPU pipeline. |
+| [`tej-ui-text`](crates/tej-ui-text) | ![Beta](https://img.shields.io/badge/status-Beta-yellow) | Unicode BiDi (UAX #9), system font discovery (`fontique`), shaping (`swash`), and measurement (`fontdue`). |
+| [`tej-ui-widgets`](crates/tej-ui-widgets) | ![Beta](https://img.shields.io/badge/status-Beta-yellow) | High-level enterprise widget suite (`DataGrid`, `RichTextEditor`, `TreeView`, `FormController`, `CommandPalette`, overlays). |
+| [`tej-ui-db-sync`](crates/tej-ui-db-sync) | ![Beta](https://img.shields.io/badge/status-Beta-yellow) | Zero-copy `tej-db` ACID database integration, mmap row lenses, direct RLE filters, RaBitQ semantic palette, and COW undo. |
+| [`tej-ui-a11y`](crates/tej-ui-a11y) | ![Beta](https://img.shields.io/badge/status-Beta-yellow) | Accessibility semantic tree, `AccessKit` bridge, Web ARIA shadow adapter, and announcement queue. |
+| [`tej-ui-animation`](crates/tej-ui-animation) | ![Beta](https://img.shields.io/badge/status-Beta-yellow) | Spring physics simulations, interruptible value transitions, and vsync pacing. |
+| [`tej-ui-icons`](crates/tej-ui-icons) | ![Beta](https://img.shields.io/badge/status-Beta-yellow) | Vector icon geometry primitives and Lucide-compatible icon definitions. |
+| [`tej-ui-platform-linux`](crates/tej-ui-platform-linux) | ![Beta](https://img.shields.io/badge/status-Beta-yellow) | Linux windowing and surface presentation backend (`minifb`) with Adwaita CSD helpers. |
+| [`tej-ui-platform-windows`](crates/tej-ui-platform-windows) | ![Preview](https://img.shields.io/badge/status-Preview-orange) | Windows Win32, DirectComposition surface, and DWM backdrop backend. |
+| [`tej-ui-platform-macos`](crates/tej-ui-platform-macos) | ![Preview](https://img.shields.io/badge/status-Preview-orange) | macOS AppKit windowing and Metal surface compositor backend. |
+| [`tej-ui-platform-web`](crates/tej-ui-platform-web) | ![Preview](https://img.shields.io/badge/status-Preview-orange) | WebAssembly Canvas/DOM event bridge and surface compositor backend. |
+| [`tej-ui-services`](crates/tej-ui-services) | ![Preview](https://img.shields.io/badge/status-Preview-orange) | Native OS clipboard, file dialogs, global shortcuts, tray icon, drag-and-drop, and credential store. |
+| [`tej-ui-devtools`](crates/tej-ui-devtools) | ![Preview](https://img.shields.io/badge/status-Preview-orange) | Runtime reactive DAG inspector, dirty-rect HUD overlay, frame metrics, and hot-reload host. |
+| [`tej-ui-3d`](crates/tej-ui-3d) | ![Preview](https://img.shields.io/badge/status-Preview-orange) | Retained 3D viewport (`Canvas3D`), software rasterizer, OBJ parser, orbit controls, and meshlet streamer. |
+| [`tej-ui-cli`](crates/tej-ui-cli) | ![Preview](https://img.shields.io/badge/status-Preview-orange) | `tej-ui` CLI binary for project scaffolding and build workflows. |
+
+## Zero-Copy `tej-db` Integration
+
+`tej-ui` pairs natively with [`tej-db`](https://github.com/YeabsiraBezabih/tej-db) (`0.1.0` on crates.io) via the `db-sync` feature:
+
+```toml
+[dependencies]
+tej-ui = { version = "0.1.0", features = ["db-sync"] }
+tej-db = "0.1.0"
+```
+
+Key primitives in `tej_ui::prelude::*` when `db-sync` is enabled:
+- **`DbRowLens`**: Borrows `&str` and fixed-width binary scalars directly from memory-mapped database pages without cloning strings onto the heap.
+- **`VirtualList` & `DbVirtualWindow`**: Materializes only rows visible in the viewport, keeping UI memory proportional to the viewport rather than total dataset size.
+- **`DirectRleFilter`**: Evaluates predicates directly over Run-Length Encoded (`RleColumn`) runs into a `FilterBitset`.
+- **`SemanticPalette`**: Searches 64-bit 1-bit quantized (RaBitQ) command signatures via hardware popcount.
+- **`CowTimeTravelStack`**: Tracks copy-on-write database root page IDs (8 bytes per commit) for instant undo/redo.
+
+See [`examples/task-manager`](examples/task-manager) and the [Database Sync with Tej-DB Wiki](docs/wiki/Database-Sync-with-Tej-DB.md) for full examples.
+
+## Developer Wiki
+
+Explore the complete documentation in [`docs/wiki/`](docs/wiki/Home.md):
+
+- [Wiki Home](docs/wiki/Home.md)
+- [Getting Started](docs/wiki/Getting-Started.md)
+- [Reactivity Guide](docs/wiki/Reactivity-Guide.md)
+- [Layout and Styling](docs/wiki/Layout-and-Styling.md)
+- [Widgets and Forms](docs/wiki/Widgets-and-Forms.md)
+- [Database Sync with Tej-DB](docs/wiki/Database-Sync-with-Tej-DB.md)
+- [Architecture and Rendering](docs/wiki/Architecture-and-Rendering.md)
+- [Publishing and Contributing](docs/wiki/Publishing-and-Contributing.md)
+
+## Running Examples & Verification
 
 ```bash
-# 1. Formatting
+# Run headless verification on examples
+cargo run -p telemetry-dashboard-example -- --test
+cargo run -p task-manager-example -- --headless
+
+# Quality gates
 cargo fmt --all -- --check
-
-# 2. Clippy (Zero Warnings)
-cargo clippy --all-targets --all-features
-
-# 3. Test Suite
-cargo test -j 2
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
 ```
 
----
+## Contributing & Security
 
-## Performance Benchmarks
-
-Run the official benchmark suite:
-
-```bash
-cargo run --release -p tej-benches
-```
-
----
+- Read [`CONTRIBUTING.md`](CONTRIBUTING.md) for setup instructions and PR guidelines.
+- Read [`SECURITY.md`](SECURITY.md) for vulnerability reporting and crate security boundaries.
+- See [`CHANGELOG.md`](CHANGELOG.md) for release notes.
 
 ## License
 
 Dual-licensed under either of:
+
 - Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
 - MIT License ([LICENSE-MIT](LICENSE-MIT))
+
+at your option.

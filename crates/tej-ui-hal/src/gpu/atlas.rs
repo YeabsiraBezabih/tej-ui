@@ -167,17 +167,35 @@ impl VramAtlas {
 
     /// Allocates space for a glyph and queues its pixel data for upload.
     ///
-    /// If the atlas is full, purges stale allocations older than `min_age_epochs`
-    /// or resets the atlas if still insufficient.
+    /// Validates that `data.len() == (glyph_w * glyph_h * bpp) as usize` before allocating.
+    /// If the atlas is full, resets the atlas layout and retries allocation.
     pub fn insert(
         &mut self,
         key: GlyphKey,
         glyph_w: u32,
         glyph_h: u32,
         data: &[u8],
-    ) -> Option<AtlasAllocation> {
+    ) -> Result<AtlasAllocation, GpuError> {
         if glyph_w == 0 || glyph_h == 0 {
-            return None;
+            return Err(GpuError::InvalidDimensions {
+                width: glyph_w,
+                height: glyph_h,
+            });
+        }
+
+        let bpp = self.format.bytes_per_pixel() as usize;
+        let expected_len = (glyph_w as usize)
+            .checked_mul(glyph_h as usize)
+            .and_then(|px| px.checked_mul(bpp))
+            .ok_or(GpuError::InvalidDimensions {
+                width: glyph_w,
+                height: glyph_h,
+            })?;
+        if data.len() != expected_len {
+            return Err(GpuError::InvalidBufferSize {
+                expected: expected_len,
+                actual: data.len(),
+            });
         }
 
         // Add 1px padding around glyph to prevent linear filtering bleeding
@@ -185,12 +203,15 @@ impl VramAtlas {
         let alloc_h = glyph_h.saturating_add(1);
 
         if alloc_w > self.width || alloc_h > self.height {
-            return None;
+            return Err(GpuError::AtlasFull {
+                width: glyph_w,
+                height: glyph_h,
+            });
         }
 
         // 1. Try shelf allocation
         if let Some((x, y)) = self.find_or_create_slot(alloc_w, alloc_h) {
-            return Some(self.record_allocation(key, x, y, glyph_w, glyph_h, data));
+            return Ok(self.record_allocation(key, x, y, glyph_w, glyph_h, data));
         }
 
         // 2. Atlas full: purge old allocations and defragment if needed
@@ -198,9 +219,12 @@ impl VramAtlas {
 
         // 3. Retry allocation
         if let Some((x, y)) = self.find_or_create_slot(alloc_w, alloc_h) {
-            Some(self.record_allocation(key, x, y, glyph_w, glyph_h, data))
+            Ok(self.record_allocation(key, x, y, glyph_w, glyph_h, data))
         } else {
-            None
+            Err(GpuError::AtlasFull {
+                width: glyph_w,
+                height: glyph_h,
+            })
         }
     }
 

@@ -5,6 +5,13 @@ edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
+description = "Unicode BiDi (UAX #9), system font discovery, glyph shaping, and text measurement engine for tej-ui."
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/tej-ui-text"
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [dependencies]
 tej-ui-layout.workspace = true
@@ -15,6 +22,7 @@ fontdue.workspace = true
 fontique.workspace = true
 swash.workspace = true
 unicode-bidi.workspace = true
+unicode-segmentation.workspace = true
 
 [lints]
 workspace = true

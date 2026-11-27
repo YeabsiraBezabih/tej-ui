@@ -5,6 +5,13 @@ edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
+description = "Runtime developer tools for tej-ui including reactive DAG inspector, dirty-rect HUD overlay, frame metrics, and hot-reload host."
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/tej-ui-devtools"
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [dependencies]
 tej-ui-core.workspace = true
@@ -13,6 +20,7 @@ tej-ui-layout.workspace = true
 tej-ui-hal.workspace = true
 parking_lot.workspace = true
 smallvec.workspace = true
+libloading.workspace = true
 
 [lints]
 workspace = true

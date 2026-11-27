@@ -1,9 +1,11 @@
 use crate::font::SystemFont;
 use parking_lot::RwLock;
 use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use tej_ui_layout::Size;
 
-/// Zero-copy text measurement engine with thread-safe caching.
+/// Zero-copy text measurement engine with thread-safe content-hashed caching.
 #[derive(Debug)]
 pub struct TextMeasurer {
     cache: RwLock<HashMap<(u64, u32), Size>>,
@@ -26,13 +28,15 @@ impl TextMeasurer {
 
     /// Measure bounding size of string slice without copying the underlying bytes.
     pub fn measure_slice(&self, text: &str, font: SystemFont, font_size: f32) -> Size {
-        let text_len = text.len();
-        if text_len == 0 {
+        if text.is_empty() {
             return Size::new(0.0, font_size * 1.2);
         }
 
-        // Fast hash of string slice pointer + length + font to avoid allocating cache keys
-        let hash_key = (text.as_ptr() as u64) ^ ((text_len as u64) << 32);
+        // Content hash over (text, font_size.to_bits()) to prevent ABA pointer-reuse cache poisoning
+        let mut hasher = DefaultHasher::new();
+        text.hash(&mut hasher);
+        font_size.to_bits().hash(&mut hasher);
+        let hash_key = hasher.finish();
         let font_key = font.cache_id() ^ font_size.to_bits();
 
         if let Some(&cached) = self.cache.read().get(&(hash_key, font_key)) {

@@ -92,7 +92,7 @@ fn test_macos_metal_surface_retina_rasterization() {
 
 #[test]
 fn test_macos_window_host_and_ime() {
-    use raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle};
+    use raw_window_handle::{HandleError, HasDisplayHandle, HasWindowHandle};
     use tej_ui_hal::{
         CursorIcon, ImeCursorArea, PlatformWindow, TejWindowHost, UiEvent, WindowConfig,
     };
@@ -107,13 +107,15 @@ fn test_macos_window_host_and_ime() {
     assert_eq!(window.title(), "macOS Test Window");
     assert_eq!(window.scale_factor(), 2.0);
 
-    let win_handle = window.window_handle().expect("valid appkit window handle");
-    assert!(matches!(win_handle.as_raw(), RawWindowHandle::AppKit(_)));
-
-    let disp_handle = window
-        .display_handle()
-        .expect("valid appkit display handle");
-    assert!(matches!(disp_handle.as_raw(), RawDisplayHandle::AppKit(_)));
+    // Raw OS handles must safely return Err(Unavailable) without fabricating pointers
+    assert!(matches!(
+        window.window_handle(),
+        Err(HandleError::Unavailable)
+    ));
+    assert!(matches!(
+        window.display_handle(),
+        Err(HandleError::Unavailable)
+    ));
 
     window.set_cursor(CursorIcon::Grab);
     assert_eq!(window.cursor(), CursorIcon::Grab);

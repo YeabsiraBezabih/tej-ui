@@ -180,13 +180,25 @@ impl InputMask {
             }
         }
 
-        // Insert typed character if valid
-        if typed.is_alphanumeric() && raw_prefix_count <= raw.len() {
-            raw.insert(raw_prefix_count, typed);
-        }
+        // Convert character index into a valid UTF-8 byte offset before inserting
+        let inserted = if typed.is_alphanumeric() && raw_prefix_count <= raw.chars().count() {
+            let byte_idx = raw
+                .char_indices()
+                .nth(raw_prefix_count)
+                .map_or(raw.len(), |(b, _)| b);
+            raw.insert(byte_idx, typed);
+            true
+        } else {
+            false
+        };
 
         let new_formatted = self.format(&raw);
-        let new_cursor = self.calculate_cursor_position(&new_formatted, raw_prefix_count + 1);
+        let target_raw = if inserted {
+            raw_prefix_count + 1
+        } else {
+            raw_prefix_count
+        };
+        let new_cursor = self.calculate_cursor_position(&new_formatted, target_raw);
 
         (new_formatted, new_cursor)
     }

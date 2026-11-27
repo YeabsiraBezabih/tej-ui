@@ -1,12 +1,13 @@
 //! Placeholder loading skeleton (shadcn `Skeleton`).
 
-use tej_ui_layout::{Dimension, Point, Rect, Size};
-use tej_ui_view::View;
+use tej_ui_layout::{Dimension, LayoutArena, LayoutStyle, Point, Rect, Size};
+use tej_ui_view::{PaintContext, View};
 
 /// Retained state for a mounted Skeleton.
 #[derive(Debug, Default)]
 pub struct SkeletonState {
     pub bounds: Rect,
+    pub node: u32,
 }
 
 /// Shimmering placeholder box used to mimic content dimensions while loading.
@@ -63,10 +64,46 @@ impl View for Skeleton {
         };
         SkeletonState {
             bounds: Rect::from_origin_size(Point::ZERO, Size::new(w, h)),
+            node: 0,
         }
     }
 
     fn rebuild(&self, _state: &mut Self::State) {}
 
     fn patch(&self, _state: &mut Self::State, _dirty_bits: u64) {}
+
+    fn layout(&self, state: &mut Self::State, arena: &mut LayoutArena) -> u32 {
+        let style = LayoutStyle {
+            width: self.width,
+            height: self.height,
+            ..Default::default()
+        };
+        let node = arena.allocate_node(style);
+        state.node = node;
+        node
+    }
+
+    fn paint(&self, state: &Self::State, ctx: &mut PaintContext<'_>) {
+        let bounds = ctx
+            .arena
+            .computed_bounds
+            .get(state.node as usize)
+            .copied()
+            .unwrap_or(state.bounds);
+
+        // Base muted skeleton block
+        ctx.fill_rounded_rect(bounds, self.corner_radius, ctx.theme.colors.muted);
+
+        // Subtle shimmer highlight stripe
+        if bounds.size.width > 8.0 && bounds.size.height > 2.0 {
+            let shimmer_w = (bounds.size.width * 0.35).max(8.0);
+            let shimmer_x = bounds.origin.x + (bounds.size.width - shimmer_w) * 0.35;
+            let shimmer_rect = Rect::new(shimmer_x, bounds.origin.y, shimmer_w, bounds.size.height);
+            ctx.fill_rounded_rect(
+                shimmer_rect,
+                self.corner_radius,
+                ctx.theme.colors.foreground.with_alpha(20),
+            );
+        }
+    }
 }

@@ -4,6 +4,21 @@ use crate::node::A11yId;
 use crate::role::A11yRole;
 use std::collections::HashMap;
 
+/// Escapes special HTML characters in attribute values (`&`, `"`, `<`, `>`).
+fn escape_html_attr(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    for ch in value.chars() {
+        match ch {
+            '&' => out.push_str("&amp;"),
+            '"' => out.push_str("&quot;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            _ => out.push(ch),
+        }
+    }
+    out
+}
+
 /// Common trait implemented by platform accessibility adapters.
 pub trait PlatformA11yAdapter: Send + Sync {
     /// Dispatches an incremental or initial tree update to the platform accessibility subsystem.
@@ -83,6 +98,7 @@ impl WebAriaShadowNode {
             A11yRole::Checkbox => ("input", Some("checkbox")),
             A11yRole::Switch => ("button", Some("switch")),
             A11yRole::RadioButton => ("input", Some("radio")),
+            A11yRole::Slider => ("input", Some("slider")),
             A11yRole::Label => ("label", None),
             A11yRole::List => ("ul", None),
             A11yRole::ListItem => ("li", None),
@@ -94,7 +110,15 @@ impl WebAriaShadowNode {
             A11yRole::Tab => ("button", Some("tab")),
             A11yRole::TabList => ("div", Some("tablist")),
             A11yRole::ScrollArea => ("div", Some("region")),
-            A11yRole::Window | A11yRole::Generic | A11yRole::Slider => ("div", None),
+            A11yRole::Menu => ("div", Some("menu")),
+            A11yRole::MenuItem => ("div", Some("menuitem")),
+            A11yRole::Tree => ("div", Some("tree")),
+            A11yRole::TreeItem => ("div", Some("treeitem")),
+            A11yRole::Grid => ("div", Some("grid")),
+            A11yRole::ComboBox => ("input", Some("combobox")),
+            A11yRole::Alert => ("div", Some("alert")),
+            A11yRole::Tooltip => ("div", Some("tooltip")),
+            A11yRole::Window | A11yRole::Generic => ("div", None),
         };
 
         Self {
@@ -106,15 +130,19 @@ impl WebAriaShadowNode {
         }
     }
 
-    /// Render shadow node to an HTML tag opening string.
+    /// Render shadow node to an HTML tag opening string with escaped attribute values.
     #[must_use]
     pub fn render_html_opening(&self) -> String {
         let mut out = format!("<{}", self.html_tag);
         if let Some(r) = self.role {
-            out.push_str(&format!(r#" role="{}""#, r));
+            out.push_str(&format!(r#" role="{}""#, escape_html_attr(r)));
         }
         for (k, v) in &self.attributes {
-            out.push_str(&format!(r#" {}="{}""#, k, v));
+            out.push_str(&format!(
+                r#" {}="{}""#,
+                escape_html_attr(k),
+                escape_html_attr(v)
+            ));
         }
         out.push('>');
         out
@@ -168,12 +196,21 @@ impl WebAriaAdapter {
             shadow.attributes.insert("aria-label".into(), l.clone());
         }
         if let Some(ref v) = node.value {
-            shadow.attributes.insert("aria-valuenow".into(), v.clone());
+            if node.role == A11yRole::TextInput {
+                shadow.attributes.insert("value".into(), v.clone());
+            } else {
+                shadow.attributes.insert("aria-valuenow".into(), v.clone());
+            }
         }
         if node.is_disabled {
             shadow
                 .attributes
                 .insert("aria-disabled".into(), "true".into());
+        }
+        if node.is_hidden {
+            shadow
+                .attributes
+                .insert("aria-hidden".into(), "true".into());
         }
         if let Some(checked) = node.is_checked {
             shadow.attributes.insert(

@@ -4,7 +4,7 @@
 //! - 60/120 Hz real-time retained canvas vector drawing surface
 //! - Multi-channel CPU, GPU, Memory, and Network telemetry graphs
 //! - Zero steady-state heap allocations during frame ticks
-//! - Reactive Signal DAG updates and theme switching
+//! - Reactive Signal/Memo DAG updates and theme switching
 //! - CLI `--test` mode for automated CI verification
 
 use std::env;
@@ -19,6 +19,16 @@ struct TelemetryMetrics {
     network_kbps: f32,
 }
 
+/// Bind a derived `Memo<String>` to a `Text::reactive` widget so the text updates
+/// automatically whenever upstream signals change.
+fn reactive_text_from_memo(memo: Memo<String>) -> Text {
+    let text_signal = Signal::new(memo.untracked_get());
+    let _sync = create_effect(move || {
+        text_signal.set(memo.get());
+    });
+    Text::reactive(text_signal)
+}
+
 fn telemetry_dashboard_view(
     metrics: Signal<TelemetryMetrics>,
     tick_count: Signal<u64>,
@@ -27,6 +37,12 @@ fn telemetry_dashboard_view(
     ram_progress: Signal<f32>,
     net_progress: Signal<f32>,
 ) -> impl View {
+    let cpu_label = Memo::new(move || format!("{:.1}%", metrics.get().cpu_usage));
+    let gpu_label = Memo::new(move || format!("{:.1}%", metrics.get().gpu_usage));
+    let ram_label = Memo::new(move || format!("{:.0} MB", metrics.get().ram_usage_mb));
+    let net_label = Memo::new(move || format!("{:.0} KB/s", metrics.get().network_kbps));
+    let tick_label = Memo::new(move || format!("Tick #{}", tick_count.get()));
+
     VStack::new((
         // Header bar with status indicators
         HStack::new((
@@ -45,25 +61,22 @@ fn telemetry_dashboard_view(
         HStack::new((
             VStack::new((
                 Card::new("CPU Core Load").description("Host Processor"),
-                Text::reactive(Signal::new(format!("{:.1}%", metrics.get().cpu_usage))),
+                reactive_text_from_memo(cpu_label),
                 Progress::new(cpu_progress),
             )),
             VStack::new((
                 Card::new("GPU Compute Load").description("Hardware Acceleration"),
-                Text::reactive(Signal::new(format!("{:.1}%", metrics.get().gpu_usage))),
+                reactive_text_from_memo(gpu_label),
                 Progress::new(gpu_progress),
             )),
             VStack::new((
                 Card::new("Memory Resident").description("RAM Allocation"),
-                Text::reactive(Signal::new(format!("{:.0} MB", metrics.get().ram_usage_mb))),
+                reactive_text_from_memo(ram_label),
                 Progress::new(ram_progress),
             )),
             VStack::new((
                 Card::new("Network Ingress").description("I/O Throughput"),
-                Text::reactive(Signal::new(format!(
-                    "{:.0} KB/s",
-                    metrics.get().network_kbps
-                ))),
+                reactive_text_from_memo(net_label),
                 Progress::new(net_progress),
             )),
         ))
@@ -72,7 +85,7 @@ fn telemetry_dashboard_view(
         VStack::new((
             HStack::new((
                 Text::new("Telemetry Waveform Stream"),
-                Text::reactive(Signal::new(format!("Tick #{}", tick_count.get()))),
+                reactive_text_from_memo(tick_label),
             ))
             .spacing(8),
             Canvas::new(
@@ -174,10 +187,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
         }
         let elapsed = start.elapsed();
-        println!(
-            "  ✓ Successfully executed 1,000 telemetry frame updates in {:?}",
-            elapsed
-        );
+        println!("  ✓ Successfully executed 1,000 telemetry frame updates in {elapsed:?}");
         println!(
             "  ✓ Average tick latency: {:.2} µs / frame",
             elapsed.as_micros() as f64 / 1000.0

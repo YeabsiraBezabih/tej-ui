@@ -156,10 +156,9 @@ impl View for Input {
             state.node,
             Arc::new(move |code| {
                 if code == 8 {
-                    // Backspace
+                    // Backspace: delete a full UAX #29 extended grapheme cluster
                     let mut current = sig.get();
-                    if !current.is_empty() {
-                        current.pop();
+                    if tej_ui_text::pop_grapheme(&mut current).is_some() {
                         sig.set(current.clone());
                         if let Some(h) = &on_change_del {
                             h(&current);
@@ -168,6 +167,34 @@ impl View for Input {
                 }
             }),
         );
+    }
+
+    fn accessibility(
+        &self,
+        state: &Self::State,
+        arena: &tej_ui_layout::LayoutArena,
+        tree: &mut tej_ui_a11y::A11yTree,
+        parent: Option<tej_ui_a11y::A11yId>,
+    ) {
+        let id = tree.allocate_id();
+        let bounds = arena
+            .computed_bounds
+            .get(state.node as usize)
+            .copied()
+            .unwrap_or(tej_ui_layout::Rect::ZERO);
+        let mut node =
+            tej_ui_a11y::A11yNode::new(id, tej_ui_a11y::A11yRole::TextInput).with_bounds(bounds);
+        if !state.placeholder.is_empty() {
+            node.label = Some(state.placeholder.clone());
+        }
+        node.value = Some(state.current_text.clone());
+        tree.insert_node(node);
+        if let Some(parent_id) = parent {
+            if let Some(p) = tree.get_node_mut(parent_id) {
+                p.children.push(id);
+            }
+            tree.mark_dirty(parent_id);
+        }
     }
 }
 

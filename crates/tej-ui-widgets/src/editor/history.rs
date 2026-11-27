@@ -50,11 +50,15 @@ impl UndoStack {
             return;
         }
 
+        self.redo_stack.clear();
+        if self.max_history == 0 {
+            return;
+        }
+
         if self.undo_stack.len() >= self.max_history {
             self.undo_stack.remove(0);
         }
         self.undo_stack.push(action);
-        self.redo_stack.clear();
     }
 
     /// Push an edit action with typing coalescing.
@@ -99,11 +103,14 @@ impl UndoStack {
         self.transaction_depth -= 1;
         if self.transaction_depth == 0 && !self.pending_transaction.is_empty() {
             let actions = std::mem::take(&mut self.pending_transaction);
+            self.redo_stack.clear();
+            if self.max_history == 0 {
+                return;
+            }
             if self.undo_stack.len() >= self.max_history {
                 self.undo_stack.remove(0);
             }
             self.undo_stack.push(EditAction::Batch(actions));
-            self.redo_stack.clear();
         }
     }
 

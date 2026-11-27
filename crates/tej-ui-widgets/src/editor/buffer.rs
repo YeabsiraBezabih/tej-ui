@@ -19,7 +19,9 @@ impl From<&str> for TextBuffer {
         let lines: Vec<String> = if text.is_empty() {
             vec![String::new()]
         } else {
-            text.lines().map(String::from).collect()
+            text.split('\n')
+                .map(|line| line.strip_suffix('\r').unwrap_or(line).to_string())
+                .collect()
         };
         Self { lines }
     }

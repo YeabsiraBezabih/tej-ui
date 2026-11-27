@@ -79,7 +79,7 @@ impl StyleProps {
         self.justify_content = Some(sheet.flex_grid.justify_content);
         self.gap = sheet.flex_grid.row_gap.max(sheet.flex_grid.column_gap);
         self.flex_grow = sheet.flex_grid.flex_grow;
-        if sheet.borders_effects.opacity > 0.0 && sheet.borders_effects.opacity < 1.0 {
+        if sheet.borders_effects.opacity >= 0.0 && sheet.borders_effects.opacity < 1.0 {
             self.opacity = Some(sheet.borders_effects.opacity);
         }
         if let Some(first_shadow) = sheet.borders_effects.box_shadows.first() {

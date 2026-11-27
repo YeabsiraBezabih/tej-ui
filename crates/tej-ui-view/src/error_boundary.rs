@@ -211,4 +211,56 @@ where
             }
         }
     }
+
+    fn register_events(
+        &self,
+        state: &Self::State,
+        dispatcher: &mut crate::events::EventDispatcher,
+    ) {
+        match state {
+            ErrorBoundaryState::Normal(child_state) => {
+                let res = catch_unwind(AssertUnwindSafe(|| {
+                    self.child.register_events(child_state, dispatcher);
+                }));
+                if let Err(payload) = res {
+                    let msg = Self::extract_panic_message(payload);
+                    self.notify_telemetry(&msg);
+                }
+            }
+            ErrorBoundaryState::Recovered {
+                error_message,
+                fallback_state,
+            } => {
+                let fallback_view = (self.fallback_builder)(error_message);
+                fallback_view.register_events(fallback_state, dispatcher);
+            }
+        }
+    }
+
+    fn accessibility(
+        &self,
+        state: &Self::State,
+        arena: &LayoutArena,
+        tree: &mut tej_ui_a11y::A11yTree,
+        parent: Option<tej_ui_a11y::A11yId>,
+    ) {
+        match state {
+            ErrorBoundaryState::Normal(child_state) => {
+                let res = catch_unwind(AssertUnwindSafe(|| {
+                    self.child.accessibility(child_state, arena, tree, parent);
+                }));
+                if let Err(payload) = res {
+                    let msg = Self::extract_panic_message(payload);
+                    self.notify_telemetry(&msg);
+                }
+            }
+            ErrorBoundaryState::Recovered {
+                error_message,
+                fallback_state,
+            } => {
+                let fallback_view = (self.fallback_builder)(error_message);
+                fallback_view.accessibility(fallback_state, arena, tree, parent);
+            }
+        }
+    }
 }

@@ -47,8 +47,11 @@ impl<'a> DbRowLens<'a> {
     /// Slices a sub-string from payload by start and length in zero-copy fashion.
     #[inline]
     pub fn slice_str(&self, start: usize, len: usize) -> Result<&'a str, std::str::Utf8Error> {
-        let end = (start + len).min(self.raw_value.len());
-        let slice = &self.raw_value[start.min(end)..end];
+        let clamped_start = start.min(self.raw_value.len());
+        let end = clamped_start
+            .checked_add(len)
+            .map_or(self.raw_value.len(), |e| e.min(self.raw_value.len()));
+        let slice = &self.raw_value[clamped_start..end];
         std::str::from_utf8(slice)
     }
 
@@ -56,8 +59,9 @@ impl<'a> DbRowLens<'a> {
     #[inline]
     #[must_use]
     pub fn read_u64_le(&self, offset: usize) -> Option<u64> {
-        if offset + 8 <= self.raw_value.len() {
-            let bytes = self.raw_value[offset..offset + 8].try_into().ok()?;
+        let end = offset.checked_add(8)?;
+        if end <= self.raw_value.len() {
+            let bytes = self.raw_value[offset..end].try_into().ok()?;
             Some(u64::from_le_bytes(bytes))
         } else {
             None
@@ -68,8 +72,9 @@ impl<'a> DbRowLens<'a> {
     #[inline]
     #[must_use]
     pub fn read_f32_le(&self, offset: usize) -> Option<f32> {
-        if offset + 4 <= self.raw_value.len() {
-            let bytes = self.raw_value[offset..offset + 4].try_into().ok()?;
+        let end = offset.checked_add(4)?;
+        if end <= self.raw_value.len() {
+            let bytes = self.raw_value[offset..end].try_into().ok()?;
             Some(f32::from_le_bytes(bytes))
         } else {
             None
@@ -137,7 +142,7 @@ impl DbVirtualWindow {
         let y = scroll_y.max(0.0);
         let start = (y / self.row_height).floor() as usize;
         let visible_count = ((self.viewport_height / self.row_height).ceil() as usize) + 2;
-        let end = (start + visible_count).min(self.total_rows);
+        let end = start.saturating_add(visible_count).min(self.total_rows);
         (start.min(self.total_rows), end)
     }
 

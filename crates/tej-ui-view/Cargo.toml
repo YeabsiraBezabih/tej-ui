@@ -5,11 +5,20 @@ edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
+description = "Compile-time static View tree traits, tuple combinators, CSS styling, theming, event dispatch, and core UI primitives for tej-ui."
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/tej-ui-view"
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [dependencies]
 tej-ui-core.workspace = true
 tej-ui-hal.workspace = true
 tej-ui-layout.workspace = true
+tej-ui-text.workspace = true
+tej-ui-a11y.workspace = true
 thiserror.workspace = true
 smallvec.workspace = true
 bitflags.workspace = true

@@ -2,10 +2,8 @@
 
 use crate::backdrop::DwmAttributes;
 use raw_window_handle::{
-    DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle, RawDisplayHandle,
-    RawWindowHandle, Win32WindowHandle, WindowHandle, WindowsDisplayHandle,
+    DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle, WindowHandle,
 };
-use std::num::NonZeroIsize;
 use std::sync::atomic::{AtomicU64, Ordering};
 use tej_ui_hal::{
     CursorIcon, ImeCursorArea, PlatformWindow, TejWindowHost, UiEvent, WindowConfig, WindowId,
@@ -157,21 +155,18 @@ impl PlatformWindow for WindowsWindow {
 }
 
 impl HasWindowHandle for WindowsWindow {
+    /// Returns [`HandleError::Unavailable`] because real OS handles require native Win32
+    /// window creation (`CreateWindowExW`) rather than synthetic window IDs.
     fn window_handle(&self) -> Result<WindowHandle<'_>, HandleError> {
-        // Construct HWND representation for Win32 DirectComposition
-        let hwnd_raw = self.id.0 as isize;
-        let non_zero_hwnd = NonZeroIsize::new(if hwnd_raw == 0 { 1 } else { hwnd_raw }).unwrap();
-        let raw = RawWindowHandle::Win32(Win32WindowHandle::new(non_zero_hwnd));
-        // SAFETY: The HWND is guaranteed valid during the active lifetime of this WindowsWindow.
-        unsafe { Ok(WindowHandle::borrow_raw(raw)) }
+        Err(HandleError::Unavailable)
     }
 }
 
 impl HasDisplayHandle for WindowsWindow {
+    /// Returns [`HandleError::Unavailable`] because real OS display handles require native
+    /// Win32 window and desktop session binding.
     fn display_handle(&self) -> Result<DisplayHandle<'_>, HandleError> {
-        let raw = RawDisplayHandle::Windows(WindowsDisplayHandle::new());
-        // SAFETY: Windows display handle is always valid for the desktop session.
-        unsafe { Ok(DisplayHandle::borrow_raw(raw)) }
+        Err(HandleError::Unavailable)
     }
 }
 

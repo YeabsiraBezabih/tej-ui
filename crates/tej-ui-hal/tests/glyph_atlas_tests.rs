@@ -48,7 +48,7 @@ fn test_atlas_shelf_packing_and_lru() {
     for i in 0..10 {
         let key = GlyphKey::new(1, i, 0, 16);
         let alloc = atlas.insert(key, 16, 16, &dummy_glyph);
-        assert!(alloc.is_some());
+        assert!(alloc.is_ok());
     }
 
     assert_eq!(atlas.allocation_count(), 10);

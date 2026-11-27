@@ -23,6 +23,14 @@ pub enum A11yRole {
     ProgressBar,
     Tab,
     TabList,
+    Menu,
+    MenuItem,
+    Tree,
+    TreeItem,
+    Grid,
+    ComboBox,
+    Alert,
+    Tooltip,
 }
 
 impl From<A11yRole> for accesskit::Role {
@@ -47,6 +55,14 @@ impl From<A11yRole> for accesskit::Role {
             A11yRole::ProgressBar => Self::ProgressIndicator,
             A11yRole::Tab => Self::Tab,
             A11yRole::TabList => Self::TabList,
+            A11yRole::Menu => Self::Menu,
+            A11yRole::MenuItem => Self::MenuItem,
+            A11yRole::Tree => Self::Tree,
+            A11yRole::TreeItem => Self::TreeItem,
+            A11yRole::Grid => Self::Grid,
+            A11yRole::ComboBox => Self::ComboBox,
+            A11yRole::Alert => Self::Alert,
+            A11yRole::Tooltip => Self::Tooltip,
         }
     }
 }

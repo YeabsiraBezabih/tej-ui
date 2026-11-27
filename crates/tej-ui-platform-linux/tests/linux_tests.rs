@@ -1,7 +1,8 @@
-use tej_ui_layout::Point;
+use tej_ui_hal::{Color, SurfaceCompositor};
+use tej_ui_layout::{Point, Rect, Size};
 use tej_ui_platform_linux::{
-    AdwaitaHeaderBar, LibinputScrollPhysics, LinuxDesktopTheme, WindowDecorationMode,
-    XdgColorScheme,
+    AdwaitaHeaderBar, LibinputScrollPhysics, LinuxDesktopTheme, LinuxSurface, LinuxWindow,
+    WindowDecorationMode, XdgColorScheme,
 };
 
 #[test]
@@ -52,11 +53,14 @@ fn test_linux_libinput_scroll_physics() {
 
 #[test]
 fn test_linux_window_host_and_ime() {
-    use raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle};
+    use raw_window_handle::{HandleError, HasDisplayHandle, HasWindowHandle};
     use tej_ui_hal::{
         CursorIcon, ImeCursorArea, PlatformWindow, TejWindowHost, UiEvent, WindowConfig,
     };
-    use tej_ui_platform_linux::LinuxWindow;
+
+    // Compile-time soundness check: LinuxWindow remains Send + Sync via parking_lot::Mutex
+    fn assert_send_sync<T: Send + Sync>() {}
+    assert_send_sync::<LinuxWindow>();
 
     let config = WindowConfig {
         title: "Linux Test Window".to_string(),
@@ -67,12 +71,15 @@ fn test_linux_window_host_and_ime() {
     assert_eq!(window.title(), "Linux Test Window");
     assert_eq!(window.scale_factor(), 1.0);
 
-    // Handles check
-    let win_handle = window.window_handle().expect("valid linux window handle");
-    assert!(matches!(win_handle.as_raw(), RawWindowHandle::Xlib(_)));
-
-    let disp_handle = window.display_handle().expect("valid linux display handle");
-    assert!(matches!(disp_handle.as_raw(), RawDisplayHandle::Xlib(_)));
+    // Raw OS handles must safely return Err(Unavailable) without fabricating pointers
+    assert!(matches!(
+        window.window_handle(),
+        Err(HandleError::Unavailable)
+    ));
+    assert!(matches!(
+        window.display_handle(),
+        Err(HandleError::Unavailable)
+    ));
 
     // Cursor
     window.set_cursor(CursorIcon::Text);
@@ -92,4 +99,60 @@ fn test_linux_window_host_and_ime() {
     assert_eq!(events.len(), 2);
     assert!(matches!(events[0], UiEvent::ImePreedit { .. }));
     assert!(matches!(events[1], UiEvent::ImeCommit { .. }));
+}
+
+#[test]
+fn test_linux_surface_partial_dirty_rect_preserves_clean_pixels() {
+    let mut surface = LinuxSurface::new(Size::new(64.0, 64.0));
+
+    // Full frame: paint entire surface bright red
+    surface.begin_frame(&[]);
+    surface.fill_rect(Rect::new(0.0, 0.0, 64.0, 64.0), Color::rgb(255, 0, 0));
+    surface.end_frame();
+    assert_eq!(surface.pixels()[50 * 64 + 50], 0xFFFF_0000);
+    assert_eq!(surface.pixels()[5 * 64 + 5], 0xFFFF_0000);
+
+    // Partial dirty-rect frame: only top-left 16x16 is dirty
+    surface.begin_frame(&[Rect::new(0.0, 0.0, 16.0, 16.0)]);
+    surface.fill_rect(Rect::new(0.0, 0.0, 16.0, 16.0), Color::rgb(0, 0, 255));
+    surface.end_frame();
+
+    // Dirty region was updated to blue
+    assert_eq!(surface.pixels()[5 * 64 + 5], 0xFF00_00FF);
+    // Clean region outside dirty rect was NOT wiped to background
+    assert_eq!(surface.pixels()[50 * 64 + 50], 0xFFFF_0000);
+}
+
+#[test]
+fn test_linux_surface_draw_text_respects_color_alpha() {
+    let mut surface = LinuxSurface::new(Size::new(64.0, 32.0));
+    surface.clear(Color::rgb(0, 0, 0));
+
+    // Alpha = 0 must leave background completely untouched
+    surface.draw_text(
+        "A",
+        Point::new(4.0, 4.0),
+        16.0,
+        Color::rgba(255, 255, 255, 0),
+    );
+    assert!(surface.pixels().iter().all(|&px| px == 0xFF00_0000));
+
+    // Semi-transparent white (alpha = 128) on black must blend to ~mid-gray, not full white
+    surface.draw_text(
+        "A",
+        Point::new(4.0, 4.0),
+        16.0,
+        Color::rgba(255, 255, 255, 128),
+    );
+    let max_red = surface
+        .pixels()
+        .iter()
+        .map(|&px| ((px >> 16) & 0xFF) as u8)
+        .max()
+        .unwrap_or(0);
+    assert!(max_red > 0, "expected some glyph pixels to be drawn");
+    assert!(
+        max_red <= 140,
+        "semi-transparent text should not reach full 255 brightness, got {max_red}"
+    );
 }
