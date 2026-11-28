@@ -277,10 +277,13 @@ impl VramAtlas {
         h: u32,
         data: &[u8],
     ) -> AtlasAllocation {
-        let u0 = (x as f32) / (self.width as f32);
-        let v0 = (y as f32) / (self.height as f32);
-        let u1 = ((x + w) as f32) / (self.width as f32);
-        let v1 = ((y + h) as f32) / (self.height as f32);
+        let to_f32 = |px: u32| f32::from(u16::try_from(px).unwrap_or(u16::MAX));
+        let atlas_w = to_f32(self.width).max(1.0);
+        let atlas_h = to_f32(self.height).max(1.0);
+        let u0 = to_f32(x) / atlas_w;
+        let v0 = to_f32(y) / atlas_h;
+        let u1 = to_f32(x + w) / atlas_w;
+        let v1 = to_f32(y + h) / atlas_h;
 
         let alloc = AtlasAllocation {
             uv_bounds: [u0, v0, u1, v1],

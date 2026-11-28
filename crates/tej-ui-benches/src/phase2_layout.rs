@@ -54,7 +54,8 @@ fn bench_tej_layout(node_count: usize, resize_steps: usize) -> LayoutBenchMetric
     let t0 = Instant::now();
 
     for step in 0..resize_steps {
-        let width = 1920.0 - (step as f32 * (640.0 / resize_steps as f32));
+        let width =
+            1920.0 - (crate::count_to_f32(step) * (640.0 / crate::count_to_f32(resize_steps)));
         arena.mark_dirty(root);
         LayoutEngine::compute_layout(&mut arena, root, Size::new(width, 1080.0));
         black_box(arena.computed_bounds[root as usize]);
@@ -62,19 +63,35 @@ fn bench_tej_layout(node_count: usize, resize_steps: usize) -> LayoutBenchMetric
 
     let elapsed = t0.elapsed();
     let (alloc_count, _bytes, peak_bytes) = TrackingAllocator::delta_since(snap);
+    build_layout_metric(
+        "tej-layout (Flat SoA)",
+        node_count,
+        resize_steps,
+        elapsed,
+        alloc_count,
+        peak_bytes,
+    )
+}
 
-    let total_us = elapsed.as_micros() as f64;
-    let us_per_step = total_us / (resize_steps as f64);
-    let ns_per_node = (elapsed.as_nanos() as f64) / ((resize_steps * node_count) as f64);
-
+fn build_layout_metric(
+    engine_name: &'static str,
+    node_count: usize,
+    resize_steps: usize,
+    elapsed: std::time::Duration,
+    alloc_count: usize,
+    peak_bytes: usize,
+) -> LayoutBenchMetric {
+    let total_us = elapsed.as_secs_f64() * 1e6;
+    let steps_f64 = crate::count_to_f64(resize_steps);
+    let total_nodes_f64 = crate::count_to_f64(resize_steps * node_count);
     LayoutBenchMetric {
-        engine_name: "tej-layout (Flat SoA)",
+        engine_name,
         node_count,
         total_resize_time_us: total_us,
-        us_per_resize_step: us_per_step,
-        ns_per_layout_node: ns_per_node,
+        us_per_resize_step: total_us / steps_f64,
+        ns_per_layout_node: (elapsed.as_secs_f64() * 1e9) / total_nodes_f64,
         allocations_per_resize: alloc_count / resize_steps,
-        peak_memory_kb: peak_bytes as f64 / 1024.0,
+        peak_memory_kb: crate::count_to_f64(peak_bytes) / 1024.0,
     }
 }
 
@@ -128,7 +145,8 @@ fn bench_taffy_layout(node_count: usize, resize_steps: usize) -> LayoutBenchMetr
     let t0 = Instant::now();
 
     for step in 0..resize_steps {
-        let width = 1920.0 - (step as f32 * (640.0 / resize_steps as f32));
+        let width =
+            1920.0 - (crate::count_to_f32(step) * (640.0 / crate::count_to_f32(resize_steps)));
         tree.compute_layout(
             root,
             tf::Size {
@@ -142,20 +160,14 @@ fn bench_taffy_layout(node_count: usize, resize_steps: usize) -> LayoutBenchMetr
 
     let elapsed = t0.elapsed();
     let (alloc_count, _bytes, peak_bytes) = TrackingAllocator::delta_since(snap);
-
-    let total_us = elapsed.as_micros() as f64;
-    let us_per_step = total_us / (resize_steps as f64);
-    let ns_per_node = (elapsed.as_nanos() as f64) / ((resize_steps * node_count) as f64);
-
-    LayoutBenchMetric {
-        engine_name: "Taffy v0.15 (GPUI/Dioxus)",
+    build_layout_metric(
+        "Taffy v0.15 (GPUI/Dioxus)",
         node_count,
-        total_resize_time_us: total_us,
-        us_per_resize_step: us_per_step,
-        ns_per_layout_node: ns_per_node,
-        allocations_per_resize: alloc_count / resize_steps,
-        peak_memory_kb: peak_bytes as f64 / 1024.0,
-    }
+        resize_steps,
+        elapsed,
+        alloc_count,
+        peak_bytes,
+    )
 }
 
 fn bench_egui_layout(node_count: usize, resize_steps: usize) -> LayoutBenchMetric {
@@ -165,7 +177,8 @@ fn bench_egui_layout(node_count: usize, resize_steps: usize) -> LayoutBenchMetri
 
     let per_col = node_count / 4;
     for step in 0..resize_steps {
-        let width = 1920.0 - (step as f32 * (640.0 / resize_steps as f32));
+        let width =
+            1920.0 - (crate::count_to_f32(step) * (640.0 / crate::count_to_f32(resize_steps)));
         let raw_input = egui::RawInput {
             screen_rect: Some(egui::Rect::from_min_size(
                 egui::pos2(0.0, 0.0),
@@ -190,20 +203,14 @@ fn bench_egui_layout(node_count: usize, resize_steps: usize) -> LayoutBenchMetri
 
     let elapsed = t0.elapsed();
     let (alloc_count, _bytes, peak_bytes) = TrackingAllocator::delta_since(snap);
-
-    let total_us = elapsed.as_micros() as f64;
-    let us_per_step = total_us / (resize_steps as f64);
-    let ns_per_node = (elapsed.as_nanos() as f64) / ((resize_steps * node_count) as f64);
-
-    LayoutBenchMetric {
-        engine_name: "egui v0.32 Single-Pass",
+    build_layout_metric(
+        "egui v0.32 Single-Pass",
         node_count,
-        total_resize_time_us: total_us,
-        us_per_resize_step: us_per_step,
-        ns_per_layout_node: ns_per_node,
-        allocations_per_resize: alloc_count / resize_steps,
-        peak_memory_kb: peak_bytes as f64 / 1024.0,
-    }
+        resize_steps,
+        elapsed,
+        alloc_count,
+        peak_bytes,
+    )
 }
 
 /// Execute Phase 2 layout engine benchmarks across 1,000 and 10,000 node scales.

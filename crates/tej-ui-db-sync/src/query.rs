@@ -19,7 +19,9 @@ pub fn prefix_to_range(prefix: &[u8]) -> KeyRange {
     let mut end_vec = prefix.to_vec();
     while let Some(&last) = end_vec.last() {
         if last < 255 {
-            *end_vec.last_mut().expect("checked non-empty") += 1;
+            if let Some(last_mut) = end_vec.last_mut() {
+                *last_mut += 1;
+            }
             return KeyRange {
                 start,
                 end: Bound::Excluded(end_vec),

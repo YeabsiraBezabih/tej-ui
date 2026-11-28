@@ -138,258 +138,257 @@ impl VectorPath {
     /// and implicit repeated coordinate tuples.
     #[must_use]
     pub fn parse_svg(d: &str) -> Self {
-        let mut path = Self::new();
+        let mut state = IconSvgParser::default();
         let mut chars = d.chars().peekable();
-        let mut current_pt = Point::ZERO;
-        let mut subpath_start = Point::ZERO;
-        let mut last_cubic_ctrl: Option<Point> = None;
-        let mut last_quad_ctrl: Option<Point> = None;
 
         while let Some(&c) = chars.peek() {
             if c.is_whitespace() || c == ',' {
                 chars.next();
                 continue;
             }
-
-            if !c.is_ascii_alphabetic() {
-                // Unexpected stray token outside a command
-                chars.next();
-                continue;
-            }
-
             chars.next();
-            match c {
-                'M' | 'm' => {
-                    let is_rel = c == 'm';
-                    let mut first = true;
-                    while has_number(&mut chars) {
-                        let Some((x, y)) = parse_point(&mut chars) else {
-                            break;
-                        };
-                        current_pt = if is_rel {
-                            Point::new(current_pt.x + x, current_pt.y + y)
-                        } else {
-                            Point::new(x, y)
-                        };
-                        if first {
-                            subpath_start = current_pt;
-                            path.move_to(current_pt);
-                            first = false;
-                        } else {
-                            path.line_to(current_pt);
-                        }
-                    }
-                    last_cubic_ctrl = None;
-                    last_quad_ctrl = None;
-                }
-                'L' | 'l' => {
-                    let is_rel = c == 'l';
-                    while has_number(&mut chars) {
-                        let Some((x, y)) = parse_point(&mut chars) else {
-                            break;
-                        };
-                        current_pt = if is_rel {
-                            Point::new(current_pt.x + x, current_pt.y + y)
-                        } else {
-                            Point::new(x, y)
-                        };
-                        path.line_to(current_pt);
-                    }
-                    last_cubic_ctrl = None;
-                    last_quad_ctrl = None;
-                }
-                'H' | 'h' => {
-                    let is_rel = c == 'h';
-                    while has_number(&mut chars) {
-                        let Some(x) = parse_float(&mut chars) else {
-                            break;
-                        };
-                        current_pt.x = if is_rel { current_pt.x + x } else { x };
-                        path.line_to(current_pt);
-                    }
-                    last_cubic_ctrl = None;
-                    last_quad_ctrl = None;
-                }
-                'V' | 'v' => {
-                    let is_rel = c == 'v';
-                    while has_number(&mut chars) {
-                        let Some(y) = parse_float(&mut chars) else {
-                            break;
-                        };
-                        current_pt.y = if is_rel { current_pt.y + y } else { y };
-                        path.line_to(current_pt);
-                    }
-                    last_cubic_ctrl = None;
-                    last_quad_ctrl = None;
-                }
-                'C' | 'c' => {
-                    let is_rel = c == 'c';
-                    while has_number(&mut chars) {
-                        let Some((x1, y1)) = parse_point(&mut chars) else {
-                            break;
-                        };
-                        let Some((x2, y2)) = parse_point(&mut chars) else {
-                            break;
-                        };
-                        let Some((x, y)) = parse_point(&mut chars) else {
-                            break;
-                        };
-                        let (ctrl1, ctrl2, end) = if is_rel {
-                            (
-                                Point::new(current_pt.x + x1, current_pt.y + y1),
-                                Point::new(current_pt.x + x2, current_pt.y + y2),
-                                Point::new(current_pt.x + x, current_pt.y + y),
-                            )
-                        } else {
-                            (Point::new(x1, y1), Point::new(x2, y2), Point::new(x, y))
-                        };
-                        path.cubic_to(ctrl1, ctrl2, end);
-                        last_cubic_ctrl = Some(ctrl2);
-                        last_quad_ctrl = None;
-                        current_pt = end;
-                    }
-                }
-                'S' | 's' => {
-                    let is_rel = c == 's';
-                    while has_number(&mut chars) {
-                        let Some((x2, y2)) = parse_point(&mut chars) else {
-                            break;
-                        };
-                        let Some((x, y)) = parse_point(&mut chars) else {
-                            break;
-                        };
-                        let ctrl1 = match last_cubic_ctrl {
-                            Some(prev) => {
-                                Point::new(2.0 * current_pt.x - prev.x, 2.0 * current_pt.y - prev.y)
-                            }
-                            None => current_pt,
-                        };
-                        let (ctrl2, end) = if is_rel {
-                            (
-                                Point::new(current_pt.x + x2, current_pt.y + y2),
-                                Point::new(current_pt.x + x, current_pt.y + y),
-                            )
-                        } else {
-                            (Point::new(x2, y2), Point::new(x, y))
-                        };
-                        path.cubic_to(ctrl1, ctrl2, end);
-                        last_cubic_ctrl = Some(ctrl2);
-                        last_quad_ctrl = None;
-                        current_pt = end;
-                    }
-                }
-                'Q' | 'q' => {
-                    let is_rel = c == 'q';
-                    while has_number(&mut chars) {
-                        let Some((x1, y1)) = parse_point(&mut chars) else {
-                            break;
-                        };
-                        let Some((x, y)) = parse_point(&mut chars) else {
-                            break;
-                        };
-                        let (control, end) = if is_rel {
-                            (
-                                Point::new(current_pt.x + x1, current_pt.y + y1),
-                                Point::new(current_pt.x + x, current_pt.y + y),
-                            )
-                        } else {
-                            (Point::new(x1, y1), Point::new(x, y))
-                        };
-                        path.quad_to(control, end);
-                        last_quad_ctrl = Some(control);
-                        last_cubic_ctrl = None;
-                        current_pt = end;
-                    }
-                }
-                'T' | 't' => {
-                    let is_rel = c == 't';
-                    while has_number(&mut chars) {
-                        let Some((x, y)) = parse_point(&mut chars) else {
-                            break;
-                        };
-                        let control = match last_quad_ctrl {
-                            Some(prev) => {
-                                Point::new(2.0 * current_pt.x - prev.x, 2.0 * current_pt.y - prev.y)
-                            }
-                            None => current_pt,
-                        };
-                        let end = if is_rel {
-                            Point::new(current_pt.x + x, current_pt.y + y)
-                        } else {
-                            Point::new(x, y)
-                        };
-                        path.quad_to(control, end);
-                        last_quad_ctrl = Some(control);
-                        last_cubic_ctrl = None;
-                        current_pt = end;
-                    }
-                }
-                'A' | 'a' => {
-                    let is_rel = c == 'a';
-                    while has_number(&mut chars) {
-                        let Some(rx) = parse_float(&mut chars) else {
-                            break;
-                        };
-                        let Some(ry) = parse_float(&mut chars) else {
-                            break;
-                        };
-                        let Some(x_rot) = parse_float(&mut chars) else {
-                            break;
-                        };
-                        let Some(large_arc) = parse_flag(&mut chars) else {
-                            break;
-                        };
-                        let Some(sweep) = parse_flag(&mut chars) else {
-                            break;
-                        };
-                        let Some((x, y)) = parse_point(&mut chars) else {
-                            break;
-                        };
-                        let end = if is_rel {
-                            Point::new(current_pt.x + x, current_pt.y + y)
-                        } else {
-                            Point::new(x, y)
-                        };
-                        arc_to_cubics(&mut path, current_pt, end, rx, ry, x_rot, large_arc, sweep);
-                        current_pt = end;
-                        last_cubic_ctrl = None;
-                        last_quad_ctrl = None;
-                    }
-                }
-                'Z' | 'z' => {
-                    path.close();
-                    current_pt = subpath_start;
-                    last_cubic_ctrl = None;
-                    last_quad_ctrl = None;
-                }
-                _ => {
-                    last_cubic_ctrl = None;
-                    last_quad_ctrl = None;
-                }
+            if c.is_ascii_alphabetic() {
+                state.apply_command(c, &mut chars);
             }
         }
 
-        path
+        state.path
     }
+}
+
+#[derive(Default)]
+struct IconSvgParser {
+    path: VectorPath,
+    current_pt: Point,
+    subpath_start: Point,
+    last_cubic_ctrl: Option<Point>,
+    last_quad_ctrl: Option<Point>,
+}
+
+#[derive(Clone, Copy)]
+enum CoordMode {
+    Absolute,
+    Relative,
+}
+
+impl IconSvgParser {
+    fn resolve(&self, mode: CoordMode, x: f32, y: f32) -> Point {
+        match mode {
+            CoordMode::Relative => Point::new(self.current_pt.x + x, self.current_pt.y + y),
+            CoordMode::Absolute => Point::new(x, y),
+        }
+    }
+
+    fn reset_controls(&mut self) {
+        self.last_cubic_ctrl = None;
+        self.last_quad_ctrl = None;
+    }
+
+    fn apply_command(&mut self, c: char, chars: &mut std::iter::Peekable<std::str::Chars<'_>>) {
+        let mode = if c.is_ascii_lowercase() {
+            CoordMode::Relative
+        } else {
+            CoordMode::Absolute
+        };
+        match c.to_ascii_uppercase() {
+            'M' => {
+                let mut first = true;
+                while has_number(chars) {
+                    let Some((x, y)) = parse_point(chars) else {
+                        break;
+                    };
+                    self.current_pt = self.resolve(mode, x, y);
+                    if first {
+                        self.subpath_start = self.current_pt;
+                        self.path.move_to(self.current_pt);
+                        first = false;
+                    } else {
+                        self.path.line_to(self.current_pt);
+                    }
+                }
+                self.reset_controls();
+            }
+            'L' => {
+                while has_number(chars) {
+                    let Some((x, y)) = parse_point(chars) else {
+                        break;
+                    };
+                    self.current_pt = self.resolve(mode, x, y);
+                    self.path.line_to(self.current_pt);
+                }
+                self.reset_controls();
+            }
+            'H' => {
+                while has_number(chars) {
+                    let Some(x) = parse_float(chars) else {
+                        break;
+                    };
+                    self.current_pt.x = self.resolve(mode, x, 0.0).x;
+                    self.path.line_to(self.current_pt);
+                }
+                self.reset_controls();
+            }
+            'V' => {
+                while has_number(chars) {
+                    let Some(y) = parse_float(chars) else {
+                        break;
+                    };
+                    self.current_pt.y = self.resolve(mode, 0.0, y).y;
+                    self.path.line_to(self.current_pt);
+                }
+                self.reset_controls();
+            }
+            'C' | 'S' | 'Q' | 'T' | 'A' => {
+                self.apply_curve_or_arc(c.to_ascii_uppercase(), mode, chars);
+            }
+            'Z' => {
+                self.path.close();
+                self.current_pt = self.subpath_start;
+                self.reset_controls();
+            }
+            _ => self.reset_controls(),
+        }
+    }
+
+    fn apply_curve_or_arc(
+        &mut self,
+        upper: char,
+        mode: CoordMode,
+        chars: &mut std::iter::Peekable<std::str::Chars<'_>>,
+    ) {
+        match upper {
+            'C' => {
+                while has_number(chars) {
+                    let (Some((x1, y1)), Some((x2, y2)), Some((x, y))) =
+                        (parse_point(chars), parse_point(chars), parse_point(chars))
+                    else {
+                        break;
+                    };
+                    let ctrl1 = self.resolve(mode, x1, y1);
+                    let ctrl2 = self.resolve(mode, x2, y2);
+                    let end = self.resolve(mode, x, y);
+                    self.path.cubic_to(ctrl1, ctrl2, end);
+                    self.last_cubic_ctrl = Some(ctrl2);
+                    self.last_quad_ctrl = None;
+                    self.current_pt = end;
+                }
+            }
+            'S' => {
+                while has_number(chars) {
+                    let (Some((x2, y2)), Some((x, y))) = (parse_point(chars), parse_point(chars))
+                    else {
+                        break;
+                    };
+                    let ctrl1 = self.last_cubic_ctrl.map_or(self.current_pt, |prev| {
+                        Point::new(
+                            2.0 * self.current_pt.x - prev.x,
+                            2.0 * self.current_pt.y - prev.y,
+                        )
+                    });
+                    let ctrl2 = self.resolve(mode, x2, y2);
+                    let end = self.resolve(mode, x, y);
+                    self.path.cubic_to(ctrl1, ctrl2, end);
+                    self.last_cubic_ctrl = Some(ctrl2);
+                    self.last_quad_ctrl = None;
+                    self.current_pt = end;
+                }
+            }
+            'Q' => {
+                while has_number(chars) {
+                    let (Some((x1, y1)), Some((x, y))) = (parse_point(chars), parse_point(chars))
+                    else {
+                        break;
+                    };
+                    let control = self.resolve(mode, x1, y1);
+                    let end = self.resolve(mode, x, y);
+                    self.path.quad_to(control, end);
+                    self.last_quad_ctrl = Some(control);
+                    self.last_cubic_ctrl = None;
+                    self.current_pt = end;
+                }
+            }
+            'T' => {
+                while has_number(chars) {
+                    let Some((x, y)) = parse_point(chars) else {
+                        break;
+                    };
+                    let control = self.last_quad_ctrl.map_or(self.current_pt, |prev| {
+                        Point::new(
+                            2.0 * self.current_pt.x - prev.x,
+                            2.0 * self.current_pt.y - prev.y,
+                        )
+                    });
+                    let end = self.resolve(mode, x, y);
+                    self.path.quad_to(control, end);
+                    self.last_quad_ctrl = Some(control);
+                    self.last_cubic_ctrl = None;
+                    self.current_pt = end;
+                }
+            }
+            'A' => self.apply_arc_cmd(mode, chars),
+            _ => {}
+        }
+    }
+
+    fn apply_arc_cmd(
+        &mut self,
+        mode: CoordMode,
+        chars: &mut std::iter::Peekable<std::str::Chars<'_>>,
+    ) {
+        while has_number(chars) {
+            let (Some(rx), Some(ry), Some(x_rot), Some(large_arc), Some(sweep), Some((x, y))) = (
+                parse_float(chars),
+                parse_float(chars),
+                parse_float(chars),
+                parse_flag(chars),
+                parse_flag(chars),
+                parse_point(chars),
+            ) else {
+                break;
+            };
+            let end = self.resolve(mode, x, y);
+            let arc = SvgArc {
+                start: self.current_pt,
+                end,
+                rx,
+                ry,
+                x_axis_rotation_deg: x_rot,
+                flags: ArcFlags { large_arc, sweep },
+            };
+            arc_to_cubics(&mut self.path, &arc);
+            self.current_pt = end;
+            self.reset_controls();
+        }
+    }
+}
+
+struct ArcFlags {
+    large_arc: bool,
+    sweep: bool,
+}
+
+struct SvgArc {
+    start: Point,
+    end: Point,
+    rx: f32,
+    ry: f32,
+    x_axis_rotation_deg: f32,
+    flags: ArcFlags,
 }
 
 /// Converts an SVG elliptical arc from `start` to `end` into 1..=4 cubic Bézier segments
 /// following the W3C SVG 1.1 Implementation Notes (Section F.6.5 & F.6.6).
-#[allow(clippy::too_many_arguments)]
-fn arc_to_cubics(
-    path: &mut VectorPath,
-    start: Point,
-    end: Point,
-    rx_in: f32,
-    ry_in: f32,
-    x_axis_rotation_deg: f32,
-    large_arc: bool,
-    sweep: bool,
-) {
-    let x1 = f64::from(start.x);
-    let y1 = f64::from(start.y);
-    let x2 = f64::from(end.x);
-    let y2 = f64::from(end.y);
+fn arc_to_cubics(path: &mut VectorPath, arc: &SvgArc) {
+    let x1 = f64::from(arc.start.x);
+    let y1 = f64::from(arc.start.y);
+    let x2 = f64::from(arc.end.x);
+    let y2 = f64::from(arc.end.y);
+    let rx_in = arc.rx;
+    let ry_in = arc.ry;
+    let x_axis_rotation_deg = arc.x_axis_rotation_deg;
+    let large_arc = arc.flags.large_arc;
+    let sweep = arc.flags.sweep;
+    let end = arc.end;
 
     if (x1 - x2).abs() < 1e-6 && (y1 - y2).abs() < 1e-6 {
         return;
@@ -433,8 +432,8 @@ fn arc_to_cubics(
     let cxp = coef * (rx * y1p / ry);
     let cyp = coef * (-ry * x1p / rx);
 
-    let cx = cos_phi * cxp - sin_phi * cyp + (x1 + x2) * 0.5;
-    let cy = sin_phi * cxp + cos_phi * cyp + (y1 + y2) * 0.5;
+    let cx = cos_phi * cxp - sin_phi * cyp + f64::midpoint(x1, x2);
+    let cy = sin_phi * cxp + cos_phi * cyp + f64::midpoint(y1, y2);
 
     let ux = (x1p - cxp) / rx;
     let uy = (y1p - cyp) / ry;
@@ -449,8 +448,8 @@ fn arc_to_cubics(
         dtheta += TAU;
     }
 
-    let segments = (dtheta.abs() / FRAC_PI_2).ceil().max(1.0) as usize;
-    let delta = dtheta / (segments as f64);
+    let segments = u16::try_from((dtheta.abs() / FRAC_PI_2).ceil().max(1.0) as usize).unwrap_or(4);
+    let delta = dtheta / f64::from(segments);
     let alpha = (4.0 / 3.0) * (delta * 0.25).tan();
 
     let map_pt = |px: f64, py: f64| -> Point {
@@ -460,7 +459,7 @@ fn arc_to_cubics(
     };
 
     for i in 0..segments {
-        let t1 = theta1 + (i as f64) * delta;
+        let t1 = theta1 + f64::from(i) * delta;
         let t2 = t1 + delta;
         let (sin1, cos1) = t1.sin_cos();
         let (sin2, cos2) = t2.sin_cos();
@@ -520,11 +519,11 @@ fn parse_float(chars: &mut std::iter::Peekable<std::str::Chars<'_>>) -> Option<f
     let mut has_digit = false;
     let mut has_dot = false;
 
-    if let Some(&c) = chars.peek() {
-        if c == '-' || c == '+' {
-            buf.push(c);
-            chars.next();
-        }
+    if let Some(&c) = chars.peek()
+        && (c == '-' || c == '+')
+    {
+        buf.push(c);
+        chars.next();
     }
 
     while let Some(&c) = chars.peek() {

@@ -35,10 +35,10 @@ pub fn provide_context<T: Any + Send + Sync + Clone>(value: T) {
     CONTEXT_STACK.with(|stack| {
         let mut map = stack.borrow_mut();
         let list = map.entry(type_id).or_default();
-        if list.is_empty() {
-            list.push(Arc::new(value));
+        if let Some(last) = list.last_mut() {
+            *last = Arc::new(value);
         } else {
-            *list.last_mut().expect("context list is non-empty") = Arc::new(value);
+            list.push(Arc::new(value));
         }
     });
 }

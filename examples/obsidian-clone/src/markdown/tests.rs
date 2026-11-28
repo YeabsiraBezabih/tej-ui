@@ -66,11 +66,11 @@ fn test_mermaid_parser_flowchart() {
 
 #[test]
 fn test_mermaid_parser_with_edge_labels() {
-    let input = r#"
+    let input = r"
     graph LR
     Start -->|Valid| Process
     Process -->|Done| End
-    "#;
+    ";
     let graph = parse_mermaid(input);
     assert!(graph.is_horizontal);
     assert_eq!(graph.edges.len(), 2);

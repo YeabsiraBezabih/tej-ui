@@ -38,10 +38,10 @@ impl SignaturePadState {
     }
 
     pub fn append_point(&mut self, pt: StrokePoint) {
-        if self.is_drawing {
-            if let Some(stroke) = self.strokes.last_mut() {
-                stroke.points.push(pt);
-            }
+        if self.is_drawing
+            && let Some(stroke) = self.strokes.last_mut()
+        {
+            stroke.points.push(pt);
         }
     }
 
@@ -81,9 +81,9 @@ impl Default for Dropzone {
     fn default() -> Self {
         Self {
             bounds: Rect::ZERO,
-            background: Color::from_rgb_u32(0xFCFCFD), // Tej Gray 25
-            drag_over_background: Color::from_rgb_u32(0xF9F5FF), // Tej Brand 50
-            border_color: Color::from_rgb_u32(0xD0D5DD), // Tej Gray 300
+            background: Color::from_rgb_u32(0x00FC_FCFD), // Tej Gray 25
+            drag_over_background: Color::from_rgb_u32(0x00F9_F5FF), // Tej Brand 50
+            border_color: Color::from_rgb_u32(0x00D0_D5DD), // Tej Gray 300
             corner_radius: 12.0,
         }
     }

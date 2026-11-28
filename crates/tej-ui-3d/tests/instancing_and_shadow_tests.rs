@@ -72,9 +72,9 @@ fn test_shadow_map_creation_and_pcf_evaluation() {
         }
     }
 
-    // Transform scene center (0, 0, 0) into light space to check depth
+    // Transform scene center (0, 0, 0) into light space
     let center_clip = sm.light_view_proj.transform_point4(Vec3::ZERO);
-    let _center_depth = center_clip[2] / center_clip[3];
+    assert!(center_clip[3].abs() > 0.0);
 
     // Points deeper than the occluder (center_depth > 0.35 + bias) should be in shadow
     let shadow_factor = sm.sample_shadow_pcf(Vec3::new(0.0, -5.0, 0.0), 0.005);

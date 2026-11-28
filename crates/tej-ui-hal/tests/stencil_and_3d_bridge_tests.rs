@@ -17,12 +17,9 @@ fn test_stencil_mode_variants() {
 #[test]
 fn test_depth_stencil_target_creation_and_resize() {
     let config = BackendConfig::default();
-    let ctx = match GpuContext::new_headless(&config) {
-        Ok(c) => c,
-        Err(_) => {
-            eprintln!("Skipping test: no compatible GPU or software rasterizer adapter found.");
-            return;
-        }
+    let Ok(ctx) = GpuContext::new_headless(&config) else {
+        eprintln!("Skipping test: no compatible GPU or software rasterizer adapter found.");
+        return;
     };
 
     let mut ds = match DepthStencilTarget::new(&ctx, 128, 128) {
@@ -46,12 +43,9 @@ fn test_depth_stencil_target_creation_and_resize() {
 #[test]
 fn test_3d_texture_bridge_creation_and_upload() {
     let config = BackendConfig::default();
-    let ctx = match GpuContext::new_headless(&config) {
-        Ok(c) => c,
-        Err(_) => {
-            eprintln!("Skipping test: no compatible GPU adapter found.");
-            return;
-        }
+    let Ok(ctx) = GpuContext::new_headless(&config) else {
+        eprintln!("Skipping test: no compatible GPU adapter found.");
+        return;
     };
 
     let format = wgpu::TextureFormat::Rgba8Unorm;

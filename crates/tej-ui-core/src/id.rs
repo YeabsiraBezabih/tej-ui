@@ -94,6 +94,7 @@ pub struct Epoch(pub u64);
 
 impl Epoch {
     #[inline]
+    #[must_use]
     pub fn advance(&mut self) -> Self {
         self.0 += 1;
         *self

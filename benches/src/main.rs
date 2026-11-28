@@ -5,14 +5,19 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 use tej_ui::prelude::*;
 
+#[inline]
+fn count_to_f64(n: usize) -> f64 {
+    f64::from(u32::try_from(n).unwrap_or(u32::MAX))
+}
+
 fn get_rss_memory_mb() -> f64 {
     if let Ok(statm) = fs::read_to_string("/proc/self/statm") {
         let parts: Vec<&str> = statm.split_whitespace().collect();
-        if parts.len() >= 2 {
-            if let Ok(resident_pages) = parts[1].parse::<u64>() {
-                let page_size_kb = 4.0;
-                return (resident_pages as f64 * page_size_kb) / 1024.0;
-            }
+        if parts.len() >= 2
+            && let Ok(resident_pages) = parts[1].parse::<u32>()
+        {
+            let page_size_kb = 4.0;
+            return (f64::from(resident_pages) * page_size_kb) / 1024.0;
         }
     }
     0.0
@@ -36,8 +41,8 @@ fn bench_signals(iterations: usize) {
         count.set(i);
     }
     let elapsed = start.elapsed();
-    let per_op_ns = (elapsed.as_nanos() as f64) / (iterations as f64);
-    let ops_per_sec = (iterations as f64) / elapsed.as_secs_f64();
+    let per_op_ns = (elapsed.as_secs_f64() * 1e9) / count_to_f64(iterations);
+    let ops_per_sec = count_to_f64(iterations) / elapsed.as_secs_f64();
 
     println!("Total operations:    {iterations} updates");
     println!("Elapsed time:        {elapsed:?}");
@@ -76,7 +81,7 @@ fn bench_layout(node_count: usize) {
         LayoutEngine::compute_layout(&mut arena, root, Size::new(1920.0, 1080.0));
     }
     let elapsed = start.elapsed();
-    let per_pass_us = (elapsed.as_micros() as f64) / (passes as f64);
+    let per_pass_us = (elapsed.as_secs_f64() * 1e6) / f64::from(passes);
 
     println!("Hierarchy:           1 container with {node_count} children");
     println!("Passes executed:     {passes}");
@@ -117,13 +122,13 @@ fn bench_db_virtual_list() {
 
     // Rapidly scroll 100,000 virtual rows
     let scroll_start = Instant::now();
-    let scroll_steps = 10_000;
+    let scroll_steps: u16 = 10_000;
     for step in 1..=scroll_steps {
-        scroll_pos.set((step * 10) as f32);
+        scroll_pos.set(f32::from(step) * 10.0);
         vlist.patch(&mut state, 1);
     }
     let scroll_elapsed = scroll_start.elapsed();
-    let time_per_scroll_us = (scroll_elapsed.as_micros() as f64) / (scroll_steps as f64);
+    let time_per_scroll_us = (scroll_elapsed.as_secs_f64() * 1e6) / f64::from(scroll_steps);
 
     let mem_after_scroll = get_rss_memory_mb();
 
@@ -153,8 +158,9 @@ fn bench_direct_rle_filtering() {
         total_matches += bitset.total_set();
     }
     let elapsed = start.elapsed();
-    let per_op_ns = (elapsed.as_nanos() as f64) / (iterations as f64);
-    let rows_per_sec = (col.total_rows() as f64 * iterations as f64) / elapsed.as_secs_f64();
+    let per_op_ns = (elapsed.as_secs_f64() * 1e9) / count_to_f64(iterations);
+    let rows_per_sec =
+        (count_to_f64(col.total_rows()) * count_to_f64(iterations)) / elapsed.as_secs_f64();
 
     println!("Rows filtered:       1,000,000 rows per pass (3 RLE runs)");
     println!("Filter iterations:   {iterations}");
@@ -177,11 +183,11 @@ fn bench_rabitq_semantic_palette() {
     let mut palette = SemanticPalette::new();
     // Register 10,000 command actions with 64-bit signatures
     for i in 0..10_000 {
-        let sig = 0xAAAAAAAAAAAAAAAAu64 ^ ((i as u64) << 16) ^ ((i as u64) >> 4);
+        let sig = 0xAAAA_AAAA_AAAA_AAAA_u64 ^ ((i as u64) << 16) ^ ((i as u64) >> 4);
         palette.register(i as u32, format!("Action #{i:05}"), sig);
     }
 
-    let query_sig = 0xAAAAAAAAAAAAFFFFu64;
+    let query_sig = 0xAAAA_AAAA_AAAA_FFFF_u64;
     let queries = 5_000;
     let start = Instant::now();
     let mut top_match_dist = 0;
@@ -192,8 +198,8 @@ fn bench_rabitq_semantic_palette() {
         }
     }
     let elapsed = start.elapsed();
-    let per_search_us = (elapsed.as_micros() as f64) / (queries as f64);
-    let ops_per_sec = (queries as f64) / elapsed.as_secs_f64();
+    let per_search_us = (elapsed.as_secs_f64() * 1e6) / f64::from(queries);
+    let ops_per_sec = f64::from(queries) / elapsed.as_secs_f64();
 
     println!("Palette catalog:     10,000 registered actions");
     println!("Queries executed:    {queries} top-5 searches");
@@ -229,11 +235,11 @@ fn bench_cow_time_travel() {
     println!("History depth:       {undo_cnt} undos, {redo_cnt} redos");
     println!(
         "RAM footprint:       {mem_bytes} bytes ({:.2} KB for 10K full states!)",
-        mem_bytes as f64 / 1024.0
+        count_to_f64(mem_bytes) / 1024.0
     );
     println!(
         "10,000 Time-travels: {time_travel_elapsed:?} ({:.2} ns per state pivot)",
-        (time_travel_elapsed.as_nanos() as f64) / 10_000.0
+        (time_travel_elapsed.as_secs_f64() * 1e9) / 10_000.0
     );
 }
 

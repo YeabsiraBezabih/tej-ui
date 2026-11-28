@@ -23,7 +23,7 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("For")
             .field("items_len", &self.items.len())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -98,6 +98,18 @@ where
             arena.add_child(parent, child_node);
         }
         parent
+    }
+
+    fn layout_children(
+        &self,
+        state: &mut Self::State,
+        arena: &mut tej_ui_layout::LayoutArena,
+        parent: u32,
+    ) {
+        for (item, (_k, child_state)) in self.items.iter().zip(state.items.iter_mut()) {
+            let view = (self.view_fn)(item);
+            view.layout_children(child_state, arena, parent);
+        }
     }
 
     fn paint(&self, state: &Self::State, ctx: &mut crate::paint::PaintContext<'_>) {

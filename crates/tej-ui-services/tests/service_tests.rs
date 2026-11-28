@@ -91,7 +91,7 @@ fn test_tray_icon_configuration() {
     assert_eq!(tray.badge_count, Some(5));
     assert!(tray.is_visible);
 
-    tray.set_visible(false).unwrap();
+    tray.hide().unwrap();
     assert!(!tray.is_visible);
 }
 
@@ -210,7 +210,11 @@ fn test_workspace_geometry_and_state_persistence() {
     assert_eq!(restored.workspace.tabs[1].id, "tab_main_rs");
     assert_eq!(restored.workspace.tabs[1].scroll_y, 150.0);
     assert_eq!(
-        restored.workspace.drafts.get("doc_1").map(|s| s.as_str()),
+        restored
+            .workspace
+            .drafts
+            .get("doc_1")
+            .map(std::string::String::as_str),
         Some("fn main() { println!(\"Hello\"); }")
     );
 
@@ -336,8 +340,18 @@ fn test_native_os_services_batch() {
     use tej_ui_services::{
         AppBadgeController, BiometricAuthResult, MenuBar, MenuItem, MenuItemRole,
         NotificationAction, NotificationBuilder, PageLayout, PageMargins, PaperSize,
-        PdfPrintSpooler, SecureKeyStore, SharePayload, ShareSheetDispatcher, TaskbarState,
+        PdfPrintSpooler, SecretProtection, SecureKeyStore, SharePayload, ShareSheetDispatcher,
+        TaskbarState,
     };
+    struct AllowBio;
+    impl tej_ui_services::BiometricVerifier for AllowBio {
+        fn authenticate(
+            &self,
+            _prompt: &tej_ui_services::BiometricPromptConfig,
+        ) -> BiometricAuthResult {
+            BiometricAuthResult::Success
+        }
+    }
 
     // 1. Menu Bar and Badges
     let mut menu_bar = MenuBar::new();
@@ -364,19 +378,13 @@ fn test_native_os_services_batch() {
     );
 
     // 2. Hardware Enclave & Biometrics Keystore
-    struct AllowBio;
-    impl tej_ui_services::BiometricVerifier for AllowBio {
-        fn authenticate(
-            &self,
-            _prompt: &tej_ui_services::BiometricPromptConfig,
-        ) -> BiometricAuthResult {
-            BiometricAuthResult::Success
-        }
-    }
-
     let mut keystore = SecureKeyStore::new();
-    keystore.store_secret("cloud_token", b"token_12345", true);
-    keystore.store_secret("public_pref", b"pref_val", false);
+    keystore.store_secret(
+        "cloud_token",
+        b"token_12345",
+        SecretProtection::BiometricRequired,
+    );
+    keystore.store_secret("public_pref", b"pref_val", SecretProtection::Standard);
 
     // Accessing without a configured biometric verifier fails closed
     assert_eq!(keystore.retrieve_secret("cloud_token", None), None);

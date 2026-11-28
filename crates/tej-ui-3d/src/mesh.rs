@@ -119,22 +119,24 @@ impl Mesh {
         let mut vertices = Vec::new();
         let mut indices = Vec::new();
 
-        for r in 0..=rings {
-            let v = r as f32 / rings as f32;
-            let phi = v * std::f32::consts::PI;
+        let rings_f = crate::math::count_to_f32(rings);
+        let segs_f = crate::math::count_to_f32(segments);
+        for ring_idx in 0..=rings {
+            let v_coord = crate::math::count_to_f32(ring_idx) / rings_f;
+            let phi = v_coord * std::f32::consts::PI;
 
-            for s in 0..=segments {
-                let u = s as f32 / segments as f32;
-                let theta = u * std::f32::consts::PI * 2.0;
+            for seg_idx in 0..=segments {
+                let u_coord = crate::math::count_to_f32(seg_idx) / segs_f;
+                let theta = u_coord * std::f32::consts::PI * 2.0;
 
-                let x = theta.cos() * phi.sin();
-                let y = phi.cos();
-                let z = theta.sin() * phi.sin();
+                let nx = theta.cos() * phi.sin();
+                let ny = phi.cos();
+                let nz = theta.sin() * phi.sin();
 
-                let normal = Vec3::new(x, y, z);
+                let normal = Vec3::new(nx, ny, nz);
                 let position = normal * radius;
 
-                vertices.push(Vertex::new(position, normal, [u, v], color));
+                vertices.push(Vertex::new(position, normal, [u_coord, v_coord], color));
             }
         }
 

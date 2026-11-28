@@ -9,8 +9,7 @@ use tej_ui_devtools::{DylibReloader, ReloadStatus};
 fn unique_temp_path(filename: &str) -> PathBuf {
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
+        .map_or(0, |d| d.as_nanos());
     std::env::temp_dir().join(format!(
         "tej_ui_devtools_{}_{}_{}",
         std::process::id(),

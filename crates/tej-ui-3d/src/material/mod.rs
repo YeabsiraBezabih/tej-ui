@@ -99,8 +99,15 @@ impl StandardMaterial {
 
     /// Enables wireframe rendering.
     #[must_use]
-    pub const fn with_wireframe(mut self, wireframe: bool) -> Self {
-        self.wireframe = wireframe;
+    pub const fn wireframe(mut self) -> Self {
+        self.wireframe = true;
+        self
+    }
+
+    /// Uses filled solid rendering.
+    #[must_use]
+    pub const fn solid(mut self) -> Self {
+        self.wireframe = false;
         self
     }
 }

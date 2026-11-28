@@ -150,6 +150,7 @@ impl DbVirtualWindow {
     #[inline]
     #[must_use]
     pub fn total_content_height(&self) -> f32 {
-        self.total_rows as f32 * self.row_height
+        let rows = f32::from(u16::try_from(self.total_rows).unwrap_or(u16::MAX));
+        rows * self.row_height
     }
 }

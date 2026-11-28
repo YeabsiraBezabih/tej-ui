@@ -25,11 +25,17 @@ fn find_p1(results: &[Phase1FrameworkResult], name: &str) -> Option<Phase1Framew
 }
 
 fn fmt_ms(ns: u64) -> String {
-    format!("{:.2} ms", (ns as f64) / 1_000_000.0)
+    format!(
+        "{:.2} ms",
+        std::time::Duration::from_nanos(ns).as_secs_f64() * 1e3
+    )
 }
 
 fn fmt_us(ns: u64) -> String {
-    format!("{:.1} µs", (ns as f64) / 1_000.0)
+    format!(
+        "{:.1} µs",
+        std::time::Duration::from_nanos(ns).as_secs_f64() * 1e6
+    )
 }
 
 /// Print Table 1: Raw Latency & Allocation Scoreboard.
@@ -60,14 +66,62 @@ pub fn print_raw_scoreboard(results: &BenchmarkSuiteResults) {
         "", "", "", "", "", "", "", ""
     );
 
-    let tej_p1 = find_p1(&results.phase1, "tej-ui").unwrap_or_default();
-    let egui_p1 = find_p1(&results.phase1, "egui").unwrap_or_default();
-    let gpui_p1 = find_p1(&results.phase1, "GPUI").unwrap_or_default();
-    let iced_p1 = find_p1(&results.phase1, "Iced").unwrap_or_default();
-    let slint_p1 = find_p1(&results.phase1, "Slint").unwrap_or_default();
-    let dioxus_p1 = find_p1(&results.phase1, "Dioxus").unwrap_or_default();
+    print_phase1_scoreboard(&results.phase1);
+    print_phase2_to_3_scoreboard(results);
+    print_phase4_scoreboard(&results.phase4);
+    print_phase5_to_6_scoreboard(results);
+    print_phase8_scoreboard(&results.phase8);
+}
+
+fn print_phase1_us_row(label: &str, winner: &str, frames: [&crate::harness::FrameMetrics; 6]) {
+    println!(
+        "{:<38} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<18}",
+        label,
+        format!(
+            "{} / {}",
+            fmt_us(frames[0].total_frame_ns),
+            frames[0].heap_alloc_count
+        ),
+        format!(
+            "{} / {}",
+            fmt_us(frames[1].total_frame_ns),
+            frames[1].heap_alloc_count
+        ),
+        format!(
+            "{} / {}",
+            fmt_us(frames[2].total_frame_ns),
+            frames[2].heap_alloc_count
+        ),
+        format!(
+            "{} / {}",
+            fmt_us(frames[3].total_frame_ns),
+            frames[3].heap_alloc_count
+        ),
+        format!(
+            "{} / {}",
+            fmt_us(frames[4].total_frame_ns),
+            frames[4].heap_alloc_count
+        ),
+        format!(
+            "{} / {}",
+            fmt_us(frames[5].total_frame_ns),
+            frames[5].heap_alloc_count
+        ),
+        winner
+    );
+}
+
+fn print_phase1_scoreboard(phase1: &[Phase1FrameworkResult]) {
+    let tej_p1 = find_p1(phase1, "tej-ui").unwrap_or_default();
+    let egui_p1 = find_p1(phase1, "egui").unwrap_or_default();
+    let gpui_p1 = find_p1(phase1, "GPUI").unwrap_or_default();
+    let iced_p1 = find_p1(phase1, "Iced").unwrap_or_default();
+    let slint_p1 = find_p1(phase1, "Slint").unwrap_or_default();
+    let dioxus_p1 = find_p1(phase1, "Dioxus").unwrap_or_default();
 
     // 1.1 Create 1,000 Rows
+    let slint_ms = std::time::Duration::from_nanos(slint_p1.create_1k.total_frame_ns).as_secs_f64();
+    let tej_ms = std::time::Duration::from_nanos(tej_p1.create_1k.total_frame_ns).as_secs_f64();
     println!(
         "{:<38} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<18}",
         "1.1 Create 1,000 Rows (ms / allocs)",
@@ -103,144 +157,70 @@ pub fn print_raw_scoreboard(results: &BenchmarkSuiteResults) {
         ),
         if tej_p1.create_1k.total_frame_ns <= slint_p1.create_1k.total_frame_ns {
             "tej-ui (+1.5x Bulk)"
-        } else if (slint_p1.create_1k.total_frame_ns as f64)
-            < (tej_p1.create_1k.total_frame_ns as f64) * 0.95
-        {
+        } else if slint_ms < tej_ms * 0.95 {
             "Slint (+1.2x DSL)"
         } else {
             "Tie (Krausest)"
         }
     );
 
-    // 1.2 Update Every 10th Row
-    println!(
-        "{:<38} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<18}",
+    print_phase1_us_row(
         "1.2 Update Every 10th Row (µs / alloc)",
-        format!(
-            "{} / {}",
-            fmt_us(tej_p1.update_10th.total_frame_ns),
-            tej_p1.update_10th.heap_alloc_count
-        ),
-        format!(
-            "{} / {}",
-            fmt_us(gpui_p1.update_10th.total_frame_ns),
-            gpui_p1.update_10th.heap_alloc_count
-        ),
-        format!(
-            "{} / {}",
-            fmt_us(egui_p1.update_10th.total_frame_ns),
-            egui_p1.update_10th.heap_alloc_count
-        ),
-        format!(
-            "{} / {}",
-            fmt_us(iced_p1.update_10th.total_frame_ns),
-            iced_p1.update_10th.heap_alloc_count
-        ),
-        format!(
-            "{} / {}",
-            fmt_us(slint_p1.update_10th.total_frame_ns),
-            slint_p1.update_10th.heap_alloc_count
-        ),
-        format!(
-            "{} / {}",
-            fmt_us(dioxus_p1.update_10th.total_frame_ns),
-            dioxus_p1.update_10th.heap_alloc_count
-        ),
-        "tej-ui (+8.4x Arena)"
+        "tej-ui (+8.4x Arena)",
+        [
+            &tej_p1.update_10th,
+            &gpui_p1.update_10th,
+            &egui_p1.update_10th,
+            &iced_p1.update_10th,
+            &slint_p1.update_10th,
+            &dioxus_p1.update_10th,
+        ],
     );
-
-    // 1.3 Select 1 Row in 1,000
-    println!(
-        "{:<38} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<18}",
+    print_phase1_us_row(
         "1.3 Select 1 Row in 1,000 (µs / alloc)",
-        format!(
-            "{} / {}",
-            fmt_us(tej_p1.select_1.total_frame_ns),
-            tej_p1.select_1.heap_alloc_count
-        ),
-        format!(
-            "{} / {}",
-            fmt_us(gpui_p1.select_1.total_frame_ns),
-            gpui_p1.select_1.heap_alloc_count
-        ),
-        format!(
-            "{} / {}",
-            fmt_us(egui_p1.select_1.total_frame_ns),
-            egui_p1.select_1.heap_alloc_count
-        ),
-        format!(
-            "{} / {}",
-            fmt_us(iced_p1.select_1.total_frame_ns),
-            iced_p1.select_1.heap_alloc_count
-        ),
-        format!(
-            "{} / {}",
-            fmt_us(slint_p1.select_1.total_frame_ns),
-            slint_p1.select_1.heap_alloc_count
-        ),
-        format!(
-            "{} / {}",
-            fmt_us(dioxus_p1.select_1.total_frame_ns),
-            dioxus_p1.select_1.heap_alloc_count
-        ),
-        "tej-ui (+14.2x O(1))"
+        "tej-ui (+14.2x O(1))",
+        [
+            &tej_p1.select_1,
+            &gpui_p1.select_1,
+            &egui_p1.select_1,
+            &iced_p1.select_1,
+            &slint_p1.select_1,
+            &dioxus_p1.select_1,
+        ],
     );
-
-    // 1.4 Swap 2 Rows in 1,000
-    println!(
-        "{:<38} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<18}",
+    print_phase1_us_row(
         "1.4 Swap 2 Rows in 1,000 (µs / alloc)",
-        format!(
-            "{} / {}",
-            fmt_us(tej_p1.swap_2.total_frame_ns),
-            tej_p1.swap_2.heap_alloc_count
-        ),
-        format!(
-            "{} / {}",
-            fmt_us(gpui_p1.swap_2.total_frame_ns),
-            gpui_p1.swap_2.heap_alloc_count
-        ),
-        format!(
-            "{} / {}",
-            fmt_us(egui_p1.swap_2.total_frame_ns),
-            egui_p1.swap_2.heap_alloc_count
-        ),
-        format!(
-            "{} / {}",
-            fmt_us(iced_p1.swap_2.total_frame_ns),
-            iced_p1.swap_2.heap_alloc_count
-        ),
-        format!(
-            "{} / {}",
-            fmt_us(slint_p1.swap_2.total_frame_ns),
-            slint_p1.swap_2.heap_alloc_count
-        ),
-        format!(
-            "{} / {}",
-            fmt_us(dioxus_p1.swap_2.total_frame_ns),
-            dioxus_p1.swap_2.heap_alloc_count
-        ),
-        "tej-ui (+11.1x)"
+        "tej-ui (+11.1x)",
+        [
+            &tej_p1.swap_2,
+            &gpui_p1.swap_2,
+            &egui_p1.swap_2,
+            &iced_p1.swap_2,
+            &slint_p1.swap_2,
+            &dioxus_p1.swap_2,
+        ],
     );
+}
 
+fn print_phase2_to_3_scoreboard(results: &BenchmarkSuiteResults) {
     // 2.1 Layout 10,000 Flex Nodes
     let tej_l = results
         .phase2
         .iter()
         .find(|m| m.engine_name.contains("tej"))
-        .cloned()
+        .copied()
         .unwrap_or_default();
     let taffy_l = results
         .phase2
         .iter()
         .find(|m| m.engine_name.contains("Taffy"))
-        .cloned()
+        .copied()
         .unwrap_or_default();
     let egui_l = results
         .phase2
         .iter()
         .find(|m| m.engine_name.contains("egui"))
-        .cloned()
+        .copied()
         .unwrap_or_default();
     println!(
         "{:<38} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<18}",
@@ -259,19 +239,19 @@ pub fn print_raw_scoreboard(results: &BenchmarkSuiteResults) {
         .phase3
         .iter()
         .find(|m| m.framework.contains("egui"))
-        .cloned()
+        .copied()
         .unwrap_or_default();
     let gpui_t = results
         .phase3
         .iter()
         .find(|m| m.framework.contains("GPUI"))
-        .cloned()
+        .copied()
         .unwrap_or_default();
     let tej_t = results
         .phase3
         .iter()
         .find(|m| m.framework.contains("tej-ui"))
-        .cloned()
+        .copied()
         .unwrap_or_default();
     println!(
         "{:<38} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<18}",
@@ -284,19 +264,19 @@ pub fn print_raw_scoreboard(results: &BenchmarkSuiteResults) {
         format!("{:.2} ms", gpui_t.avg_frame_ms * 1.4),
         "egui (+1.2x Turf)"
     );
+}
 
+fn print_phase4_scoreboard(phase4: &[VirtualGridMetric]) {
     // 4.1 Virtual Scroll 100M Rows
-    let std_v = results
-        .phase4
+    let std_v = phase4
         .iter()
         .find(|m| m.backend_name.contains("Standard"))
-        .cloned()
+        .copied()
         .unwrap_or_default();
-    let mydb_v = results
-        .phase4
+    let mydb_v = phase4
         .iter()
         .find(|m| m.backend_name.contains("MyDb"))
-        .cloned()
+        .copied()
         .unwrap_or_default();
     println!(
         "{:<38} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<18}",
@@ -329,19 +309,21 @@ pub fn print_raw_scoreboard(results: &BenchmarkSuiteResults) {
         ),
         "tej+MyDb (Zero-Copy)"
     );
+}
 
+fn print_phase5_to_6_scoreboard(results: &BenchmarkSuiteResults) {
     // 5.1 Multilingual / Ge'ez / BiDi Shaping
     let tej_ty = results
         .phase5
         .iter()
         .find(|m| m.engine_name.contains("tej"))
-        .cloned()
+        .copied()
         .unwrap_or_default();
     let egui_ty = results
         .phase5
         .iter()
         .find(|m| m.engine_name.contains("egui"))
-        .cloned()
+        .copied()
         .unwrap_or_default();
     println!(
         "{:<38} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<18}",
@@ -360,19 +342,19 @@ pub fn print_raw_scoreboard(results: &BenchmarkSuiteResults) {
         .phase6
         .iter()
         .find(|m| m.framework.contains("tej"))
-        .cloned()
+        .copied()
         .unwrap_or_default();
     let egui_c = results
         .phase6
         .iter()
         .find(|m| m.framework.contains("egui"))
-        .cloned()
+        .copied()
         .unwrap_or_default();
     let gpui_c = results
         .phase6
         .iter()
         .find(|m| m.framework.contains("GPUI"))
-        .cloned()
+        .copied()
         .unwrap_or_default();
     println!(
         "{:<38} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<18}",
@@ -385,43 +367,39 @@ pub fn print_raw_scoreboard(results: &BenchmarkSuiteResults) {
         format!("{:.1} µs", gpui_c.cursor_blink_repaint_us * 1.3),
         "tej-ui (+50,000x Pixels)"
     );
+}
 
+fn print_phase8_scoreboard(phase8: &[FootprintMetric]) {
     // 8.1 Release Binary Size
-    let f_tej = results
-        .phase8
+    let f_tej = phase8
         .iter()
         .find(|m| m.framework == "tej-ui")
-        .cloned()
+        .copied()
         .unwrap_or_default();
-    let f_egui = results
-        .phase8
+    let f_egui = phase8
         .iter()
         .find(|m| m.framework.contains("egui"))
-        .cloned()
+        .copied()
         .unwrap_or_default();
-    let f_gpui = results
-        .phase8
+    let f_gpui = phase8
         .iter()
         .find(|m| m.framework.contains("GPUI"))
-        .cloned()
+        .copied()
         .unwrap_or_default();
-    let f_iced = results
-        .phase8
+    let f_iced = phase8
         .iter()
         .find(|m| m.framework.contains("Iced"))
-        .cloned()
+        .copied()
         .unwrap_or_default();
-    let f_slint = results
-        .phase8
+    let f_slint = phase8
         .iter()
         .find(|m| m.framework.contains("Slint"))
-        .cloned()
+        .copied()
         .unwrap_or_default();
-    let f_dioxus = results
-        .phase8
+    let f_dioxus = phase8
         .iter()
         .find(|m| m.framework.contains("Dioxus"))
-        .cloned()
+        .copied()
         .unwrap_or_default();
     println!(
         "{:<38} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12} | {:<18}",

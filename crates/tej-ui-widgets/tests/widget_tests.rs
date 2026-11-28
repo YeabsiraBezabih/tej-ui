@@ -45,7 +45,10 @@ fn test_datagrid_2d_virtualization() {
     assert!(visible_cols.contains(&3));
 
     let state = grid.build();
-    assert!(!state.cell_states.is_empty());
+    assert_ne!(
+        state.cell_states,
+        [] as [(tej_ui_widgets::GridCellCoords, tej_ui_view::TextState); 0]
+    );
 }
 
 #[test]
@@ -190,7 +193,7 @@ fn test_layout_sidebar_card_separator_accordion_scroll() {
     let sidebar = Sidebar::new(
         collapsed,
         vec![
-            SidebarItem::new("home", "Home").active(true),
+            SidebarItem::new("home", "Home").mark_active(),
             SidebarItem::new("inbox", "Inbox").badge("5"),
         ],
     );
@@ -277,7 +280,7 @@ fn test_feedback_badge_avatar_progress_skeleton_alert_tooltip() {
     let tooltip = Tooltip::new("Help text", visible);
     let mut t_state = tooltip.build();
     assert!(!t_state.is_visible);
-    tooltip.set_visible(true);
+    tooltip.show();
     tooltip.patch(&mut t_state, 1);
     assert!(t_state.is_visible);
 }
@@ -287,7 +290,7 @@ fn test_navigation_breadcrumb_pagination_and_sheet() {
     // Breadcrumb
     let breadcrumb = Breadcrumb::new(vec![
         BreadcrumbItem::new("Workspace").href("/workspace"),
-        BreadcrumbItem::new("Settings").current(true),
+        BreadcrumbItem::new("Settings").mark_current(),
     ]);
     let bc_state = breadcrumb.build();
     assert_eq!(bc_state.count, 2);
@@ -486,28 +489,38 @@ fn test_datagrid_multi_column_sorting_and_resizing() {
     use std::cmp::Ordering;
     use tej_ui_widgets::{ColumnResizeSession, InlineCellEditor, MultiColumnSorter, SortDirection};
 
-    // 1. Multi-column sorting
-    let mut sorter = MultiColumnSorter::new();
-    // Normal click sorts by 'department'
-    sorter.toggle_sort("department", false);
-    assert_eq!(sorter.direction_for("department"), SortDirection::Ascending);
-    assert_eq!(sorter.criteria().len(), 1);
-
-    // Shift-click adds 'salary' as secondary sort criterion
-    sorter.toggle_sort("salary", true);
-    assert_eq!(sorter.criteria().len(), 2);
-    assert_eq!(sorter.direction_for("salary"), SortDirection::Ascending);
-
-    // Shift-click 'salary' again to cycle to Descending
-    sorter.toggle_sort("salary", true);
-    assert_eq!(sorter.direction_for("salary"), SortDirection::Descending);
-
-    // Test row comparison
     #[derive(Debug)]
     struct Employee {
         dept: &'static str,
         salary: u64,
     }
+
+    // 1. Multi-column sorting
+    let mut sorter = MultiColumnSorter::new();
+    // Normal click sorts by 'department'
+    sorter.toggle_sort(
+        "department",
+        tej_ui_widgets::datagrid::interactions::SortMode::Single,
+    );
+    assert_eq!(sorter.direction_for("department"), SortDirection::Ascending);
+    assert_eq!(sorter.criteria().len(), 1);
+
+    // Shift-click adds 'salary' as secondary sort criterion
+    sorter.toggle_sort(
+        "salary",
+        tej_ui_widgets::datagrid::interactions::SortMode::Multi,
+    );
+    assert_eq!(sorter.criteria().len(), 2);
+    assert_eq!(sorter.direction_for("salary"), SortDirection::Ascending);
+
+    // Shift-click 'salary' again to cycle to Descending
+    sorter.toggle_sort(
+        "salary",
+        tej_ui_widgets::datagrid::interactions::SortMode::Multi,
+    );
+    assert_eq!(sorter.direction_for("salary"), SortDirection::Descending);
+
+    // Test row comparison
     let emp1 = Employee {
         dept: "Engineering",
         salary: 120_000,
@@ -600,18 +613,27 @@ fn test_tree_virtualization_and_split_pane() {
     assert_eq!(multi.count(), 0);
 
     // Single click selects node
-    multi.select("src", false);
+    multi.select(
+        "src",
+        tej_ui_widgets::navigation::tree_virtualizer::SelectionMode::Single,
+    );
     assert!(multi.is_selected("src"));
     assert_eq!(multi.count(), 1);
 
     // Single click replaces selection
-    multi.select("cargo_toml", false);
+    multi.select(
+        "cargo_toml",
+        tej_ui_widgets::navigation::tree_virtualizer::SelectionMode::Single,
+    );
     assert!(!multi.is_selected("src"));
     assert!(multi.is_selected("cargo_toml"));
     assert_eq!(multi.count(), 1);
 
     // Toggle click adds to selection
-    multi.select("src", true);
+    multi.select(
+        "src",
+        tej_ui_widgets::navigation::tree_virtualizer::SelectionMode::Toggle,
+    );
     assert!(multi.is_selected("cargo_toml"));
     assert!(multi.is_selected("src"));
     assert_eq!(multi.count(), 2);

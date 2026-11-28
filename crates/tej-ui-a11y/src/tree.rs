@@ -80,11 +80,11 @@ impl A11yTree {
 
     /// Update node bounds from layout calculation, marking it dirty if changed.
     pub fn update_bounds(&mut self, id: A11yId, bounds: Rect) {
-        if let Some(node) = self.nodes.get_mut(&id) {
-            if node.bounds != bounds {
-                node.bounds = bounds;
-                self.dirty_nodes.insert(id);
-            }
+        if let Some(node) = self.nodes.get_mut(&id)
+            && node.bounds != bounds
+        {
+            node.bounds = bounds;
+            self.dirty_nodes.insert(id);
         }
     }
 

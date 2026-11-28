@@ -73,8 +73,14 @@ impl TrafficLightsController {
         )
     }
 
-    pub fn set_active_window(&mut self, active: bool) {
-        self.is_active_window = active;
+    /// Marks the window as active so traffic lights render in color.
+    pub fn activate_window(&mut self) {
+        self.is_active_window = true;
+    }
+
+    /// Marks the window as inactive so traffic lights render in grayscale.
+    pub fn deactivate_window(&mut self) {
+        self.is_active_window = false;
     }
 
     pub fn hovered(&self) -> HoveredTrafficLight {

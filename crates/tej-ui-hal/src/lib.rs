@@ -38,13 +38,13 @@ pub use gesture::{
 pub use lifecycle::{
     AppLifecycleState, CloseVetoToken, LifecycleEvent, LifecycleManager, MemoryPressureLevel,
 };
-pub use monitor::{MonitorId, MonitorInfo, MonitorManager};
+pub use monitor::{MonitorId, MonitorInfo, MonitorManager, MonitorRole};
 pub use native_view::{NativeViewHandle, NativeViewHost};
 pub use pacing::{FramePacer, RefreshRateMode};
 pub use recovery::{DeviceHealth, DeviceLossCoordinator, RecoveryToken};
 pub use stylus::{PalmRejectionFilter, StylusPoint, StylusToolType};
 pub use titlebar::{CustomTitlebar, TitlebarHitRegion};
 
-pub use surface::SurfaceCompositor;
+pub use surface::{SurfaceCompositor, TextFamily};
 pub use window::{PlatformWindow, WindowConfig, WindowId, WindowKind, WindowRegistry};
 pub use window_host::{CursorIcon, ImeCursorArea, TejWindowHost};

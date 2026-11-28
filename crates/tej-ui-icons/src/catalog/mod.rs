@@ -168,7 +168,17 @@ impl LucideIcon {
     /// Returns the SVG vector path data in 24x24 coordinate space.
     #[must_use]
     pub const fn svg_path(self) -> &'static str {
-        match self {
+        if let Some(path) = self.nav_or_action_svg_path() {
+            return path;
+        }
+        if let Some(path) = self.media_device_comm_svg_path() {
+            return path;
+        }
+        self.editor_or_system_svg_path()
+    }
+
+    const fn nav_or_action_svg_path(self) -> Option<&'static str> {
+        Some(match self {
             // Navigation
             Self::ChevronDown => NavigationIcon::ChevronDown.svg_path(),
             Self::ChevronUp => NavigationIcon::ChevronUp.svg_path(),
@@ -215,7 +225,12 @@ impl LucideIcon {
             Self::ZoomOut => ActionIcon::ZoomOut.svg_path(),
             Self::Maximize => ActionIcon::Maximize.svg_path(),
             Self::Minimize => ActionIcon::Minimize.svg_path(),
+            _ => return None,
+        })
+    }
 
+    const fn media_device_comm_svg_path(self) -> Option<&'static str> {
+        Some(match self {
             // Media
             Self::Play => MediaIcon::Play.svg_path(),
             Self::Pause => MediaIcon::Pause.svg_path(),
@@ -264,7 +279,12 @@ impl LucideIcon {
             Self::Bell => CommunicationIcon::Bell.svg_path(),
             Self::BellOff => CommunicationIcon::BellOff.svg_path(),
             Self::Globe => CommunicationIcon::Globe.svg_path(),
+            _ => return None,
+        })
+    }
 
+    const fn editor_or_system_svg_path(self) -> &'static str {
+        match self {
             // Editor
             Self::Bold => EditorIcon::Bold.svg_path(),
             Self::Italic => EditorIcon::Italic.svg_path(),
@@ -310,6 +330,7 @@ impl LucideIcon {
             Self::Star => SystemIcon::Star.svg_path(),
             Self::Heart => SystemIcon::Heart.svg_path(),
             Self::Flag => SystemIcon::Flag.svg_path(),
+            _ => "",
         }
     }
 

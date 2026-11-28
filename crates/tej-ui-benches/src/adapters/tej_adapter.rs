@@ -218,7 +218,7 @@ impl GuiBenchHarness for TejAdapter {
             row.label.set(val);
 
             // Invalidate only the fine-grained dirty bounding rect
-            let y = (i as f32 * 36.0).min(1080.0);
+            let y = (crate::count_to_f32(i) * 36.0).min(1080.0);
             self.dirty_tracker.add_rect(Rect::new(0.0, y, 1920.0, 36.0));
         }
         let recon_ns = t_recon_start.elapsed().as_nanos() as u64;
@@ -247,7 +247,7 @@ impl GuiBenchHarness for TejAdapter {
         if let Some(row) = self.rows.get(index) {
             let cur = row.selected.get();
             row.selected.set(!cur);
-            let y = (index as f32 * 36.0).min(1080.0);
+            let y = (crate::count_to_f32(index) * 36.0).min(1080.0);
             self.dirty_tracker.add_rect(Rect::new(0.0, y, 1920.0, 36.0));
         }
         let recon_ns = t_recon_start.elapsed().as_nanos() as u64;
@@ -274,8 +274,8 @@ impl GuiBenchHarness for TejAdapter {
         let t_recon_start = Instant::now();
         if idx_a < self.rows.len() && idx_b < self.rows.len() {
             self.rows.swap(idx_a, idx_b);
-            let y_a = (idx_a as f32 * 36.0).min(1080.0);
-            let y_b = (idx_b as f32 * 36.0).min(1080.0);
+            let y_a = (crate::count_to_f32(idx_a) * 36.0).min(1080.0);
+            let y_b = (crate::count_to_f32(idx_b) * 36.0).min(1080.0);
             self.dirty_tracker
                 .add_rect(Rect::new(0.0, y_a, 1920.0, 36.0));
             self.dirty_tracker
@@ -445,8 +445,8 @@ impl GuiBenchHarness for TejAdapter {
 
         let count = active_widgets / 3;
         for i in 0..count {
-            let val = ((i * 17) % 100) as f32 / 100.0;
-            let y = (i * 20) as f32;
+            let val = crate::count_to_f32((i * 17) % 100) / 100.0;
+            let y = crate::count_to_f32(i * 20);
             self.dirty_tracker
                 .add_rect(Rect::new(10.0, y, val * 300.0, 16.0));
         }

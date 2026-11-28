@@ -173,10 +173,11 @@ impl InputMask {
             if i >= cursor_pos {
                 break;
             }
-            if let Some(token) = self.tokens.get(i) {
-                if !matches!(token, MaskToken::Literal(_)) && c.is_alphanumeric() {
-                    raw_prefix_count += 1;
-                }
+            if let Some(token) = self.tokens.get(i)
+                && !matches!(token, MaskToken::Literal(_))
+                && c.is_alphanumeric()
+            {
+                raw_prefix_count += 1;
             }
         }
 
@@ -218,10 +219,11 @@ impl InputMask {
             if seen_raw == target_raw_chars {
                 return i;
             }
-            if let Some(token) = self.tokens.get(i) {
-                if !matches!(token, MaskToken::Literal(_)) && ch.is_alphanumeric() {
-                    seen_raw += 1;
-                }
+            if let Some(token) = self.tokens.get(i)
+                && !matches!(token, MaskToken::Literal(_))
+                && ch.is_alphanumeric()
+            {
+                seen_raw += 1;
             }
             cursor = i + 1;
         }

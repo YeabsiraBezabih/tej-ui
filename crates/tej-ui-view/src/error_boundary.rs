@@ -44,7 +44,7 @@ where
         f.debug_struct("ErrorBoundary")
             .field("child", &self.child)
             .field("has_telemetry", &self.telemetry.is_some())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -68,7 +68,7 @@ where
         self
     }
 
-    fn extract_panic_message(payload: Box<dyn std::any::Any + Send>) -> String {
+    fn extract_panic_message(payload: &(dyn std::any::Any + Send)) -> String {
         if let Some(msg) = payload.downcast_ref::<&str>() {
             (*msg).to_string()
         } else if let Some(msg) = payload.downcast_ref::<String>() {
@@ -96,7 +96,7 @@ where
         match child_res {
             Ok(state) => ErrorBoundaryState::Normal(state),
             Err(payload) => {
-                let msg = Self::extract_panic_message(payload);
+                let msg = Self::extract_panic_message(&*payload);
                 self.notify_telemetry(&msg);
                 let fallback_view = (self.fallback_builder)(&msg);
                 let fallback_state = fallback_view.build();
@@ -113,7 +113,7 @@ where
             ErrorBoundaryState::Normal(child_state) => {
                 let res = catch_unwind(AssertUnwindSafe(|| self.child.rebuild(child_state)));
                 if let Err(payload) = res {
-                    let msg = Self::extract_panic_message(payload);
+                    let msg = Self::extract_panic_message(&*payload);
                     self.notify_telemetry(&msg);
                     let fallback_view = (self.fallback_builder)(&msg);
                     let fallback_state = fallback_view.build();
@@ -137,10 +137,10 @@ where
         match state {
             ErrorBoundaryState::Normal(child_state) => {
                 let res = catch_unwind(AssertUnwindSafe(|| {
-                    self.child.patch(child_state, dirty_bits)
+                    self.child.patch(child_state, dirty_bits);
                 }));
                 if let Err(payload) = res {
-                    let msg = Self::extract_panic_message(payload);
+                    let msg = Self::extract_panic_message(&*payload);
                     self.notify_telemetry(&msg);
                     let fallback_view = (self.fallback_builder)(&msg);
                     let fallback_state = fallback_view.build();
@@ -167,7 +167,7 @@ where
                 match res {
                     Ok(node) => node,
                     Err(payload) => {
-                        let msg = Self::extract_panic_message(payload);
+                        let msg = Self::extract_panic_message(&*payload);
                         self.notify_telemetry(&msg);
                         let fallback_view = (self.fallback_builder)(&msg);
                         let mut fallback_state = fallback_view.build();
@@ -195,7 +195,7 @@ where
             ErrorBoundaryState::Normal(child_state) => {
                 let res = catch_unwind(AssertUnwindSafe(|| self.child.paint(child_state, ctx)));
                 if let Err(payload) = res {
-                    let msg = Self::extract_panic_message(payload);
+                    let msg = Self::extract_panic_message(&*payload);
                     self.notify_telemetry(&msg);
                     let fallback_view = (self.fallback_builder)(&msg);
                     let fallback_state = fallback_view.build();
@@ -223,7 +223,7 @@ where
                     self.child.register_events(child_state, dispatcher);
                 }));
                 if let Err(payload) = res {
-                    let msg = Self::extract_panic_message(payload);
+                    let msg = Self::extract_panic_message(&*payload);
                     self.notify_telemetry(&msg);
                 }
             }
@@ -250,7 +250,7 @@ where
                     self.child.accessibility(child_state, arena, tree, parent);
                 }));
                 if let Err(payload) = res {
-                    let msg = Self::extract_panic_message(payload);
+                    let msg = Self::extract_panic_message(&*payload);
                     self.notify_telemetry(&msg);
                 }
             }

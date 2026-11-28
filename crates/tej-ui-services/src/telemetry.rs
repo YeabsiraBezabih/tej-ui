@@ -36,6 +36,7 @@ impl CrashReport {
         }
     }
 
+    #[must_use]
     pub fn with_stack_trace(mut self, trace: Vec<String>) -> Self {
         self.stack_trace = trace;
         self
@@ -83,6 +84,7 @@ impl TelemetrySpan {
         }
     }
 
+    #[must_use]
     pub fn with_attr(mut self, key: impl Into<String>, val: impl Into<String>) -> Self {
         self.attributes.insert(key.into(), val.into());
         self

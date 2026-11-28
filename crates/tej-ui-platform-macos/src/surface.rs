@@ -26,7 +26,7 @@ impl MetalSurfaceCompositor {
         let phys_w = (new_size.width * self.backing_scale_factor).max(1.0) as usize;
         let phys_h = (new_size.height * self.backing_scale_factor).max(1.0) as usize;
         self.size = new_size;
-        self.pixel_buffer = vec![0xFFFFFFFF; phys_w * phys_h];
+        self.pixel_buffer = vec![0xFFFF_FFFF; phys_w * phys_h];
     }
 
     /// Creates a new Metal surface compositor with Retina-scaled pixel buffer.
@@ -45,7 +45,7 @@ impl MetalSurfaceCompositor {
             backing_scale_factor: sf,
             dirty_clip: SmallVec::new(),
             draw_calls_count: 0,
-            pixel_buffer: vec![0xFFFFFFFF; phys_w * phys_h],
+            pixel_buffer: vec![0xFFFF_FFFF; phys_w * phys_h],
         }
     }
 
@@ -94,15 +94,17 @@ impl SurfaceCompositor for MetalSurfaceCompositor {
             let phys_w = (self.size.width * sf) as usize;
             let phys_h = (self.size.height * sf) as usize;
 
-            let x0 = (rect.origin.x * sf).clamp(0.0, phys_w as f32) as usize;
-            let y0 = (rect.origin.y * sf).clamp(0.0, phys_h as f32) as usize;
-            let x1 = ((rect.origin.x + rect.size.width) * sf).clamp(0.0, phys_w as f32) as usize;
-            let y1 = ((rect.origin.y + rect.size.height) * sf).clamp(0.0, phys_h as f32) as usize;
+            let max_w = f32::from(u16::try_from(phys_w).unwrap_or(u16::MAX));
+            let max_h = f32::from(u16::try_from(phys_h).unwrap_or(u16::MAX));
+            let x0 = (rect.origin.x * sf).clamp(0.0, max_w) as usize;
+            let y0 = (rect.origin.y * sf).clamp(0.0, max_h) as usize;
+            let x1 = ((rect.origin.x + rect.size.width) * sf).clamp(0.0, max_w) as usize;
+            let y1 = ((rect.origin.y + rect.size.height) * sf).clamp(0.0, max_h) as usize;
 
-            let rgba = ((color.a as u32) << 24)
-                | ((color.b as u32) << 16)
-                | ((color.g as u32) << 8)
-                | (color.r as u32);
+            let rgba = (u32::from(color.a) << 24)
+                | (u32::from(color.b) << 16)
+                | (u32::from(color.g) << 8)
+                | u32::from(color.r);
 
             for y in y0..y1 {
                 let row_offset = y * phys_w;

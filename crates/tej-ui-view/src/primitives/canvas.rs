@@ -24,7 +24,7 @@ impl fmt::Debug for Canvas {
         f.debug_struct("Canvas")
             .field("width", &self.width)
             .field("height", &self.height)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -50,12 +50,14 @@ impl Canvas {
     }
 
     /// Set explicit canvas width constraint.
+    #[must_use]
     pub fn width(mut self, width: Dimension) -> Self {
         self.width = width;
         self
     }
 
     /// Set explicit canvas height constraint.
+    #[must_use]
     pub fn height(mut self, height: Dimension) -> Self {
         self.height = height;
         self

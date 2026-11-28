@@ -30,7 +30,7 @@ impl std::fmt::Debug for Switch {
         f.debug_struct("Switch")
             .field("checked", &self.checked.get())
             .field("disabled", &self.disabled)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -59,8 +59,15 @@ impl Switch {
 
     /// Disables user interaction.
     #[must_use]
-    pub const fn disabled(mut self, disabled: bool) -> Self {
-        self.disabled = disabled;
+    pub const fn disable(mut self) -> Self {
+        self.disabled = true;
+        self
+    }
+
+    /// Enables user interaction.
+    #[must_use]
+    pub const fn enable(mut self) -> Self {
+        self.disabled = false;
         self
     }
 
@@ -96,14 +103,14 @@ impl View for Switch {
         SwitchState {
             bounds: Rect::from_origin_size(tej_ui_layout::Point::ZERO, Size::new(44.0, 24.0)),
             is_checked,
-            thumb_offset_x: if is_checked { 20.0 } else { 2.0 },
+            thumb_offset_x: if is_checked { 22.0 } else { 2.0 },
             node: 0,
         }
     }
 
     fn rebuild(&self, state: &mut Self::State) {
         state.is_checked = self.checked.get();
-        state.thumb_offset_x = if state.is_checked { 20.0 } else { 2.0 };
+        state.thumb_offset_x = if state.is_checked { 22.0 } else { 2.0 };
     }
 
     fn patch(&self, state: &mut Self::State, _dirty_bits: u64) {
@@ -194,15 +201,14 @@ impl View for Switch {
                             }
                         }
                     }
-                    38 | 39 => {
+                    38 | 39
                         // ArrowUp / ArrowRight -> on
-                        if !sig_key.get() {
+                        if !sig_key.get() => {
                             sig_key.set(true);
                             if let Some(cb) = &on_change_key {
                                 cb(true);
                             }
                         }
-                    }
                     _ => {}
                 }),
             );

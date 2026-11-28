@@ -66,14 +66,24 @@ impl A11yPreferences {
         self.invert_colors.get()
     }
 
-    /// Update reduced motion preference.
-    pub fn set_reduced_motion(&self, enabled: bool) {
-        self.reduced_motion.set(enabled);
+    /// Enable reduced motion preference.
+    pub fn enable_reduced_motion(&self) {
+        self.reduced_motion.set(true);
     }
 
-    /// Update high contrast preference.
-    pub fn set_high_contrast(&self, enabled: bool) {
-        self.high_contrast.set(enabled);
+    /// Disable reduced motion preference.
+    pub fn disable_reduced_motion(&self) {
+        self.reduced_motion.set(false);
+    }
+
+    /// Enable high contrast preference.
+    pub fn enable_high_contrast(&self) {
+        self.high_contrast.set(true);
+    }
+
+    /// Disable high contrast preference.
+    pub fn disable_high_contrast(&self) {
+        self.high_contrast.set(false);
     }
 
     /// Update dynamic type scale factor.
@@ -81,8 +91,13 @@ impl A11yPreferences {
         self.dynamic_type_scale.set(scale.max(0.5));
     }
 
-    /// Update color inversion preference.
-    pub fn set_invert_colors(&self, enabled: bool) {
-        self.invert_colors.set(enabled);
+    /// Enable color inversion preference.
+    pub fn enable_invert_colors(&self) {
+        self.invert_colors.set(true);
+    }
+
+    /// Disable color inversion preference.
+    pub fn disable_invert_colors(&self) {
+        self.invert_colors.set(false);
     }
 }

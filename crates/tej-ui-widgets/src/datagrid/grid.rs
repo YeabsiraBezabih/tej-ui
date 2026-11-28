@@ -38,7 +38,7 @@ where
         f.debug_struct("DataGrid")
             .field("columns_count", &self.columns.len())
             .field("dimensions", &self.dimensions)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -285,9 +285,14 @@ where
         );
         ctx.fill_rect(header_rect, ctx.theme.colors.muted);
 
+        let mut col_spans: Vec<(usize, f32, f32)> = Vec::with_capacity(state.visible_cols.len());
         let mut col_x = bounds.origin.x;
         for &col_idx in &state.visible_cols {
             if let Some(col) = self.columns.get(col_idx) {
+                let col_w = col.width.max(0.0);
+                col_spans.push((col_idx, col_x, col_w));
+                let header_cell_rect = Rect::new(col_x, bounds.origin.y, col_w, header_h);
+                ctx.push_clip(header_cell_rect, [0.0; 4]);
                 let title_pt = Point::new(col_x + 8.0, bounds.origin.y + 6.0);
                 ctx.draw_text(
                     &col.title,
@@ -295,7 +300,8 @@ where
                     ctx.theme.typography.body.font_size,
                     ctx.theme.colors.foreground,
                 );
-                col_x += col.width.max(0.0);
+                ctx.pop_clip();
+                col_x += col_w;
                 ctx.draw_line(
                     Point::new(col_x, bounds.origin.y),
                     Point::new(col_x, bounds.origin.y + header_h),
@@ -318,7 +324,7 @@ where
 
         // Visible row backgrounds and horizontal dividers
         for (rel_idx, _row) in (state.start_row..state.end_row).enumerate() {
-            let row_y = bounds.origin.y + header_h + (rel_idx as f32) * row_h;
+            let row_y = bounds.origin.y + header_h + crate::count_to_f32(rel_idx) * row_h;
             if row_y >= bounds.origin.y + bounds.size.height {
                 break;
             }
@@ -336,10 +342,20 @@ where
             );
         }
 
-        // Paint visible cell views
+        // Paint visible cell views clipped to their cell column/row bounds
         for (coords, child_state) in &state.cell_states {
+            let cell_clip = col_spans
+                .iter()
+                .find(|(idx, _, _)| *idx == coords.col)
+                .map_or(bounds, |&(_, cx, cw)| {
+                    let rel_row = coords.row.saturating_sub(state.start_row);
+                    let cy = bounds.origin.y + header_h + crate::count_to_f32(rel_row) * row_h;
+                    Rect::new(cx, cy, cw, row_h)
+                });
+            ctx.push_clip(cell_clip, [0.0; 4]);
             let cell_view = (self.cell_builder)(*coords);
             cell_view.paint(child_state, ctx);
+            ctx.pop_clip();
         }
     }
 }

@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 use std::sync::Arc;
 use tej_ui_core::Signal;
+use tej_ui_text::FontRegistry;
 use tej_ui_view::View;
 
 /// An individual tab header entry.
@@ -22,6 +23,7 @@ impl TabItem {
     }
 
     /// Add badge counter or status label.
+    #[must_use]
     pub fn badge(mut self, badge: impl Into<String>) -> Self {
         self.badge = Some(badge.into());
         self
@@ -33,7 +35,7 @@ pub struct Tabs<V: View, ContentBuilder>
 where
     ContentBuilder: Fn(usize) -> V + 'static,
 {
-    tabs: Vec<TabItem>,
+    items: Vec<TabItem>,
     active_tab: Signal<usize>,
     content_builder: Arc<ContentBuilder>,
 }
@@ -44,9 +46,9 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Tabs")
-            .field("tabs_count", &self.tabs.len())
+            .field("tabs_count", &self.items.len())
             .field("active_tab", &self.active_tab)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -61,7 +63,7 @@ where
         content_builder: ContentBuilder,
     ) -> Self {
         Self {
-            tabs,
+            items: tabs,
             active_tab,
             content_builder: Arc::new(content_builder),
         }
@@ -101,21 +103,21 @@ where
     fn rebuild(&self, state: &mut Self::State) {
         let active = self.active_tab.get();
         let content_view = (self.content_builder)(active);
-        if active != state.active_tab {
+        if active == state.active_tab {
+            content_view.rebuild(&mut state.content_state);
+        } else {
             state.active_tab = active;
             state.content_state = content_view.build();
-        } else {
-            content_view.rebuild(&mut state.content_state);
         }
     }
 
     fn patch(&self, state: &mut Self::State, dirty_bits: u64) {
         let active = self.active_tab.get();
-        if active != state.active_tab {
-            self.rebuild(state);
-        } else {
+        if active == state.active_tab {
             let content_view = (self.content_builder)(active);
             content_view.patch(&mut state.content_state, dirty_bits);
+        } else {
+            self.rebuild(state);
         }
     }
 
@@ -141,8 +143,10 @@ where
         arena.add_child(root, header_node);
 
         state.tab_nodes.clear();
-        for _ in 0..self.tabs.len() {
+        for tab in &self.items {
+            let tab_width = (crate::count_to_f32(tab.title.chars().count()) * 8.0 + 28.0).max(64.0);
             let tab_style = tej_ui_layout::LayoutStyle {
+                width: tej_ui_layout::Dimension::Points(tab_width),
                 height: tej_ui_layout::Dimension::Points(32.0),
                 padding: tej_ui_layout::Insets::symmetric(8.0, 12.0),
                 ..Default::default()
@@ -169,7 +173,7 @@ where
         {
             ctx.fill_rounded_rect(header_bounds, ctx.theme.radii.md, ctx.theme.colors.muted);
 
-            for (i, tab) in self.tabs.iter().enumerate() {
+            for (i, tab) in self.items.iter().enumerate() {
                 if let Some(&tab_n) = state.tab_nodes.get(i) {
                     let tab_bounds = ctx
                         .arena
@@ -199,16 +203,25 @@ where
                     } else {
                         ctx.theme.colors.muted_foreground
                     };
-                    let text_pt = tej_ui_layout::Point::new(
-                        tab_bounds.origin.x + 8.0,
-                        tab_bounds.origin.y + (tab_bounds.size.height - 14.0) * 0.5,
+                    let font_size = ctx.theme.typography.body_small.font_size;
+                    let text_size = FontRegistry::global().measure_text(
+                        &tab.title,
+                        font_size,
+                        tej_ui_text::FontFamilyKind::SansSerif,
+                        400,
                     );
+                    let text_x = tab_bounds.origin.x
+                        + ((tab_bounds.size.width - text_size.width) * 0.5).max(6.0);
+                    let text_y = tab_bounds.origin.y
+                        + ((tab_bounds.size.height - text_size.height) * 0.5).max(0.0);
+                    ctx.push_clip(tab_bounds, [ctx.theme.radii.sm; 4]);
                     ctx.draw_text(
                         &tab.title,
-                        text_pt,
-                        ctx.theme.typography.body_small.font_size,
+                        tej_ui_layout::Point::new(text_x, text_y),
+                        font_size,
                         text_color,
                     );
+                    ctx.pop_clip();
                 }
             }
         }
@@ -218,7 +231,7 @@ where
     }
 
     fn register_events(&self, state: &Self::State, dispatcher: &mut tej_ui_view::EventDispatcher) {
-        let tab_count = self.tabs.len();
+        let tab_count = self.items.len();
 
         // Root & header row arrow key navigation
         for container_node in [state.node, state.header_row_node] {
@@ -248,7 +261,7 @@ where
             );
         }
 
-        for (i, _) in self.tabs.iter().enumerate() {
+        for (i, _) in self.items.iter().enumerate() {
             if let Some(&tab_n) = state.tab_nodes.get(i) {
                 let sig = self.active_tab;
                 dispatcher.register_click(

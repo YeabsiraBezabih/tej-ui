@@ -33,7 +33,7 @@ impl std::fmt::Debug for Slider {
             .field("value", &self.value.get())
             .field("min", &self.min)
             .field("max", &self.max)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -150,27 +150,31 @@ impl View for Slider {
             .copied()
             .unwrap_or(state.bounds);
 
+        let thumb_radius = 8.0;
+        let track_x = bounds.origin.x + thumb_radius;
+        let track_w = (bounds.size.width - thumb_radius * 2.0).max(0.0);
         let track_h = 6.0;
         let track_y = bounds.origin.y + (bounds.size.height - track_h) * 0.5;
-        let track_rect = Rect::new(bounds.origin.x, track_y, bounds.size.width, track_h);
+        let track_rect = Rect::new(track_x, track_y, track_w, track_h);
 
-        // Track background
+        // Track background (inset by thumb_radius so thumb never overflows bounds)
         let bg_color = ctx.theme.colors.muted;
         ctx.fill_rounded_rect(track_rect, 3.0, bg_color);
 
         // Filled progress
-        let fill_w = bounds.size.width * state.normalized_ratio;
-        let fill_rect = Rect::new(bounds.origin.x, track_y, fill_w, track_h);
-        let fill_color = if self.disabled {
-            ctx.theme.colors.muted_foreground
-        } else {
-            ctx.theme.colors.primary
-        };
-        ctx.fill_rounded_rect(fill_rect, 3.0, fill_color);
+        let fill_w = track_w * state.normalized_ratio;
+        if fill_w > 0.0 {
+            let fill_rect = Rect::new(track_x, track_y, fill_w, track_h);
+            let fill_color = if self.disabled {
+                ctx.theme.colors.muted_foreground
+            } else {
+                ctx.theme.colors.primary
+            };
+            ctx.fill_rounded_rect(fill_rect, 3.0, fill_color);
+        }
 
         // Thumb
-        let thumb_radius = 8.0;
-        let thumb_x = bounds.origin.x + fill_w;
+        let thumb_x = track_x + fill_w;
         let thumb_y = bounds.origin.y + bounds.size.height * 0.5;
         let thumb_rect = Rect::new(
             thumb_x - thumb_radius,
@@ -190,6 +194,21 @@ impl View for Slider {
             ctx.fill_rounded_rect(ring, thumb_radius + 2.0, ctx.theme.colors.ring);
         }
 
+        // Visible thumb border
+        let thumb_border = if self.disabled {
+            ctx.theme.colors.border
+        } else {
+            ctx.theme.colors.primary
+        };
+        ctx.fill_rounded_rect(thumb_rect, thumb_radius, thumb_border);
+
+        // Thumb inner fill
+        let thumb_inner = Rect::new(
+            thumb_rect.origin.x + 1.5,
+            thumb_rect.origin.y + 1.5,
+            (thumb_rect.size.width - 3.0).max(0.0),
+            (thumb_rect.size.height - 3.0).max(0.0),
+        );
         let thumb_color = if self.disabled {
             ctx.theme.colors.muted
         } else if ctx.is_pressed(state.node) {
@@ -197,7 +216,7 @@ impl View for Slider {
         } else {
             ctx.theme.colors.background
         };
-        ctx.fill_rounded_rect(thumb_rect, thumb_radius, thumb_color);
+        ctx.fill_rounded_rect(thumb_inner, (thumb_radius - 1.5).max(0.0), thumb_color);
     }
 
     fn register_events(&self, state: &Self::State, dispatcher: &mut tej_ui_view::EventDispatcher) {

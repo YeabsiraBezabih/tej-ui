@@ -37,8 +37,8 @@ impl FramePacer {
     pub fn new(mode: RefreshRateMode) -> Self {
         let initial_hz = match mode {
             RefreshRateMode::Fixed(hz) => hz,
-            RefreshRateMode::ProMotion { max_hz, .. } => max_hz,
-            RefreshRateMode::VariableRate { max_hz, .. } => max_hz,
+            RefreshRateMode::ProMotion { max_hz, .. }
+            | RefreshRateMode::VariableRate { max_hz, .. } => max_hz,
         };
         let budget = Duration::from_secs_f32(1.0 / initial_hz);
         Self {

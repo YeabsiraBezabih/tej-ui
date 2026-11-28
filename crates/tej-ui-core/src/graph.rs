@@ -160,12 +160,12 @@ impl DependencyGraph {
 
         // Drain the BFS queue to discover all transitive subscribers across derived signals
         while let Some(node) = queue.pop_front() {
-            if let Some(&out_sig) = self.node_output_signal.get(&node) {
-                if let Some(subs) = self.signal_subscribers.get(&out_sig) {
-                    for &sub in subs {
-                        if dirty_nodes.insert(sub) {
-                            queue.push_back(sub);
-                        }
+            if let Some(&out_sig) = self.node_output_signal.get(&node)
+                && let Some(subs) = self.signal_subscribers.get(&out_sig)
+            {
+                for &sub in subs {
+                    if dirty_nodes.insert(sub) {
+                        queue.push_back(sub);
                     }
                 }
             }

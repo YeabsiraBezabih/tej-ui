@@ -102,3 +102,13 @@ pub use overlays::{
     SheetSide, SheetState, ToastItem, ToastSeverity,
 };
 pub use pickers::{CalendarDate, CalendarPickerState, ColorHsv, DateRange};
+
+#[inline]
+pub(crate) fn count_to_f32(count: usize) -> f32 {
+    f32::from(u16::try_from(count).unwrap_or(u16::MAX))
+}
+
+#[inline]
+pub(crate) fn u32_to_f32(val: u32) -> f32 {
+    f32::from(u16::try_from(val).unwrap_or(u16::MAX))
+}

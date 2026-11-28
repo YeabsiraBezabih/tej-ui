@@ -17,6 +17,7 @@ pub struct ProgressState {
 pub struct Progress {
     percentage: Signal<f32>,
     height: f32,
+    width: Dimension,
 }
 
 impl Progress {
@@ -26,6 +27,7 @@ impl Progress {
         Self {
             percentage,
             height: 8.0,
+            width: Dimension::Percent(1.0),
         }
     }
 
@@ -35,6 +37,13 @@ impl Progress {
         self.height = height;
         self
     }
+
+    /// Sets explicit progress bar width constraint.
+    #[must_use]
+    pub const fn width(mut self, width: Dimension) -> Self {
+        self.width = width;
+        self
+    }
 }
 
 impl View for Progress {
@@ -42,8 +51,12 @@ impl View for Progress {
 
     fn build(&self) -> Self::State {
         let pct = self.percentage.get().clamp(0.0, 100.0);
+        let default_w = match self.width {
+            Dimension::Points(w) => w,
+            _ => 240.0,
+        };
         ProgressState {
-            bounds: Rect::from_origin_size(Point::ZERO, Size::new(240.0, self.height)),
+            bounds: Rect::from_origin_size(Point::ZERO, Size::new(default_w, self.height)),
             percentage: pct,
             node: 0,
         }
@@ -59,7 +72,7 @@ impl View for Progress {
 
     fn layout(&self, state: &mut Self::State, arena: &mut LayoutArena) -> u32 {
         let style = LayoutStyle {
-            width: Dimension::Percent(1.0),
+            width: self.width,
             height: Dimension::Points(self.height),
             ..Default::default()
         };
@@ -80,10 +93,11 @@ impl View for Progress {
         // Track background
         ctx.fill_rounded_rect(bounds, radius, ctx.theme.colors.secondary);
 
-        // Filled indicator
+        // Filled indicator clipped to rounded track bounds
         let ratio = state.percentage.clamp(0.0, 100.0) / 100.0;
         let fill_width = bounds.size.width * ratio;
         if fill_width > 0.0 {
+            ctx.push_clip(bounds, [radius; 4]);
             let fill_rect = Rect::new(
                 bounds.origin.x,
                 bounds.origin.y,
@@ -91,6 +105,7 @@ impl View for Progress {
                 bounds.size.height,
             );
             ctx.fill_rounded_rect(fill_rect, radius, ctx.theme.colors.primary);
+            ctx.pop_clip();
         }
     }
 }

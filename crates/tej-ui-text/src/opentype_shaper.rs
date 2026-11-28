@@ -31,6 +31,10 @@ pub struct ShapedTextRun {
 
 /// OpenType feature flags to toggle during shaping.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "Public OpenType shaper toggle struct; callers and tests access boolean fields directly"
+)]
 pub struct ShaperFeatures {
     /// Pair kerning (`kern`).
     pub kerning: bool,

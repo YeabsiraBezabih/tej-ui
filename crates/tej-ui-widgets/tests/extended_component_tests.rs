@@ -151,7 +151,7 @@ fn test_workspace_docking_and_kanban() {
             assert_eq!(*orientation, DockSplitOrientation::Horizontal);
             assert!((ratio - 0.7).abs() < 1e-4);
         }
-        _ => panic!("Expected split root"),
+        DockNode::Tabs { .. } => panic!("Expected split root"),
     }
 
     let mut kanban = KanbanState::new(vec![
@@ -290,5 +290,5 @@ fn test_media_and_creative_controls() {
 
     let uptime = UptimeBar::default();
     let col = uptime.color_for_uptime(99.95);
-    assert_eq!(col, Color::from_rgb_u32(0x12B76A));
+    assert_eq!(col, Color::from_rgb_u32(0x0012_B76A));
 }

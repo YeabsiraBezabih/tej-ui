@@ -15,7 +15,7 @@ fn test_gpu_struct_layouts() {
     let uniform = ViewportUniform {
         viewport_size: [800.0, 600.0],
         scale_factor: 2.0,
-        _pad: 0.0,
+        pad: 0.0,
     };
     let bytes = bytemuck::bytes_of(&uniform);
     assert_eq!(bytes.len(), 16);
@@ -68,12 +68,9 @@ fn test_batch_coalescing_and_zero_steady_state_alloc() {
         allow_software_fallback: true,
         ..Default::default()
     };
-    let ctx = match GpuContext::new_headless(&config) {
-        Ok(c) => c,
-        Err(_) => {
-            eprintln!("Skipping test: no compatible GPU or software rasterizer adapter found.");
-            return;
-        }
+    let Ok(ctx) = GpuContext::new_headless(&config) else {
+        eprintln!("Skipping test: no compatible GPU or software rasterizer adapter found.");
+        return;
     };
 
     let mut pool = InstanceBufferPool::new(ctx.device(), 512);

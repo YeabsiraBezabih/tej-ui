@@ -45,9 +45,14 @@ impl HeadlessA11yAdapter {
         }
     }
 
-    /// Set whether the adapter simulates an active screen reader.
-    pub fn set_active(&mut self, active: bool) {
-        self.is_active = active;
+    /// Marks the adapter as simulating an active screen reader.
+    pub fn activate(&mut self) {
+        self.is_active = true;
+    }
+
+    /// Marks the adapter as inactive.
+    pub fn deactivate(&mut self) {
+        self.is_active = false;
     }
 
     /// History of all updates dispatched to this adapter.
@@ -133,16 +138,13 @@ impl WebAriaShadowNode {
     /// Render shadow node to an HTML tag opening string with escaped attribute values.
     #[must_use]
     pub fn render_html_opening(&self) -> String {
+        use std::fmt::Write as _;
         let mut out = format!("<{}", self.html_tag);
         if let Some(r) = self.role {
-            out.push_str(&format!(r#" role="{}""#, escape_html_attr(r)));
+            let _ = write!(out, r#" role="{}""#, escape_html_attr(r));
         }
         for (k, v) in &self.attributes {
-            out.push_str(&format!(
-                r#" {}="{}""#,
-                escape_html_attr(k),
-                escape_html_attr(v)
-            ));
+            let _ = write!(out, r#" {}="{}""#, escape_html_attr(k), escape_html_attr(v));
         }
         out.push('>');
         out
@@ -172,9 +174,14 @@ impl WebAriaAdapter {
         self.nodes.len()
     }
 
-    /// Set whether web accessibility is active.
-    pub fn set_active(&mut self, active: bool) {
-        self.is_active = active;
+    /// Activates web accessibility synchronization.
+    pub fn activate(&mut self) {
+        self.is_active = true;
+    }
+
+    /// Deactivates web accessibility synchronization.
+    pub fn deactivate(&mut self) {
+        self.is_active = false;
     }
 
     /// Whether web accessibility is active.

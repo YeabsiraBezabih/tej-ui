@@ -25,9 +25,7 @@ fn test_octahedral_normal_cardinal_axes() {
         let dot = axis[0] * dec[0] + axis[1] * dec[1] + axis[2] * dec[2];
         assert!(
             dot > 0.999,
-            "Cardinal axis {:?} must decode with >0.999 dot product, got {}",
-            axis,
-            dot
+            "Cardinal axis {axis:?} must decode with >0.999 dot product, got {dot}"
         );
     }
 }
@@ -50,9 +48,7 @@ fn test_octahedral_normal_arbitrary_vectors_sub_degree_accuracy() {
         // 0.998 dot product corresponds to <3 degrees of angular deviation across 16 bits!
         assert!(
             dot > 0.995,
-            "Arbitrary normal {:?} must decode accurately, got dot {}",
-            raw,
-            dot
+            "Arbitrary normal {raw:?} must decode accurately, got dot {dot}"
         );
     }
 }
@@ -74,10 +70,7 @@ fn test_vertex_position_quantization_roundtrip() {
             let max_allowed_err = scale_pt[c] / 65535.0 + 1e-4;
             assert!(
                 err <= max_allowed_err,
-                "Coordinate {} error {} must be within quantization step {}",
-                c,
-                err,
-                max_allowed_err
+                "Coordinate {c} error {err} must be within quantization step {max_allowed_err}"
             );
         }
     }
@@ -116,8 +109,8 @@ fn test_quantized_meshlet_cluster_storage_footprint() {
     let mut meshlet = QuantizedMeshlet::new([-2.0, -2.0, -2.0], [2.0, 2.0, 2.0]);
 
     // Add 64 vertices and 124 triangles
-    for i in 0..64 {
-        let t = i as f32 / 64.0;
+    for i in 0..64u16 {
+        let t = f32::from(i) / 64.0;
         meshlet.add_vertex(
             [t * 4.0 - 2.0, (t * 2.0).sin(), 0.0],
             [0.0, 1.0, 0.0],
@@ -193,8 +186,7 @@ fn test_all_workspace_assets_pass_sanitization() {
             let mesh = tej_ui_3d::load_obj_from_file(path).expect("Asset must load");
             assert!(
                 sanitize_mesh_geometry(&mesh.vertices, &mesh.normals, &mesh.triangles).is_ok(),
-                "Asset {} must pass sanitization",
-                path
+                "Asset {path} must pass sanitization"
             );
         }
     }

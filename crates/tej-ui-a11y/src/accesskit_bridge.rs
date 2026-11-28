@@ -13,7 +13,7 @@ use crate::tree::A11yTree;
 #[inline]
 #[must_use]
 pub fn to_accesskit_node_id(id: A11yId) -> accesskit::NodeId {
-    accesskit::NodeId(id.0 as u64 + 1)
+    accesskit::NodeId(u64::from(id.0) + 1)
 }
 
 /// Convert `accesskit::NodeId` to `A11yId`.
@@ -41,10 +41,10 @@ pub fn convert_a11y_node(node: &A11yNode) -> accesskit::Node {
 
     let b = node.bounds;
     ak_node.set_bounds(accesskit::Rect {
-        x0: b.origin.x as f64,
-        y0: b.origin.y as f64,
-        x1: (b.origin.x + b.size.width) as f64,
-        y1: (b.origin.y + b.size.height) as f64,
+        x0: f64::from(b.origin.x),
+        y0: f64::from(b.origin.y),
+        x1: f64::from(b.origin.x + b.size.width),
+        y1: f64::from(b.origin.y + b.size.height),
     });
 
     if node.is_disabled {
@@ -78,25 +78,23 @@ pub fn convert_a11y_node(node: &A11yNode) -> accesskit::Node {
 
     // Role-dependent default accessibility actions
     match node.role {
-        A11yRole::Button | A11yRole::Link | A11yRole::MenuItem | A11yRole::TreeItem => {
+        A11yRole::Button
+        | A11yRole::Link
+        | A11yRole::MenuItem
+        | A11yRole::TreeItem
+        | A11yRole::Checkbox
+        | A11yRole::Switch
+        | A11yRole::RadioButton => {
             ak_node.add_action(accesskit::Action::Click);
             ak_node.add_action(accesskit::Action::Focus);
         }
-        A11yRole::Checkbox | A11yRole::Switch | A11yRole::RadioButton => {
-            ak_node.add_action(accesskit::Action::Click);
-            ak_node.add_action(accesskit::Action::Focus);
-        }
-        A11yRole::TextInput | A11yRole::ComboBox => {
+        A11yRole::TextInput | A11yRole::ComboBox | A11yRole::Slider => {
             ak_node.add_action(accesskit::Action::Focus);
             ak_node.add_action(accesskit::Action::SetValue);
         }
         A11yRole::ScrollArea | A11yRole::List | A11yRole::Tree | A11yRole::Grid => {
             ak_node.add_action(accesskit::Action::ScrollDown);
             ak_node.add_action(accesskit::Action::ScrollUp);
-        }
-        A11yRole::Slider => {
-            ak_node.add_action(accesskit::Action::Focus);
-            ak_node.add_action(accesskit::Action::SetValue);
         }
         _ => {
             ak_node.add_action(accesskit::Action::Focus);
@@ -148,22 +146,7 @@ impl AccessKitBridge {
         let root_id = tree.root().unwrap_or(A11yId(1));
         let focus_id = self.active_focus.unwrap_or(root_id);
 
-        if !self.initial_tree_sent {
-            self.initial_tree_sent = true;
-            let mut nodes = Vec::with_capacity(tree.len());
-            for (&id, node) in tree.iter() {
-                nodes.push((to_accesskit_node_id(id), convert_a11y_node(node)));
-            }
-            // Clear dirty set since all nodes have been sent
-            let _ = tree.drain_dirty();
-
-            accesskit::TreeUpdate {
-                tree_id: accesskit::TreeId::ROOT,
-                nodes,
-                tree: Some(accesskit::TreeInfo::new(to_accesskit_node_id(root_id))),
-                focus: to_accesskit_node_id(focus_id),
-            }
-        } else {
+        if self.initial_tree_sent {
             let dirty = tree.drain_dirty();
             let mut nodes = Vec::with_capacity(dirty.len());
             for id in dirty {
@@ -176,6 +159,21 @@ impl AccessKitBridge {
                 tree_id: accesskit::TreeId::ROOT,
                 nodes,
                 tree: None,
+                focus: to_accesskit_node_id(focus_id),
+            }
+        } else {
+            self.initial_tree_sent = true;
+            let mut nodes = Vec::with_capacity(tree.len());
+            for (&id, node) in tree.iter() {
+                nodes.push((to_accesskit_node_id(id), convert_a11y_node(node)));
+            }
+            // Clear dirty set since all nodes have been sent
+            let _ = tree.drain_dirty();
+
+            accesskit::TreeUpdate {
+                tree_id: accesskit::TreeId::ROOT,
+                nodes,
+                tree: Some(accesskit::TreeInfo::new(to_accesskit_node_id(root_id))),
                 focus: to_accesskit_node_id(focus_id),
             }
         }

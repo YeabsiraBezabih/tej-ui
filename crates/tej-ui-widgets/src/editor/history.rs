@@ -17,8 +17,8 @@ pub enum EditAction {
 /// Transactional undo and redo buffer with configurable history capacity.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct UndoStack {
-    undo_stack: Vec<EditAction>,
-    redo_stack: Vec<EditAction>,
+    undo: Vec<EditAction>,
+    redo: Vec<EditAction>,
     transaction_depth: usize,
     pending_transaction: Vec<EditAction>,
     max_history: usize,
@@ -35,8 +35,8 @@ impl UndoStack {
     #[must_use]
     pub const fn new(max_history: usize) -> Self {
         Self {
-            undo_stack: Vec::new(),
-            redo_stack: Vec::new(),
+            undo: Vec::new(),
+            redo: Vec::new(),
             transaction_depth: 0,
             pending_transaction: Vec::new(),
             max_history,
@@ -50,15 +50,15 @@ impl UndoStack {
             return;
         }
 
-        self.redo_stack.clear();
+        self.redo.clear();
         if self.max_history == 0 {
             return;
         }
 
-        if self.undo_stack.len() >= self.max_history {
-            self.undo_stack.remove(0);
+        if self.undo.len() >= self.max_history {
+            self.undo.remove(0);
         }
-        self.undo_stack.push(action);
+        self.undo.push(action);
     }
 
     /// Push an edit action with typing coalescing.
@@ -69,20 +69,19 @@ impl UndoStack {
             return;
         }
 
-        if let EditAction::Insert { pos, text } = &action {
-            if let Some(EditAction::Insert {
+        if let EditAction::Insert { pos, text } = &action
+            && let Some(EditAction::Insert {
                 pos: prev_pos,
                 text: prev_text,
-            }) = self.undo_stack.last_mut()
-            {
-                // Only coalesce single-line continuous typing bursts without newlines
-                if !prev_text.contains('\n') && !text.contains('\n') {
-                    let expected_col = prev_pos.col + prev_text.chars().count();
-                    if prev_pos.line == pos.line && expected_col == pos.col {
-                        prev_text.push_str(text);
-                        self.redo_stack.clear();
-                        return;
-                    }
+            }) = self.undo.last_mut()
+        {
+            // Only coalesce single-line continuous typing bursts without newlines
+            if !prev_text.contains('\n') && !text.contains('\n') {
+                let expected_col = prev_pos.col + prev_text.chars().count();
+                if prev_pos.line == pos.line && expected_col == pos.col {
+                    prev_text.push_str(text);
+                    self.redo.clear();
+                    return;
                 }
             }
         }
@@ -103,49 +102,49 @@ impl UndoStack {
         self.transaction_depth -= 1;
         if self.transaction_depth == 0 && !self.pending_transaction.is_empty() {
             let actions = std::mem::take(&mut self.pending_transaction);
-            self.redo_stack.clear();
+            self.redo.clear();
             if self.max_history == 0 {
                 return;
             }
-            if self.undo_stack.len() >= self.max_history {
-                self.undo_stack.remove(0);
+            if self.undo.len() >= self.max_history {
+                self.undo.remove(0);
             }
-            self.undo_stack.push(EditAction::Batch(actions));
+            self.undo.push(EditAction::Batch(actions));
         }
     }
 
     /// Check if an undo action is available.
     #[must_use]
     pub fn can_undo(&self) -> bool {
-        !self.undo_stack.is_empty()
+        !self.undo.is_empty()
     }
 
     /// Check if a redo action is available.
     #[must_use]
     pub fn can_redo(&self) -> bool {
-        !self.redo_stack.is_empty()
+        !self.redo.is_empty()
     }
 
     /// Undo last modification on the buffer, returning restored cursor position.
     pub fn undo(&mut self, buf: &mut TextBuffer) -> Option<CursorPos> {
-        let action = self.undo_stack.pop()?;
+        let action = self.undo.pop()?;
         let restore_pos = invert_action(&action, buf);
-        self.redo_stack.push(action);
+        self.redo.push(action);
         restore_pos
     }
 
     /// Redo previously undone modification on the buffer.
     pub fn redo(&mut self, buf: &mut TextBuffer) -> Option<CursorPos> {
-        let action = self.redo_stack.pop()?;
+        let action = self.redo.pop()?;
         let restore_pos = forward_action(&action, buf);
-        self.undo_stack.push(action);
+        self.undo.push(action);
         restore_pos
     }
 
     /// Clear all history.
     pub fn clear(&mut self) {
-        self.undo_stack.clear();
-        self.redo_stack.clear();
+        self.undo.clear();
+        self.redo.clear();
         self.pending_transaction.clear();
         self.transaction_depth = 0;
     }
@@ -201,7 +200,7 @@ fn forward_action(action: &EditAction, buf: &mut TextBuffer) -> Option<CursorPos
         }
         EditAction::Batch(actions) => {
             let mut last_pos = None;
-            for act in actions.iter() {
+            for act in actions {
                 last_pos = forward_action(act, buf);
             }
             last_pos

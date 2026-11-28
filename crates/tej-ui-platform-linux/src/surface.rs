@@ -16,6 +16,7 @@ pub struct LinuxSurface {
     height: usize,
     pixels: Vec<u32>,
     dirty_clip: SmallVec<[Rect; 4]>,
+    clip_stack: Vec<Rect>,
     draw_calls_count: usize,
     font_engine: Arc<FontEngine>,
 }
@@ -46,6 +47,7 @@ impl LinuxSurface {
             height,
             pixels,
             dirty_clip: SmallVec::new(),
+            clip_stack: Vec::new(),
             draw_calls_count: 0,
             font_engine,
         }
@@ -103,6 +105,24 @@ impl LinuxSurface {
     pub const fn draw_calls(&self) -> usize {
         self.draw_calls_count
     }
+
+    /// Active pixel clip bounds `(x0, y0, x1, y1)` clamped to surface dimensions.
+    #[inline]
+    fn active_clip_bounds(&self) -> (usize, usize, usize, usize) {
+        if let Some(clip) = self.clip_stack.last() {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let x0 = (clip.origin.x.max(0.0) as usize).min(self.width);
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let y0 = (clip.origin.y.max(0.0) as usize).min(self.height);
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let x1 = ((clip.origin.x + clip.size.width).max(0.0) as usize).min(self.width);
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let y1 = ((clip.origin.y + clip.size.height).max(0.0) as usize).min(self.height);
+            (x0, y0, x1, y1)
+        } else {
+            (0, 0, self.width, self.height)
+        }
+    }
 }
 
 #[inline]
@@ -115,14 +135,14 @@ fn blend_pixel(bg: u32, fg_color: Color, alpha: u8) -> u32 {
     if alpha == 255 {
         return pack_color(fg_color);
     }
-    let a = alpha as u32;
+    let a = u32::from(alpha);
     let inv_a = 255 - a;
     let bg_r = (bg >> 16) & 0xff;
     let bg_g = (bg >> 8) & 0xff;
     let bg_b = bg & 0xff;
-    let r = (fg_color.r as u32 * a + bg_r * inv_a) / 255;
-    let g = (fg_color.g as u32 * a + bg_g * inv_a) / 255;
-    let b = (fg_color.b as u32 * a + bg_b * inv_a) / 255;
+    let r = (u32::from(fg_color.r) * a + bg_r * inv_a) / 255;
+    let g = (u32::from(fg_color.g) * a + bg_g * inv_a) / 255;
+    let b = (u32::from(fg_color.b) * a + bg_b * inv_a) / 255;
     0xff00_0000 | (r << 16) | (g << 8) | b
 }
 
@@ -130,6 +150,7 @@ impl SurfaceCompositor for LinuxSurface {
     fn begin_frame(&mut self, dirty_rects: &[Rect]) {
         self.dirty_clip.clear();
         self.dirty_clip.extend_from_slice(dirty_rects);
+        self.clip_stack.clear();
         self.draw_calls_count = 0;
 
         if dirty_rects.is_empty() {
@@ -157,6 +178,19 @@ impl SurfaceCompositor for LinuxSurface {
         }
     }
 
+    fn push_clip(&mut self, rect: Rect, _corner_radii: [f32; 4]) {
+        let clipped = if let Some(top) = self.clip_stack.last() {
+            top.intersection(&rect).unwrap_or(Rect::ZERO)
+        } else {
+            rect
+        };
+        self.clip_stack.push(clipped);
+    }
+
+    fn pop_clip(&mut self) {
+        self.clip_stack.pop();
+    }
+
     fn fill_rect(&mut self, rect: Rect, color: Color) {
         if color.a == 0 {
             return;
@@ -174,14 +208,23 @@ impl SurfaceCompositor for LinuxSurface {
         self.draw_calls_count += 1;
         let px = pack_color(color);
 
+        let (cx0, cy0, cx1, cy1) = self.active_clip_bounds();
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let x0 = (rect.origin.x.max(0.0) as usize).min(self.width);
+        let x0 = (rect.origin.x.max(0.0) as usize).min(self.width).max(cx0);
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let y0 = (rect.origin.y.max(0.0) as usize).min(self.height);
+        let y0 = (rect.origin.y.max(0.0) as usize).min(self.height).max(cy0);
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let x1 = ((rect.origin.x + rect.size.width).max(0.0) as usize).min(self.width);
+        let x1 = ((rect.origin.x + rect.size.width).max(0.0) as usize)
+            .min(self.width)
+            .min(cx1);
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let y1 = ((rect.origin.y + rect.size.height).max(0.0) as usize).min(self.height);
+        let y1 = ((rect.origin.y + rect.size.height).max(0.0) as usize)
+            .min(self.height)
+            .min(cy1);
+
+        if x0 >= x1 || y0 >= y1 {
+            return;
+        }
 
         if color.a == 255 {
             for y in y0..y1 {
@@ -217,14 +260,23 @@ impl SurfaceCompositor for LinuxSurface {
         self.draw_calls_count += 1;
         let px = pack_color(color);
 
+        let (cx0, cy0, cx1, cy1) = self.active_clip_bounds();
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let x0 = (rect.origin.x.max(0.0) as usize).min(self.width);
+        let x0 = (rect.origin.x.max(0.0) as usize).min(self.width).max(cx0);
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let y0 = (rect.origin.y.max(0.0) as usize).min(self.height);
+        let y0 = (rect.origin.y.max(0.0) as usize).min(self.height).max(cy0);
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let x1 = ((rect.origin.x + rect.size.width).max(0.0) as usize).min(self.width);
+        let x1 = ((rect.origin.x + rect.size.width).max(0.0) as usize)
+            .min(self.width)
+            .min(cx1);
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let y1 = ((rect.origin.y + rect.size.height).max(0.0) as usize).min(self.height);
+        let y1 = ((rect.origin.y + rect.size.height).max(0.0) as usize)
+            .min(self.height)
+            .min(cy1);
+
+        if x0 >= x1 || y0 >= y1 {
+            return;
+        }
 
         let r = radius
             .min(rect.size.width * 0.5)
@@ -257,10 +309,10 @@ impl SurfaceCompositor for LinuxSurface {
         let ry1 = rect.origin.y + rect.size.height - r;
 
         for y in y0..y1 {
-            let py = y as f32 + 0.5;
+            let py = f32::from(u16::try_from(y).unwrap_or(u16::MAX)) + 0.5;
             let row_start = y * self.width;
             for x in x0..x1 {
-                let px_f = x as f32 + 0.5;
+                let px_f = f32::from(u16::try_from(x).unwrap_or(u16::MAX)) + 0.5;
                 if px_f < rx0 && py < ry0 {
                     let dx = rx0 - px_f;
                     let dy = ry0 - py;
@@ -302,18 +354,23 @@ impl SurfaceCompositor for LinuxSurface {
             return;
         }
 
+        let (cx0, cy0, cx1, cy1) = self.active_clip_bounds();
+        if cx0 >= cx1 || cy0 >= cy1 {
+            return;
+        }
+
         let radius = (stroke_width * 0.5).max(0.5);
         let d_max = radius + 0.5;
         let d_min = (radius - 0.5).max(0.0);
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-        let min_x = ((p1.x.min(p2.x) - d_max).floor() as i32).max(0);
+        let min_x = ((p1.x.min(p2.x) - d_max).floor() as i32).max(cx0 as i32);
         #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-        let max_x = ((p1.x.max(p2.x) + d_max).ceil() as i32).min((self.width as i32) - 1);
+        let max_x = ((p1.x.max(p2.x) + d_max).ceil() as i32).min((cx1 as i32) - 1);
         #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-        let min_y = ((p1.y.min(p2.y) - d_max).floor() as i32).max(0);
+        let min_y = ((p1.y.min(p2.y) - d_max).floor() as i32).max(cy0 as i32);
         #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-        let max_y = ((p1.y.max(p2.y) + d_max).ceil() as i32).min((self.height as i32) - 1);
+        let max_y = ((p1.y.max(p2.y) + d_max).ceil() as i32).min((cy1 as i32) - 1);
 
         if min_x > max_x || min_y > max_y {
             return;
@@ -324,11 +381,11 @@ impl SurfaceCompositor for LinuxSurface {
         let seg_len_sq = vx * vx + vy * vy;
 
         for py in min_y..=max_y {
-            let y_center = py as f32 + 0.5;
+            let y_center = f32::from(i16::try_from(py).unwrap_or(0)) + 0.5;
             let row_offset = (py as usize) * self.width;
 
             for px in min_x..=max_x {
-                let x_center = px as f32 + 0.5;
+                let x_center = f32::from(i16::try_from(px).unwrap_or(0)) + 0.5;
 
                 let dist = if seg_len_sq < 1e-4 {
                     let dx = x_center - p1.x;
@@ -353,7 +410,7 @@ impl SurfaceCompositor for LinuxSurface {
                     };
 
                     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-                    let eff_alpha = ((color.a as f32) * coverage).round() as u8;
+                    let eff_alpha = (f32::from(color.a) * coverage).round() as u8;
                     if eff_alpha > 0 {
                         let idx = row_offset + (px as usize);
                         self.pixels[idx] = blend_pixel(self.pixels[idx], color, eff_alpha);
@@ -369,132 +426,15 @@ impl SurfaceCompositor for LinuxSurface {
             return;
         }
 
-        if self.font_engine.has_vector_font() {
-            let line_height = font_size * 1.35;
-            let mut cur_x = origin.x;
-            let mut cur_y = origin.y;
-            let mut baseline = cur_y + font_size * 0.8;
-
-            for ch in text.chars() {
-                if ch == '\n' {
-                    cur_x = origin.x;
-                    cur_y += line_height;
-                    baseline = cur_y + font_size * 0.8;
-                    continue;
-                }
-                let target_glyph = self.font_engine.get_glyph(ch, font_size).or_else(|| {
-                    let fallback = match ch {
-                        '●' | '•' => '*',
-                        '▲' => '^',
-                        '▾' | '▼' => 'v',
-                        '↗' | '→' => '>',
-                        '↵' => '<',
-                        '⌖' => '+',
-                        '⌘' => '#',
-                        '–' | '—' => '-',
-                        other => other,
-                    };
-                    self.font_engine.get_glyph(fallback, font_size)
-                });
-                if let Some(glyph) = target_glyph {
-                    #[allow(clippy::cast_possible_truncation)]
-                    let start_x = (cur_x + glyph.xmin as f32).round() as i32;
-                    #[allow(clippy::cast_possible_truncation)]
-                    let start_y =
-                        (baseline - glyph.ymin as f32 - glyph.height as f32).round() as i32;
-
-                    for row in 0..glyph.height {
-                        let y = start_y + row as i32;
-                        if y < 0 || (y as usize) >= self.height {
-                            continue;
-                        }
-                        let row_offset = (y as usize) * self.width;
-                        let bmp_row = row * glyph.width;
-
-                        for col in 0..glyph.width {
-                            let x = start_x + col as i32;
-                            if x < 0 || (x as usize) >= self.width {
-                                continue;
-                            }
-                            let glyph_alpha = glyph.bitmap[bmp_row + col];
-                            if glyph_alpha > 0 {
-                                let eff_alpha = ((u16::from(glyph_alpha) * u16::from(color.a)
-                                    + 127)
-                                    / 255) as u8;
-                                if eff_alpha > 0 {
-                                    let idx = row_offset + (x as usize);
-                                    self.pixels[idx] =
-                                        blend_pixel(self.pixels[idx], color, eff_alpha);
-                                }
-                            }
-                        }
-                    }
-                    cur_x += glyph.advance_width;
-                    if cur_x >= self.width as f32 {
-                        break;
-                    }
-                }
-            }
+        let clip = self.active_clip_bounds();
+        if clip.0 >= clip.2 || clip.1 >= clip.3 {
             return;
         }
 
-        let px = pack_color(color);
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let scale = (font_size / 8.0).round().max(1.0) as usize;
-        let char_advance = 8 * scale;
-        let line_height = 10 * scale;
-
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let mut cur_x = origin.x.max(0.0) as usize;
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let mut cur_y = origin.y.max(0.0) as usize;
-
-        for ch in text.chars() {
-            if ch == '\n' {
-                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-                {
-                    cur_x = origin.x.max(0.0) as usize;
-                }
-                cur_y += line_height;
-                continue;
-            }
-            let normalized_ch = match ch {
-                '●' | '•' => '*',
-                '▲' => '^',
-                '▾' | '▼' => 'v',
-                '↗' | '→' => '>',
-                '↵' => '<',
-                '⌖' => '+',
-                '⌘' => '#',
-                '–' | '—' => '-',
-                other => other,
-            };
-            if let Some(glyph) = crate::font_table::get_glyph_8x8(normalized_ch) {
-                for (row_idx, &row_byte) in glyph.iter().enumerate() {
-                    for col_idx in 0..8 {
-                        if (row_byte & (0x80 >> col_idx)) != 0 {
-                            for dy in 0..scale {
-                                for dx in 0..scale {
-                                    let px_x = cur_x + col_idx * scale + dx;
-                                    let px_y = cur_y + row_idx * scale + dy;
-                                    if px_x < self.width && px_y < self.height {
-                                        let idx = px_y * self.width + px_x;
-                                        self.pixels[idx] = if color.a == 255 {
-                                            px
-                                        } else {
-                                            blend_pixel(self.pixels[idx], color, color.a)
-                                        };
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            cur_x += char_advance;
-            if cur_x >= self.width {
-                break;
-            }
+        if self.font_engine.has_vector_font() {
+            self.draw_vector_text(text, origin, font_size, color, clip);
+        } else {
+            self.draw_bitmap_text(text, origin, font_size, color, clip);
         }
     }
 
@@ -523,5 +463,150 @@ impl SurfaceCompositor for LinuxSurface {
 
     fn end_frame(&mut self) {
         self.dirty_clip.clear();
+        self.clip_stack.clear();
+    }
+}
+
+impl LinuxSurface {
+    fn draw_vector_text(
+        &mut self,
+        text: &str,
+        origin: Point,
+        font_size: f32,
+        color: Color,
+        (cx0, cy0, cx1, cy1): (usize, usize, usize, usize),
+    ) {
+        let (ascent, line_height) = self.font_engine.line_metrics(font_size);
+        let mut cur_x = origin.x;
+        let mut cur_y = origin.y;
+        let mut baseline = cur_y + ascent;
+
+        let clip_x0 = i32::try_from(cx0).unwrap_or(i32::MAX);
+        let clip_y0 = i32::try_from(cy0).unwrap_or(i32::MAX);
+        let clip_x1 = i32::try_from(cx1).unwrap_or(i32::MAX);
+        let clip_y1 = i32::try_from(cy1).unwrap_or(i32::MAX);
+        let surf_w = f32::from(u16::try_from(self.width).unwrap_or(u16::MAX));
+
+        for ch in text.chars() {
+            if ch == '\n' {
+                cur_x = origin.x;
+                cur_y += line_height;
+                baseline = cur_y + ascent;
+                continue;
+            }
+            let target_glyph = self.font_engine.get_glyph(ch, font_size).or_else(|| {
+                self.font_engine
+                    .get_glyph(normalize_fallback_char(ch), font_size)
+            });
+            if let Some(glyph) = target_glyph {
+                let xmin = f32::from(i16::try_from(glyph.xmin).unwrap_or(0));
+                let ymin = f32::from(i16::try_from(glyph.ymin).unwrap_or(0));
+                let gh = f32::from(u16::try_from(glyph.height).unwrap_or(u16::MAX));
+                #[allow(clippy::cast_possible_truncation)]
+                let start_x = (cur_x + xmin).round() as i32;
+                #[allow(clippy::cast_possible_truncation)]
+                let start_y = (baseline - ymin - gh).round() as i32;
+
+                for row in 0..glyph.height {
+                    let y = start_y + row as i32;
+                    if y < clip_y0 || y >= clip_y1 {
+                        continue;
+                    }
+                    let row_offset = (y as usize) * self.width;
+                    let bmp_row = row * glyph.width;
+
+                    for col in 0..glyph.width {
+                        let x = start_x + col as i32;
+                        if x < clip_x0 || x >= clip_x1 {
+                            continue;
+                        }
+                        let glyph_alpha = glyph.bitmap[bmp_row + col];
+                        if glyph_alpha > 0 {
+                            let eff_alpha =
+                                ((u16::from(glyph_alpha) * u16::from(color.a) + 127) / 255) as u8;
+                            if eff_alpha > 0 {
+                                let idx = row_offset + (x as usize);
+                                self.pixels[idx] = blend_pixel(self.pixels[idx], color, eff_alpha);
+                            }
+                        }
+                    }
+                }
+                cur_x += glyph.advance_width;
+                if cur_x >= surf_w {
+                    break;
+                }
+            }
+        }
+    }
+
+    fn draw_bitmap_text(
+        &mut self,
+        text: &str,
+        origin: Point,
+        font_size: f32,
+        color: Color,
+        (cx0, cy0, cx1, cy1): (usize, usize, usize, usize),
+    ) {
+        let px = pack_color(color);
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let scale = (font_size / 8.0).round().max(1.0) as usize;
+        let char_advance = 8 * scale;
+        let line_height = 10 * scale;
+
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let mut cur_x = origin.x.max(0.0) as usize;
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let mut cur_y = origin.y.max(0.0) as usize;
+
+        for ch in text.chars() {
+            if ch == '\n' {
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                {
+                    cur_x = origin.x.max(0.0) as usize;
+                }
+                cur_y += line_height;
+                continue;
+            }
+            if let Some(glyph) = crate::font_table::get_glyph_8x8(normalize_fallback_char(ch)) {
+                for (row_idx, &row_byte) in glyph.iter().enumerate() {
+                    for col_idx in 0..8 {
+                        if (row_byte & (0x80 >> col_idx)) != 0 {
+                            for dy in 0..scale {
+                                for dx in 0..scale {
+                                    let px_x = cur_x + col_idx * scale + dx;
+                                    let px_y = cur_y + row_idx * scale + dy;
+                                    if px_x >= cx0 && px_x < cx1 && px_y >= cy0 && px_y < cy1 {
+                                        let idx = px_y * self.width + px_x;
+                                        self.pixels[idx] = if color.a == 255 {
+                                            px
+                                        } else {
+                                            blend_pixel(self.pixels[idx], color, color.a)
+                                        };
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            cur_x += char_advance;
+            if cur_x >= self.width {
+                break;
+            }
+        }
+    }
+}
+
+const fn normalize_fallback_char(ch: char) -> char {
+    match ch {
+        '●' | '•' => '*',
+        '▲' => '^',
+        '▾' | '▼' => 'v',
+        '↗' | '→' => '>',
+        '↵' => '<',
+        '⌖' => '+',
+        '⌘' => '#',
+        '–' | '—' => '-',
+        other => other,
     }
 }

@@ -158,8 +158,16 @@ fn test_ota_updater_prevents_semver_downgrades_and_replays() {
 fn test_secure_keystore_biometric_verifier_and_delete_wipe() {
     let calls = Arc::new(AtomicUsize::new(0));
     let mut store = SecureKeyStore::new();
-    store.store_secret("api_key", b"sk-live-secret-999", true);
-    store.store_secret("public_id", b"pub-123", false);
+    store.store_secret(
+        "api_key",
+        b"sk-live-secret-999",
+        tej_ui_services::SecretProtection::BiometricRequired,
+    );
+    store.store_secret(
+        "public_id",
+        b"pub-123",
+        tej_ui_services::SecretProtection::Standard,
+    );
 
     // Debug output must not leak raw secret bytes
     let debug_str = format!("{store:?}");

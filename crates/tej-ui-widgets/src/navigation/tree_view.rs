@@ -66,7 +66,7 @@ impl Debug for TreeView {
             .field("roots", &self.roots)
             .field("selected_id", &self.selected_id)
             .field("expanded_ids", &self.expanded_ids)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -108,12 +108,27 @@ impl TreeView {
 
     /// Toggles expansion state for a branch node ID.
     pub fn toggle_expand(&self, id: &str) {
-        toggle_expanded_signal(self.expanded_ids, id, &self.on_toggle);
+        toggle_expanded_signal(self.expanded_ids, id, self.on_toggle.as_ref());
     }
 
-    /// Explicitly sets expansion state for a branch node ID.
-    pub fn set_expanded(&self, id: &str, expanded: bool) {
-        set_expanded_signal(self.expanded_ids, id, expanded, &self.on_toggle);
+    /// Expands a branch node ID.
+    pub fn expand(&self, id: &str) {
+        set_expanded_signal(
+            self.expanded_ids,
+            id,
+            ExpandState::Expanded,
+            self.on_toggle.as_ref(),
+        );
+    }
+
+    /// Collapses a branch node ID.
+    pub fn collapse(&self, id: &str) {
+        set_expanded_signal(
+            self.expanded_ids,
+            id,
+            ExpandState::Collapsed,
+            self.on_toggle.as_ref(),
+        );
     }
 
     /// Flatten visible nodes accounting for reactive expansion state.
@@ -142,10 +157,16 @@ impl TreeView {
     }
 }
 
+#[derive(Clone, Copy)]
+enum ExpandState {
+    Expanded,
+    Collapsed,
+}
+
 fn toggle_expanded_signal(
     expanded_ids: Signal<HashSet<String>>,
     id: &str,
-    on_toggle: &Option<TreeToggleCallback>,
+    on_toggle: Option<&TreeToggleCallback>,
 ) {
     let mut set = expanded_ids.get();
     let now_expanded = if set.contains(id) {
@@ -164,9 +185,10 @@ fn toggle_expanded_signal(
 fn set_expanded_signal(
     expanded_ids: Signal<HashSet<String>>,
     id: &str,
-    expanded: bool,
-    on_toggle: &Option<TreeToggleCallback>,
+    state: ExpandState,
+    on_toggle: Option<&TreeToggleCallback>,
 ) {
+    let expanded = matches!(state, ExpandState::Expanded);
     let mut set = expanded_ids.get();
     let changed = if expanded {
         set.insert(id.to_string())
@@ -239,47 +261,47 @@ impl View for TreeView {
         let visible = self.visible_flattened();
         let expanded = self.expanded_ids.get();
         for (i, (depth, node)) in visible.iter().enumerate() {
-            if let Some(&node_id) = state.item_nodes.get(i) {
-                if let Some(bounds) = ctx.arena.computed_bounds.get(node_id as usize).copied() {
-                    let is_selected = state.selected_id.as_deref() == Some(&node.id);
-                    let is_hovered = ctx.is_hovered(node_id);
+            if let Some(&node_id) = state.item_nodes.get(i)
+                && let Some(bounds) = ctx.arena.computed_bounds.get(node_id as usize).copied()
+            {
+                let is_selected = state.selected_id.as_deref() == Some(&node.id);
+                let is_hovered = ctx.is_hovered(node_id);
 
-                    if is_selected {
-                        ctx.fill_rounded_rect(bounds, ctx.theme.radii.sm, ctx.theme.colors.accent);
-                    } else if is_hovered {
-                        ctx.fill_rounded_rect(
-                            bounds,
-                            ctx.theme.radii.sm,
-                            ctx.theme.colors.accent.with_alpha(80),
-                        );
-                    }
-
-                    let indent = (*depth as f32) * 16.0 + 8.0;
-                    let prefix = if node.children.is_empty() {
-                        "• "
-                    } else if expanded.contains(&node.id) {
-                        "▾ "
-                    } else {
-                        "▸ "
-                    };
-                    let label = format!("{prefix}{}", node.label);
-
-                    let text_color = if is_selected {
-                        ctx.theme.colors.accent_foreground
-                    } else {
-                        ctx.theme.colors.foreground
-                    };
-                    let pt = tej_ui_layout::Point::new(
-                        bounds.origin.x + indent,
-                        bounds.origin.y + (bounds.size.height - 14.0) * 0.5,
-                    );
-                    ctx.draw_text(
-                        &label,
-                        pt,
-                        ctx.theme.typography.body_small.font_size,
-                        text_color,
+                if is_selected {
+                    ctx.fill_rounded_rect(bounds, ctx.theme.radii.sm, ctx.theme.colors.accent);
+                } else if is_hovered {
+                    ctx.fill_rounded_rect(
+                        bounds,
+                        ctx.theme.radii.sm,
+                        ctx.theme.colors.accent.with_alpha(80),
                     );
                 }
+
+                let indent = crate::count_to_f32(*depth) * 16.0 + 8.0;
+                let prefix = if node.children.is_empty() {
+                    "• "
+                } else if expanded.contains(&node.id) {
+                    "▾ "
+                } else {
+                    "▸ "
+                };
+                let label = format!("{prefix}{}", node.label);
+
+                let text_color = if is_selected {
+                    ctx.theme.colors.accent_foreground
+                } else {
+                    ctx.theme.colors.foreground
+                };
+                let pt = tej_ui_layout::Point::new(
+                    bounds.origin.x + indent,
+                    bounds.origin.y + (bounds.size.height - 14.0) * 0.5,
+                );
+                ctx.draw_text(
+                    &label,
+                    pt,
+                    ctx.theme.typography.body_small.font_size,
+                    text_color,
+                );
             }
         }
     }
@@ -302,7 +324,7 @@ impl View for TreeView {
                     Arc::new(move || {
                         sig.set(Some(id.clone()));
                         if has_children {
-                            toggle_expanded_signal(exp_sig, &id, &on_toggle);
+                            toggle_expanded_signal(exp_sig, &id, on_toggle.as_ref());
                         }
                     }),
                 );
@@ -319,21 +341,31 @@ impl View for TreeView {
                         37 => {
                             // ArrowLeft -> collapse branch
                             if has_children {
-                                set_expanded_signal(exp_key, &id_key, false, &on_toggle_key);
+                                set_expanded_signal(
+                                    exp_key,
+                                    &id_key,
+                                    ExpandState::Collapsed,
+                                    on_toggle_key.as_ref(),
+                                );
                             }
                         }
                         39 => {
                             // ArrowRight -> expand branch
                             if has_children {
-                                set_expanded_signal(exp_key, &id_key, true, &on_toggle_key);
+                                set_expanded_signal(
+                                    exp_key,
+                                    &id_key,
+                                    ExpandState::Expanded,
+                                    on_toggle_key.as_ref(),
+                                );
                             }
                         }
                         38 => {
                             // ArrowUp -> previous visible row
-                            if i > 0 {
-                                if let Some(prev_id) = ids_for_nav.get(i - 1) {
-                                    sig_key.set(Some(prev_id.clone()));
-                                }
+                            if i > 0
+                                && let Some(prev_id) = ids_for_nav.get(i - 1)
+                            {
+                                sig_key.set(Some(prev_id.clone()));
                             }
                         }
                         40 => {
@@ -345,7 +377,7 @@ impl View for TreeView {
                         13 | 32 => {
                             sig_key.set(Some(id_key.clone()));
                             if has_children {
-                                toggle_expanded_signal(exp_key, &id_key, &on_toggle_key);
+                                toggle_expanded_signal(exp_key, &id_key, on_toggle_key.as_ref());
                             }
                         }
                         _ => {}

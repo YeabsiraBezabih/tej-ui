@@ -10,6 +10,10 @@ pub type ShortcutHandler = Arc<dyn Fn() + Send + Sync>;
 
 /// Keyboard modifiers for shortcuts.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "Public keyboard modifier flags accessed directly as booleans by callers"
+)]
 pub struct Modifiers {
     pub ctrl: bool,
     pub alt: bool,
@@ -141,7 +145,7 @@ impl fmt::Debug for ShortcutManager {
         f.debug_struct("ShortcutManager")
             .field("registered_count", &self.registry.read().len())
             .field("has_pending_chord", &self.pending_chord.read().is_some())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -194,12 +198,12 @@ impl ShortcutManager {
     ) -> bool {
         // 1. Check if we have a pending chord stroke that has not timed out
         let prev_opt = self.pending_chord.write().take();
-        if let Some(prev) = prev_opt {
-            if prev.started_at.elapsed() <= self.chord_timeout {
-                let chord = ShortcutChord::sequence(prev.stroke, stroke.clone());
-                if self.try_dispatch_chord(&chord, active_window, active_local) {
-                    return true;
-                }
+        if let Some(prev) = prev_opt
+            && prev.started_at.elapsed() <= self.chord_timeout
+        {
+            let chord = ShortcutChord::sequence(prev.stroke, stroke.clone());
+            if self.try_dispatch_chord(&chord, active_window, active_local) {
+                return true;
             }
         }
 
@@ -233,19 +237,19 @@ impl ShortcutManager {
         let reg = self.registry.read();
 
         // Check local scope first (highest precedence)
-        if let Some(local_id) = active_local {
-            if let Some(handler) = reg.get(&(ShortcutScope::Local(local_id), chord.clone())) {
-                handler();
-                return true;
-            }
+        if let Some(local_id) = active_local
+            && let Some(handler) = reg.get(&(ShortcutScope::Local(local_id), chord.clone()))
+        {
+            handler();
+            return true;
         }
 
         // Check window scope second
-        if let Some(win_id) = active_window {
-            if let Some(handler) = reg.get(&(ShortcutScope::Window(win_id), chord.clone())) {
-                handler();
-                return true;
-            }
+        if let Some(win_id) = active_window
+            && let Some(handler) = reg.get(&(ShortcutScope::Window(win_id), chord.clone()))
+        {
+            handler();
+            return true;
         }
 
         // Check global scope last

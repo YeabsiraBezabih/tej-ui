@@ -128,7 +128,7 @@ impl GpuiAdapter {
         self.glyph_batch.clear();
 
         for (idx, row) in self.rows.iter().enumerate() {
-            let y = idx as f32 * 36.0;
+            let y = crate::count_to_f32(idx) * 36.0;
             // Background quad
             self.quad_batch.push(GpuQuadCommand {
                 bounds: [0.0, y, 1920.0, 36.0],
@@ -417,7 +417,7 @@ impl GuiBenchHarness for GpuiAdapter {
         for (idx, p) in paragraphs.iter().enumerate() {
             self.glyph_batch.push(GpuGlyphCommand {
                 text: p.clone(),
-                origin: [20.0, (idx * 24) as f32],
+                origin: [20.0, crate::count_to_f32(idx * 24)],
                 font_size: 14.0,
                 color: [1.0, 1.0, 1.0, 1.0],
             });
@@ -447,15 +447,15 @@ impl GuiBenchHarness for GpuiAdapter {
         self.glyph_batch.clear();
 
         for i in 0..count {
-            let val = ((i * 17) % 100) as f32 / 100.0;
+            let val = crate::count_to_f32((i * 17) % 100) / 100.0;
             self.quad_batch.push(GpuQuadCommand {
-                bounds: [10.0, (i * 20) as f32, val * 300.0, 16.0],
+                bounds: [10.0, crate::count_to_f32(i * 20), val * 300.0, 16.0],
                 color: [0.1, 0.7, 0.2, 1.0],
                 corner_radius: 2.0,
             });
             self.glyph_batch.push(GpuGlyphCommand {
                 text: format!("GPUI Telemetry #{i}: {:.2}", val * 100.0),
-                origin: [320.0, (i * 20 + 14) as f32],
+                origin: [320.0, crate::count_to_f32(i * 20 + 14)],
                 font_size: 12.0,
                 color: [1.0, 1.0, 1.0, 1.0],
             });

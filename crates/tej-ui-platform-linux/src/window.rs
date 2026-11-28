@@ -45,7 +45,7 @@ impl fmt::Debug for LinuxWindow {
             .field("title", &self.title)
             .field("size", &self.size)
             .field("has_native_window", &self.native_window.lock().is_some())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -183,102 +183,105 @@ impl PlatformWindow for LinuxWindow {
     fn poll_events(&mut self) -> Vec<UiEvent> {
         let mut events = std::mem::take(&mut *self.event_queue.lock());
 
-        if let Some(w) = self.native_window.lock().as_mut() {
-            if w.0.is_open() {
-                // Poll window resize events dynamically from compositor
-                let (win_w, win_h) = w.0.get_size();
-                #[allow(clippy::cast_precision_loss)]
-                let current_size = Size::new(win_w as f32, win_h as f32);
-                if self.size != current_size && win_w > 0 && win_h > 0 {
-                    self.size = current_size;
-                    events.push(UiEvent::Resize {
-                        width: current_size.width,
-                        height: current_size.height,
+        if let Some(w) = self.native_window.lock().as_mut()
+            && w.0.is_open()
+        {
+            // Poll window resize events dynamically from compositor
+            let (win_w, win_h) = w.0.get_size();
+            #[allow(clippy::cast_precision_loss)]
+            let current_size = Size::new(win_w as f32, win_h as f32);
+            if self.size != current_size && win_w > 0 && win_h > 0 {
+                self.size = current_size;
+                events.push(UiEvent::Resize {
+                    width: current_size.width,
+                    height: current_size.height,
+                });
+            }
+
+            // Poll mouse position with Pass mode so we always receive real-time cursor coords
+            if let Some((x, y)) = w.0.get_mouse_pos(MouseMode::Pass) {
+                let pt = Point::new(x, y);
+                let mut last = self.last_mouse_pos.lock();
+                if *last != Some(pt) {
+                    *last = Some(pt);
+                    events.push(UiEvent::MouseMove { position: pt });
+                }
+            }
+
+            // Poll mouse button down / up edge transitions
+            let is_down = w.0.get_mouse_down(MfbMouseButton::Left);
+            let mut last_down = self.last_mouse_down.lock();
+            if is_down && !*last_down {
+                *last_down = true;
+                let pos = self.last_mouse_pos.lock().unwrap_or(Point::ZERO);
+                events.push(UiEvent::MouseDown {
+                    button: MouseButton::Left,
+                    position: pos,
+                });
+            } else if !is_down && *last_down {
+                *last_down = false;
+                let pos = self.last_mouse_pos.lock().unwrap_or(Point::ZERO);
+                events.push(UiEvent::MouseUp {
+                    button: MouseButton::Left,
+                    position: pos,
+                });
+            }
+
+            // Poll scroll wheel
+            if let Some((dx, dy)) = w.0.get_scroll_wheel()
+                && (dx != 0.0 || dy != 0.0)
+            {
+                events.push(UiEvent::Scroll {
+                    delta_x: dx,
+                    delta_y: dy,
+                    position: self.last_mouse_pos.lock().unwrap_or(Point::ZERO),
+                });
+            }
+
+            // Poll keyboard presses with edge triggering and key repeats
+            let shift =
+                w.0.is_key_down(minifb::Key::LeftShift) || w.0.is_key_down(minifb::Key::RightShift);
+            let ctrl =
+                w.0.is_key_down(minifb::Key::LeftCtrl) || w.0.is_key_down(minifb::Key::RightCtrl);
+
+            for key in w.0.get_keys_pressed(minifb::KeyRepeat::Yes) {
+                let code = match key {
+                    minifb::Key::Key1 => 49,
+                    minifb::Key::Key2 => 50,
+                    minifb::Key::Key3 => 51,
+                    minifb::Key::Key4 => 52,
+                    minifb::Key::Key5 => 53,
+                    minifb::Key::Key6 => 54,
+                    minifb::Key::Escape => 27,
+                    minifb::Key::Tab => 9,
+                    minifb::Key::Enter => 13,
+                    minifb::Key::Space => 32,
+                    minifb::Key::Backspace => 8,
+                    minifb::Key::Delete => 46,
+                    minifb::Key::Up => 38,
+                    minifb::Key::Down => 40,
+                    minifb::Key::Left => 37,
+                    minifb::Key::Right => 39,
+                    minifb::Key::W => 87,
+                    minifb::Key::A => 65,
+                    minifb::Key::S => 83,
+                    minifb::Key::D => 68,
+                    minifb::Key::Q => 81,
+                    minifb::Key::E => 69,
+                    minifb::Key::C => 67,
+                    _ => key as u32,
+                };
+                events.push(UiEvent::KeyDown { key_code: code });
+
+                let shift_state = if shift {
+                    ShiftState::Shifted
+                } else {
+                    ShiftState::Normal
+                };
+                if !ctrl && let Some(ch) = map_key_to_char(key, shift_state) {
+                    events.push(UiEvent::TextInput {
+                        text: ch.to_string(),
                     });
-                }
-
-                // Poll mouse position with Pass mode so we always receive real-time cursor coords
-                if let Some((x, y)) = w.0.get_mouse_pos(MouseMode::Pass) {
-                    let pt = Point::new(x, y);
-                    let mut last = self.last_mouse_pos.lock();
-                    if *last != Some(pt) {
-                        *last = Some(pt);
-                        events.push(UiEvent::MouseMove { position: pt });
-                    }
-                }
-
-                // Poll mouse button down / up edge transitions
-                let is_down = w.0.get_mouse_down(MfbMouseButton::Left);
-                let mut last_down = self.last_mouse_down.lock();
-                if is_down && !*last_down {
-                    *last_down = true;
-                    let pos = self.last_mouse_pos.lock().unwrap_or(Point::ZERO);
-                    events.push(UiEvent::MouseDown {
-                        button: MouseButton::Left,
-                        position: pos,
-                    });
-                } else if !is_down && *last_down {
-                    *last_down = false;
-                    let pos = self.last_mouse_pos.lock().unwrap_or(Point::ZERO);
-                    events.push(UiEvent::MouseUp {
-                        button: MouseButton::Left,
-                        position: pos,
-                    });
-                }
-
-                // Poll scroll wheel
-                if let Some((dx, dy)) = w.0.get_scroll_wheel() {
-                    if dx != 0.0 || dy != 0.0 {
-                        events.push(UiEvent::Scroll {
-                            delta_x: dx,
-                            delta_y: dy,
-                            position: self.last_mouse_pos.lock().unwrap_or(Point::ZERO),
-                        });
-                    }
-                }
-
-                // Poll keyboard presses with edge triggering and key repeats
-                let shift = w.0.is_key_down(minifb::Key::LeftShift)
-                    || w.0.is_key_down(minifb::Key::RightShift);
-                let ctrl = w.0.is_key_down(minifb::Key::LeftCtrl)
-                    || w.0.is_key_down(minifb::Key::RightCtrl);
-
-                for key in w.0.get_keys_pressed(minifb::KeyRepeat::Yes) {
-                    let code = match key {
-                        minifb::Key::Key1 => 49,
-                        minifb::Key::Key2 => 50,
-                        minifb::Key::Key3 => 51,
-                        minifb::Key::Key4 => 52,
-                        minifb::Key::Key5 => 53,
-                        minifb::Key::Key6 => 54,
-                        minifb::Key::Escape => 27,
-                        minifb::Key::Tab => 9,
-                        minifb::Key::Enter => 13,
-                        minifb::Key::Space => 32,
-                        minifb::Key::Backspace => 8,
-                        minifb::Key::Delete => 46,
-                        minifb::Key::Up => 38,
-                        minifb::Key::Down => 40,
-                        minifb::Key::Left => 37,
-                        minifb::Key::Right => 39,
-                        minifb::Key::W => 87,
-                        minifb::Key::A => 65,
-                        minifb::Key::S => 83,
-                        minifb::Key::D => 68,
-                        minifb::Key::Q => 81,
-                        minifb::Key::E => 69,
-                        minifb::Key::C => 67,
-                        _ => key as u32,
-                    };
-                    events.push(UiEvent::KeyDown { key_code: code });
-
-                    if !ctrl {
-                        if let Some(ch) = map_key_to_char(key, shift) {
-                            events.push(UiEvent::TextInput {
-                                text: ch.to_string(),
-                            });
-                        }
-                    }
                 }
             }
         }
@@ -316,8 +319,12 @@ impl TejWindowHost for LinuxWindow {
         *self.ime_area.lock() = area;
     }
 
-    fn set_ime_allowed(&mut self, allowed: bool) {
-        *self.ime_allowed.lock() = allowed;
+    fn enable_ime(&mut self) {
+        *self.ime_allowed.lock() = true;
+    }
+
+    fn disable_ime(&mut self) {
+        *self.ime_allowed.lock() = false;
     }
 
     fn ime_allowed(&self) -> bool {
@@ -325,8 +332,15 @@ impl TejWindowHost for LinuxWindow {
     }
 }
 
-fn map_key_to_char(key: minifb::Key, shift: bool) -> Option<char> {
+#[derive(Clone, Copy)]
+enum ShiftState {
+    Normal,
+    Shifted,
+}
+
+fn map_key_to_char(key: minifb::Key, shift_state: ShiftState) -> Option<char> {
     use minifb::Key;
+    let shift = matches!(shift_state, ShiftState::Shifted);
     match key {
         Key::A => Some(if shift { 'A' } else { 'a' }),
         Key::B => Some(if shift { 'B' } else { 'b' }),

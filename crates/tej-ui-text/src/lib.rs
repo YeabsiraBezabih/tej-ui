@@ -21,7 +21,7 @@ pub use bidi::{BidiClassifier, BidiRun, TextDirection};
 pub use complex::{ArabicJoiningForm, CursiveScriptJoiner, EmojiPresentation, OpenTypeFeatures};
 pub use fallback::{FontCategory, FontFallbackChain};
 pub use font::{FontWeight, SystemFont};
-pub use font_db::SystemFontDb;
+pub use font_db::{FontFamilyKind, FontRegistry, FontSlant, SystemFontDb};
 pub use glyph_stream::{CaretHit, GlyphStreamConfig, GlyphStreamer};
 pub use grapheme::{
     grapheme_count, next_grapheme_boundary, next_word_boundary, pop_grapheme,

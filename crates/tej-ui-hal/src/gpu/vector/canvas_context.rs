@@ -230,7 +230,7 @@ impl Canvas2DContext {
         if SvgPathParser::parse(svg_d, &mut temp_builder).is_ok() {
             let temp_path = temp_builder.build();
             // Transform and append into current path
-            for event in temp_path.inner().iter() {
+            for event in temp_path.inner() {
                 match event {
                     lyon_path::Event::Begin { at } => {
                         let (tx, ty) = self.state.transform.transform_point(at.x, at.y);

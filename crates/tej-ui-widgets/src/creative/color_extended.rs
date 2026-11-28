@@ -87,8 +87,8 @@ impl Default for AspectRatioPicker {
             bounds: Rect::ZERO,
             selected: AspectRatioPreset::Square1x1,
             background: Color::WHITE,
-            border_color: Color::from_rgb_u32(0xD0D5DD), // Tej Gray 300
-            active_border_color: Color::from_rgb_u32(0x7F56D9), // Tej Brand 600
+            border_color: Color::from_rgb_u32(0x00D0_D5DD), // Tej Gray 300
+            active_border_color: Color::from_rgb_u32(0x007F_56D9), // Tej Brand 600
         }
     }
 }

@@ -71,7 +71,7 @@ impl fmt::Display for NaniteFrameStats {
             self.clusters_evicted,
             self.culling_time_us,
             self.staging_upload_time_us,
-            self.resident_vram_bytes as f64 / (1024.0 * 1024.0),
+            f64::from(u32::try_from(self.resident_vram_bytes / 1024).unwrap_or(u32::MAX)) / 1024.0,
         )
     }
 }

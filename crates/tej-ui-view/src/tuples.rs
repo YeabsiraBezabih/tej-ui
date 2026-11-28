@@ -30,8 +30,7 @@ macro_rules! impl_view_for_tuple {
                 parent: u32,
             ) {
                 $(
-                    let child_node = self.$idx.layout(&mut state.$idx, arena);
-                    arena.add_child(parent, child_node);
+                    self.$idx.layout_children(&mut state.$idx, arena, parent);
                 )+
             }
 

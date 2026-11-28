@@ -18,6 +18,15 @@ pub struct MultiColumnSorter {
     criteria: Vec<SortCriterion>,
 }
 
+/// Sort column selection mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SortMode {
+    /// Replace prior sort criteria with this column only.
+    Single,
+    /// Append or cycle this column in multi-column sort hierarchy.
+    Multi,
+}
+
 impl MultiColumnSorter {
     #[must_use]
     pub fn new() -> Self {
@@ -31,11 +40,8 @@ impl MultiColumnSorter {
     }
 
     /// Toggle or update sort for `column_id`.
-    ///
-    /// If `is_multi` (e.g. Shift-click) is true, appends/cycles in multi-sort hierarchy.
-    /// Otherwise, clears prior criteria and sets this as the sole sort column.
-    pub fn toggle_sort(&mut self, column_id: &str, is_multi: bool) {
-        if !is_multi {
+    pub fn toggle_sort(&mut self, column_id: &str, mode: SortMode) {
+        if matches!(mode, SortMode::Single) {
             let next_dir = self
                 .criteria
                 .iter()

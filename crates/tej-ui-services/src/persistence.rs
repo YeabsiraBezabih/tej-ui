@@ -81,49 +81,39 @@ impl WorkspaceStateStore {
     /// Serialize this state to a clean, deterministic JSON string.
     #[must_use]
     pub fn to_json_string(&self) -> String {
+        use std::fmt::Write;
         let mut out = String::with_capacity(1024);
         out.push_str("{\n");
 
         // Window geometry
         out.push_str("  \"window\": {\n");
-        out.push_str(&format!("    \"x\": {},\n", self.window.x));
-        out.push_str(&format!("    \"y\": {},\n", self.window.y));
-        out.push_str(&format!("    \"width\": {},\n", self.window.width));
-        out.push_str(&format!("    \"height\": {},\n", self.window.height));
-        out.push_str(&format!(
-            "    \"is_maximized\": {},\n",
-            self.window.is_maximized
-        ));
-        out.push_str(&format!(
-            "    \"is_fullscreen\": {},\n",
-            self.window.is_fullscreen
-        ));
-        out.push_str(&format!("    \"display_id\": {}\n", self.window.display_id));
+        let _ = writeln!(out, "    \"x\": {},", self.window.x);
+        let _ = writeln!(out, "    \"y\": {},", self.window.y);
+        let _ = writeln!(out, "    \"width\": {},", self.window.width);
+        let _ = writeln!(out, "    \"height\": {},", self.window.height);
+        let _ = writeln!(out, "    \"is_maximized\": {},", self.window.is_maximized);
+        let _ = writeln!(out, "    \"is_fullscreen\": {},", self.window.is_fullscreen);
+        let _ = writeln!(out, "    \"display_id\": {}", self.window.display_id);
         out.push_str("  },\n");
 
         // Workspace
         out.push_str("  \"workspace\": {\n");
-        out.push_str(&format!(
-            "    \"active_tab_index\": {},\n",
+        let _ = writeln!(
+            out,
+            "    \"active_tab_index\": {},",
             self.workspace.active_tab_index
-        ));
-        out.push_str(&format!(
-            "    \"split_ratio\": {},\n",
-            self.workspace.split_ratio
-        ));
+        );
+        let _ = writeln!(out, "    \"split_ratio\": {},", self.workspace.split_ratio);
 
         // Tabs
         out.push_str("    \"tabs\": [\n");
         for (i, tab) in self.workspace.tabs.iter().enumerate() {
             out.push_str("      {\n");
-            out.push_str(&format!("        \"id\": \"{}\",\n", escape_json(&tab.id)));
-            out.push_str(&format!(
-                "        \"title\": \"{}\",\n",
-                escape_json(&tab.title)
-            ));
-            out.push_str(&format!("        \"scroll_x\": {},\n", tab.scroll_x));
-            out.push_str(&format!("        \"scroll_y\": {},\n", tab.scroll_y));
-            out.push_str(&format!("        \"is_pinned\": {}\n", tab.is_pinned));
+            let _ = writeln!(out, "        \"id\": \"{}\",", escape_json(&tab.id));
+            let _ = writeln!(out, "        \"title\": \"{}\",", escape_json(&tab.title));
+            let _ = writeln!(out, "        \"scroll_x\": {},", tab.scroll_x);
+            let _ = writeln!(out, "        \"scroll_y\": {},", tab.scroll_y);
+            let _ = writeln!(out, "        \"is_pinned\": {}", tab.is_pinned);
             if i + 1 < self.workspace.tabs.len() {
                 out.push_str("      },\n");
             } else {
@@ -136,12 +126,13 @@ impl WorkspaceStateStore {
         out.push_str("    \"drafts\": {\n");
         let drafts_len = self.workspace.drafts.len();
         for (i, (k, v)) in self.workspace.drafts.iter().enumerate() {
-            out.push_str(&format!(
-                "      \"{}\": \"{}\"{}",
+            let suffix = if i + 1 < drafts_len { "," } else { "" };
+            let _ = writeln!(
+                out,
+                "      \"{}\": \"{}\"{suffix}",
                 escape_json(k),
                 escape_json(v),
-                if i + 1 < drafts_len { ",\n" } else { "\n" }
-            ));
+            );
         }
         out.push_str("    }\n");
 

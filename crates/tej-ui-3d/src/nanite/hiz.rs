@@ -72,24 +72,26 @@ impl HiZBuffer {
             return;
         }
 
-        let w_f32 = width as f32;
-        let h_f32 = height as f32;
+        let w_f32 = crate::math::count_to_f32(width);
+        let h_f32 = crate::math::count_to_f32(height);
+        let hiz_w0_f32 = crate::math::count_to_f32(HIZ_W0);
+        let hiz_h0_f32 = crate::math::count_to_f32(HIZ_H0);
 
         for cy in 0..HIZ_H0 {
+            let cy_f = crate::math::count_to_f32(cy);
+            let cy_next_f = crate::math::count_to_f32(cy + 1);
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-            let y_start = ((cy as f32 / HIZ_H0 as f32) * h_f32).floor() as usize;
+            let y_start = ((cy_f / hiz_h0_f32) * h_f32).floor() as usize;
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-            let y_end = (((cy + 1) as f32 / HIZ_H0 as f32) * h_f32)
-                .ceil()
-                .min(h_f32) as usize;
+            let y_end = ((cy_next_f / hiz_h0_f32) * h_f32).ceil().min(h_f32) as usize;
 
             for cx in 0..HIZ_W0 {
+                let cx_f = crate::math::count_to_f32(cx);
+                let cx_next_f = crate::math::count_to_f32(cx + 1);
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-                let x_start = ((cx as f32 / HIZ_W0 as f32) * w_f32).floor() as usize;
+                let x_start = ((cx_f / hiz_w0_f32) * w_f32).floor() as usize;
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-                let x_end = (((cx + 1) as f32 / HIZ_W0 as f32) * w_f32)
-                    .ceil()
-                    .min(w_f32) as usize;
+                let x_end = ((cx_next_f / hiz_w0_f32) * w_f32).ceil().min(w_f32) as usize;
 
                 let mut min_depth = 1.0_f32;
 
@@ -166,8 +168,8 @@ impl HiZBuffer {
         }
 
         // Map screen rect to Hi-Z cell coordinates [0..64) x [0..36)
-        let inv_w = (HIZ_W0 as f32) / screen_w;
-        let inv_h = (HIZ_H0 as f32) / screen_h;
+        let inv_w = crate::math::count_to_f32(HIZ_W0) / screen_w;
+        let inv_h = crate::math::count_to_f32(HIZ_H0) / screen_h;
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let cx_start = ((min_x.max(0.0) * inv_w).floor() as usize).min(HIZ_W0 - 1);
@@ -216,7 +218,7 @@ impl HiZBuffer {
         }
 
         let inv_w = 1.0 / w;
-        let sx = (clip_pos[0] * inv_w + 1.0) * 0.5 * screen_w;
+        let sx = f32::midpoint(clip_pos[0] * inv_w, 1.0) * screen_w;
         let sy = (1.0 - clip_pos[1] * inv_w) * 0.5 * screen_h;
         let sz = clip_pos[2] * inv_w;
 

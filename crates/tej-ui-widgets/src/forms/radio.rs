@@ -51,7 +51,7 @@ impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> std::fmt::D
         f.debug_struct("RadioGroup")
             .field("selected", &self.selected.get())
             .field("items_count", &self.items.len())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -68,21 +68,23 @@ impl<T: Clone + PartialEq + Send + Sync + 'static> RadioGroup<T> {
 
     /// Sets selection by index.
     pub fn select_index(&self, index: usize) {
-        if let Some(item) = self.items.get(index) {
-            if !item.disabled {
-                self.selected.set(item.value.clone());
-                if let Some(cb) = &self.on_change {
-                    cb(&item.value);
-                }
+        if let Some(item) = self.items.get(index)
+            && !item.disabled
+        {
+            self.selected.set(item.value.clone());
+            if let Some(cb) = &self.on_change {
+                cb(&item.value);
             }
         }
     }
 }
 
+type RadioChangeFn<T> = Arc<dyn Fn(&T) + Send + Sync>;
+
 fn step_radio_selection<T: Clone + PartialEq + Send + Sync + 'static>(
     items: &[RadioItem<T>],
     sig: Signal<T>,
-    on_change: &RadioCallback<T>,
+    on_change: Option<&RadioChangeFn<T>>,
     delta: isize,
 ) {
     let enabled_indices: Vec<usize> = items
@@ -118,7 +120,7 @@ impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> View for Ra
         RadioGroupState {
             bounds: Rect::from_origin_size(
                 Point::ZERO,
-                Size::new(200.0, (self.items.len() as f32) * 28.0),
+                Size::new(200.0, crate::count_to_f32(self.items.len()) * 28.0),
             ),
             selected_index,
             node: 0,
@@ -168,7 +170,7 @@ impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> View for Ra
                     .copied()
                     .unwrap_or(Rect::new(
                         state.bounds.origin.x,
-                        state.bounds.origin.y + (i as f32) * 28.0,
+                        state.bounds.origin.y + crate::count_to_f32(i) * 28.0,
                         state.bounds.size.width,
                         24.0,
                     ));
@@ -247,52 +249,52 @@ impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> View for Ra
         dispatcher.register_key_down(
             state.node,
             Arc::new(move |key_code| match key_code {
-                37 | 38 => step_radio_selection(&items_root, sig_root, &on_change_root, -1),
-                39 | 40 => step_radio_selection(&items_root, sig_root, &on_change_root, 1),
+                37 | 38 => step_radio_selection(&items_root, sig_root, on_change_root.as_ref(), -1),
+                39 | 40 => step_radio_selection(&items_root, sig_root, on_change_root.as_ref(), 1),
                 _ => {}
             }),
         );
 
         for (i, item) in self.items.iter().enumerate() {
-            if !item.disabled {
-                if let Some(&item_node) = state.item_nodes.get(i) {
-                    let val = item.value.clone();
-                    let sig = self.selected;
-                    let on_change = self.on_change.clone();
-                    dispatcher.register_click(
-                        item_node,
-                        Arc::new(move || {
-                            sig.set(val.clone());
-                            if let Some(cb) = &on_change {
-                                cb(&val);
-                            }
-                        }),
-                    );
+            if !item.disabled
+                && let Some(&item_node) = state.item_nodes.get(i)
+            {
+                let val = item.value.clone();
+                let sig = self.selected;
+                let on_change = self.on_change.clone();
+                dispatcher.register_click(
+                    item_node,
+                    Arc::new(move || {
+                        sig.set(val.clone());
+                        if let Some(cb) = &on_change {
+                            cb(&val);
+                        }
+                    }),
+                );
 
-                    // Keyboard navigation on each radio item (Space/Enter/Arrows)
-                    let items_item = self.items.clone();
-                    let item_val = item.value.clone();
-                    let sig_key = self.selected;
-                    let on_change_key = self.on_change.clone();
-                    dispatcher.register_key_down(
-                        item_node,
-                        Arc::new(move |key_code| match key_code {
-                            13 | 32 => {
-                                sig_key.set(item_val.clone());
-                                if let Some(cb) = &on_change_key {
-                                    cb(&item_val);
-                                }
+                // Keyboard navigation on each radio item (Space/Enter/Arrows)
+                let items_item = self.items.clone();
+                let item_val = item.value.clone();
+                let sig_key = self.selected;
+                let on_change_key = self.on_change.clone();
+                dispatcher.register_key_down(
+                    item_node,
+                    Arc::new(move |key_code| match key_code {
+                        13 | 32 => {
+                            sig_key.set(item_val.clone());
+                            if let Some(cb) = &on_change_key {
+                                cb(&item_val);
                             }
-                            37 | 38 => {
-                                step_radio_selection(&items_item, sig_key, &on_change_key, -1);
-                            }
-                            39 | 40 => {
-                                step_radio_selection(&items_item, sig_key, &on_change_key, 1);
-                            }
-                            _ => {}
-                        }),
-                    );
-                }
+                        }
+                        37 | 38 => {
+                            step_radio_selection(&items_item, sig_key, on_change_key.as_ref(), -1);
+                        }
+                        39 | 40 => {
+                            step_radio_selection(&items_item, sig_key, on_change_key.as_ref(), 1);
+                        }
+                        _ => {}
+                    }),
+                );
             }
         }
     }

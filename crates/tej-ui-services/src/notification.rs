@@ -53,21 +53,33 @@ impl NotificationBuilder {
         }
     }
 
+    #[must_use]
     pub fn subtitle(mut self, subtitle: impl Into<String>) -> Self {
         self.notification.subtitle = Some(subtitle.into());
         self
     }
 
+    #[must_use]
     pub fn action(mut self, action: NotificationAction) -> Self {
         self.notification.actions.push(action);
         self
     }
 
-    pub fn sound(mut self, play_sound: bool) -> Self {
-        self.notification.play_sound = play_sound;
+    /// Enables the default notification sound.
+    #[must_use]
+    pub fn with_sound(mut self) -> Self {
+        self.notification.play_sound = true;
         self
     }
 
+    /// Suppresses the notification sound.
+    #[must_use]
+    pub fn silent(mut self) -> Self {
+        self.notification.play_sound = false;
+        self
+    }
+
+    #[must_use]
     pub fn build(self) -> Notification {
         self.notification
     }

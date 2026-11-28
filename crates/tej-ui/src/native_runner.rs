@@ -12,13 +12,13 @@ use std::sync::Arc;
 
 use tej_ui_core::{Epoch, ReactiveRuntime};
 use tej_ui_hal::gpu::{
-    AtlasFormat, BackendConfig, FrameStats, GlyphKey, GpuCompositor, GpuContext, GpuError,
-    PathBuilder, PathTessellator, PremulColor, QuadInstance, RenderTarget, TessellatedMesh,
-    VramAtlas, WindowSurface,
+    AtlasFormat, BackendConfig, FrameStats, GlyphKey, GlyphKind, GpuCompositor, GpuContext,
+    GpuError, PathBuilder, PathTessellator, PremulColor, QuadInstance, RenderTarget,
+    TessellatedMesh, VramAtlas, WindowSurface,
 };
 use tej_ui_hal::{Color, DirtyRectTracker, MouseButton, SurfaceCompositor, UiEvent, WindowConfig};
 use tej_ui_layout::{LayoutArena, LayoutEngine, Point, Rect, Size};
-use tej_ui_text::{FontRasterizer, SystemFontDb};
+use tej_ui_text::{FontRasterizer, FontRegistry, SystemFontDb};
 use tej_ui_view::{EventDispatcher, PaintContext, View};
 
 use winit::application::ApplicationHandler;
@@ -33,15 +33,21 @@ use winit::window::{Window, WindowAttributes, WindowId as WinitWindowId};
 /// Default logical clip bounds representing an unclipped infinite plane.
 const UNCLIPPED_BOUNDS: [f32; 4] = [-1e6, -1e6, 2e6, 2e6];
 
-/// Recorded glyph draw command generated from `SurfaceCompositor::draw_text`.
+/// Recorded glyph draw command generated from `SurfaceCompositor::draw_text` / `draw_text_styled`.
 #[derive(Clone, Debug, PartialEq)]
 pub struct GlyphDrawCommand {
+    /// Stable font face identifier from `FontRegistry`.
+    pub font_id: u64,
+    /// Whether this glyph uses a monospace font face.
+    pub monospace: bool,
+    /// CSS font weight (100..=900).
+    pub weight: u16,
+    /// Rasterization font size in physical pixels.
+    pub size_px: u16,
     /// Character to rasterize and render.
     pub ch: char,
     /// Logical destination bounds `[x, y, width, height]`.
     pub bounds: [f32; 4],
-    /// Font size in logical pixels.
-    pub font_size: f32,
     /// Premultiplied linear RGBA tint color.
     pub color: PremulColor,
     /// Active logical clip bounds `[x, y, width, height]`.
@@ -84,8 +90,23 @@ impl Debug for GpuSurfaceBridge {
             .field("glyph_count", &self.glyphs.len())
             .field("line_count", &self.line_count)
             .field("frame_count", &self.frame_count)
-            .finish()
+            .finish_non_exhaustive()
     }
+}
+
+#[inline]
+fn dim_to_f32(v: u32) -> f32 {
+    f32::from(u16::try_from(v).unwrap_or(u16::MAX))
+}
+
+#[inline]
+fn count_to_f32(v: usize) -> f32 {
+    f32::from(u16::try_from(v).unwrap_or(u16::MAX))
+}
+
+#[inline]
+fn bearing_to_f32(v: i32) -> f32 {
+    f32::from(i16::try_from(v).unwrap_or(0))
 }
 
 impl GpuSurfaceBridge {
@@ -116,10 +137,10 @@ impl GpuSurfaceBridge {
     pub fn with_system_font(logical_size: Size, scale_factor: f32) -> Self {
         let mut bridge = Self::new(logical_size, scale_factor);
         let db = SystemFontDb::new();
-        if let Some(font) = db.query_font("sans-serif", 400, false) {
-            if let Ok(rast) = FontRasterizer::from_bytes(font.blob.data()) {
-                bridge.rasterizer = Some(Arc::new(rast));
-            }
+        if let Some(font) = db.query_font("sans-serif", 400, tej_ui_text::FontSlant::Normal)
+            && let Ok(rast) = FontRasterizer::from_bytes(font.blob.data())
+        {
+            bridge.rasterizer = Some(Arc::new(rast));
         }
         bridge
     }
@@ -237,12 +258,12 @@ impl GpuSurfaceBridge {
         compositor.begin_frame(width_px, height_px, self.scale_factor, self.clear_color);
 
         for &quad in &self.quads {
-            if quad.clip_bounds != UNCLIPPED_BOUNDS {
+            if quad.clip_bounds == UNCLIPPED_BOUNDS {
+                compositor.draw_quad(quad);
+            } else {
                 compositor.push_clip(quad.clip_bounds, quad.clip_radii);
                 compositor.draw_quad(quad);
                 let _ = compositor.pop_clip();
-            } else {
-                compositor.draw_quad(quad);
             }
         }
 
@@ -252,15 +273,24 @@ impl GpuSurfaceBridge {
                     continue;
                 }
 
-                let size_px = (cmd.font_size * self.scale_factor)
-                    .round()
-                    .clamp(1.0, f32::from(u16::MAX)) as u16;
-                let key = GlyphKey::new(0, u32::from(cmd.ch), 0, size_px);
+                let key = GlyphKey::new(cmd.font_id, u32::from(cmd.ch), 0, cmd.size_px);
 
                 let alloc_opt = if let Some(existing) = vram_atlas.get(&key) {
                     Some(existing)
-                } else if let Some(ref rast) = self.rasterizer {
-                    let g = rast.rasterize(cmd.ch, f32::from(size_px));
+                } else if let Some(rast) = FontRegistry::global()
+                    .rasterizer(
+                        if cmd.monospace {
+                            tej_ui_text::FontFamilyKind::Monospace
+                        } else {
+                            tej_ui_text::FontFamilyKind::SansSerif
+                        },
+                        cmd.weight,
+                        tej_ui_text::FontSlant::Normal,
+                    )
+                    .map(|(_, r)| r)
+                    .or_else(|| self.rasterizer.clone())
+                {
+                    let g = rast.rasterize(cmd.ch, f32::from(cmd.size_px));
                     if g.metrics.width > 0 && g.metrics.height > 0 {
                         vram_atlas
                             .insert(
@@ -280,12 +310,22 @@ impl GpuSurfaceBridge {
                 };
 
                 if let Some(alloc) = alloc_opt {
-                    if cmd.clip_bounds != UNCLIPPED_BOUNDS {
-                        compositor.push_clip(cmd.clip_bounds, [0.0; 4]);
-                        compositor.draw_glyph(cmd.bounds, alloc.uv_bounds, cmd.color, false);
-                        let _ = compositor.pop_clip();
+                    if cmd.clip_bounds == UNCLIPPED_BOUNDS {
+                        compositor.draw_glyph(
+                            cmd.bounds,
+                            alloc.uv_bounds,
+                            cmd.color,
+                            GlyphKind::AlphaMask,
+                        );
                     } else {
-                        compositor.draw_glyph(cmd.bounds, alloc.uv_bounds, cmd.color, false);
+                        compositor.push_clip(cmd.clip_bounds, [0.0; 4]);
+                        compositor.draw_glyph(
+                            cmd.bounds,
+                            alloc.uv_bounds,
+                            cmd.color,
+                            GlyphKind::AlphaMask,
+                        );
+                        let _ = compositor.pop_clip();
                     }
                 }
             }
@@ -361,7 +401,7 @@ impl SurfaceCompositor for GpuSurfaceBridge {
         let mut pb = PathBuilder::new();
         pb.move_to(p1.x, p1.y);
         pb.line_to(p2.x, p2.y);
-        pb.end(false);
+        pb.end_open();
         let path = pb.build();
 
         let mut tess = PathTessellator::new();
@@ -369,7 +409,35 @@ impl SurfaceCompositor for GpuSurfaceBridge {
         self.line_count += 1;
     }
 
+    fn push_clip(&mut self, rect: Rect, corner_radii: [f32; 4]) {
+        Self::push_clip(self, rect, corner_radii);
+    }
+
+    fn pop_clip(&mut self) {
+        let _ = Self::pop_clip(self);
+    }
+
     fn draw_text(&mut self, text: &str, origin: Point, font_size: f32, color: Color) {
+        self.draw_text_styled(
+            text,
+            origin,
+            font_size,
+            400,
+            tej_ui_hal::TextFamily::SansSerif,
+            color,
+        );
+    }
+
+    fn draw_text_styled(
+        &mut self,
+        text: &str,
+        origin: Point,
+        font_size: f32,
+        weight: u16,
+        family: tej_ui_hal::TextFamily,
+        color: Color,
+    ) {
+        let monospace = matches!(family, tej_ui_hal::TextFamily::Monospace);
         if text.is_empty() || color.a == 0 {
             return;
         }
@@ -385,40 +453,85 @@ impl SurfaceCompositor for GpuSurfaceBridge {
             .last()
             .map_or(UNCLIPPED_BOUNDS, |c| c.bounds);
 
-        let mut cursor_x = origin.x;
-        let mut cursor_y = origin.y;
-        let line_height = safe_size * 1.35;
+        let sf = self.scale_factor.max(0.5);
+        let inv_sf = 1.0 / sf;
+        let phys_size = (safe_size * sf).round().max(1.0);
+        let size_px = phys_size.clamp(1.0, f32::from(u16::MAX)) as u16;
 
-        for ch in text.chars() {
-            if ch == '\n' {
-                cursor_x = origin.x;
-                cursor_y += line_height;
-                continue;
+        let family_kind = if monospace {
+            tej_ui_text::FontFamilyKind::Monospace
+        } else {
+            tej_ui_text::FontFamilyKind::SansSerif
+        };
+        let font_entry = FontRegistry::global()
+            .rasterizer(family_kind, weight, tej_ui_text::FontSlant::Normal)
+            .or_else(|| self.rasterizer.as_ref().map(|r| (0, Arc::clone(r))));
+
+        if let Some((font_id, rast)) = font_entry {
+            let (ascent_px, _descent_px, line_height_px) = rast.horizontal_line_metrics(phys_size);
+            let mut pen_x_px = (origin.x * sf).round();
+            let mut baseline_y_px = (origin.y * sf).round() + ascent_px.round();
+
+            for ch in text.chars() {
+                if ch == '\n' {
+                    pen_x_px = (origin.x * sf).round();
+                    baseline_y_px += line_height_px.round();
+                    continue;
+                }
+
+                let g = rast.rasterize(ch, phys_size);
+                if !ch.is_whitespace() && g.metrics.width > 0 && g.metrics.height > 0 {
+                    let gx_px = pen_x_px.round() + bearing_to_f32(g.metrics.xmin);
+                    let gy_px = baseline_y_px
+                        - bearing_to_f32(g.metrics.ymin)
+                        - count_to_f32(g.metrics.height);
+                    self.glyphs.push(GlyphDrawCommand {
+                        font_id,
+                        monospace,
+                        weight,
+                        size_px,
+                        ch,
+                        bounds: [
+                            gx_px * inv_sf,
+                            gy_px * inv_sf,
+                            count_to_f32(g.metrics.width) * inv_sf,
+                            count_to_f32(g.metrics.height) * inv_sf,
+                        ],
+                        color: premul,
+                        clip_bounds,
+                    });
+                }
+
+                pen_x_px += g.metrics.advance_width;
             }
+        } else {
+            let mut cursor_x = origin.x;
+            let mut cursor_y = origin.y;
+            let line_height = safe_size * 1.35;
+            let approx_w = safe_size * 0.6;
 
-            let (advance, glyph_w, glyph_h) = if let Some(ref rast) = self.rasterizer {
-                let g = rast.rasterize(ch, safe_size);
-                (
-                    g.metrics.advance_width,
-                    (g.metrics.width as f32).max(1.0),
-                    (g.metrics.height as f32).max(1.0),
-                )
-            } else {
-                let approx_w = safe_size * 0.6;
-                (approx_w, approx_w, safe_size)
-            };
+            for ch in text.chars() {
+                if ch == '\n' {
+                    cursor_x = origin.x;
+                    cursor_y += line_height;
+                    continue;
+                }
 
-            if !ch.is_whitespace() {
-                self.glyphs.push(GlyphDrawCommand {
-                    ch,
-                    bounds: [cursor_x, cursor_y, glyph_w, glyph_h],
-                    font_size: safe_size,
-                    color: premul,
-                    clip_bounds,
-                });
+                if !ch.is_whitespace() {
+                    self.glyphs.push(GlyphDrawCommand {
+                        font_id: 0,
+                        monospace,
+                        weight,
+                        size_px,
+                        ch,
+                        bounds: [cursor_x, cursor_y, approx_w, safe_size],
+                        color: premul,
+                        clip_bounds,
+                    });
+                }
+
+                cursor_x += approx_w;
             }
-
-            cursor_x += advance;
         }
     }
 
@@ -571,6 +684,7 @@ impl<V: View> NativeWinitApp<V> {
             self.dispatcher.pressed_node,
         );
         self.root_view.paint(state, &mut paint_ctx);
+        paint_ctx.flush_overlays();
         gpu.bridge.end_frame();
 
         let _ = gpu.bridge.flush_to_compositor(
@@ -582,6 +696,112 @@ impl<V: View> NativeWinitApp<V> {
 
         self.dirty_tracker.reset();
         self.needs_repaint = false;
+    }
+
+    fn handle_resized(&mut self, width: u32, height: u32) {
+        if width == 0 || height == 0 {
+            return;
+        }
+        if let Some(gpu) = self.gpu.as_mut() {
+            let _ = gpu.target.resize(&gpu.ctx, width, height);
+            let sf = gpu.bridge.scale_factor();
+            let logical = Size::new(
+                (dim_to_f32(width) / sf).max(1.0),
+                (dim_to_f32(height) / sf).max(1.0),
+            );
+            gpu.bridge.resize(logical);
+            gpu.window.request_redraw();
+            self.needs_relayout = true;
+            self.needs_repaint = true;
+            self.dirty_tracker.mark_full_dirty();
+            self.dispatch_ui_event(&UiEvent::Resize {
+                width: logical.width,
+                height: logical.height,
+            });
+        }
+    }
+
+    fn handle_scale_factor_changed(&mut self, scale_factor: f64) {
+        let sf = scale_factor as f32;
+        if let Some(gpu) = self.gpu.as_mut() {
+            gpu.bridge.set_scale_factor(sf);
+            let phys = gpu.window.inner_size();
+            let logical = Size::new(
+                (dim_to_f32(phys.width) / sf).max(1.0),
+                (dim_to_f32(phys.height) / sf).max(1.0),
+            );
+            gpu.bridge.resize(logical);
+            gpu.window.request_redraw();
+        }
+        self.needs_relayout = true;
+        self.needs_repaint = true;
+        self.dirty_tracker.mark_full_dirty();
+        self.dispatch_ui_event(&UiEvent::ScaleFactorChanged { scale_factor: sf });
+    }
+
+    fn handle_mouse_input(&mut self, state: ElementState, button: WinitMouseButton) {
+        let Some(mapped_btn) = map_winit_mouse_button(button) else {
+            return;
+        };
+        let adj = Point::new(self.cursor_pos.x, self.cursor_pos.y + self.scroll_offset_y);
+        let ui_evt = match state {
+            ElementState::Pressed => UiEvent::MouseDown {
+                button: mapped_btn,
+                position: adj,
+            },
+            ElementState::Released => UiEvent::MouseUp {
+                button: mapped_btn,
+                position: adj,
+            },
+        };
+        self.dispatch_ui_event(&ui_evt);
+        if (self.needs_repaint || self.needs_relayout)
+            && let Some(gpu) = self.gpu.as_ref()
+        {
+            gpu.window.request_redraw();
+        }
+    }
+
+    fn handle_mouse_wheel(&mut self, delta: MouseScrollDelta) {
+        let (dx, dy) = match delta {
+            MouseScrollDelta::LineDelta(x, y) => (x, y),
+            MouseScrollDelta::PixelDelta(p) => (p.x as f32 / 20.0, p.y as f32 / 20.0),
+        };
+        self.scroll_offset_y = (self.scroll_offset_y - dy * 45.0).max(0.0);
+        self.needs_repaint = true;
+        self.dirty_tracker.mark_full_dirty();
+        self.dispatch_ui_event(&UiEvent::Scroll {
+            delta_x: dx,
+            delta_y: dy,
+            position: self.cursor_pos,
+        });
+        if let Some(gpu) = self.gpu.as_ref() {
+            gpu.window.request_redraw();
+        }
+    }
+
+    fn handle_keyboard_input(&mut self, event: &KeyEvent) {
+        let key_code = map_winit_key_code(event);
+        let ui_evt = match event.state {
+            ElementState::Pressed => UiEvent::KeyDown { key_code },
+            ElementState::Released => UiEvent::KeyUp { key_code },
+        };
+        self.dispatch_ui_event(&ui_evt);
+
+        if event.state == ElementState::Pressed
+            && let Some(ref text) = event.text
+        {
+            let filtered: String = text.chars().filter(|c| !c.is_control()).collect();
+            if !filtered.is_empty() {
+                self.dispatch_ui_event(&UiEvent::TextInput { text: filtered });
+            }
+        }
+
+        if (self.needs_repaint || self.needs_relayout)
+            && let Some(gpu) = self.gpu.as_ref()
+        {
+            gpu.window.request_redraw();
+        }
     }
 }
 
@@ -608,8 +828,8 @@ impl<V: View> ApplicationHandler for NativeWinitApp<V> {
         let phys_size = window.inner_size();
         let scale_factor = window.scale_factor() as f32;
         let logical_size = Size::new(
-            (phys_size.width as f32 / scale_factor).max(1.0),
-            (phys_size.height as f32 / scale_factor).max(1.0),
+            (dim_to_f32(phys_size.width) / scale_factor).max(1.0),
+            (dim_to_f32(phys_size.height) / scale_factor).max(1.0),
         );
 
         let backend_cfg = BackendConfig::default();
@@ -674,44 +894,9 @@ impl<V: View> ApplicationHandler for NativeWinitApp<V> {
                 self.dispatch_ui_event(&UiEvent::CloseRequested);
                 event_loop.exit();
             }
-            WindowEvent::Resized(new_size) => {
-                if new_size.width == 0 || new_size.height == 0 {
-                    return;
-                }
-                if let Some(gpu) = self.gpu.as_mut() {
-                    let _ = gpu.target.resize(&gpu.ctx, new_size.width, new_size.height);
-                    let sf = gpu.bridge.scale_factor();
-                    let logical = Size::new(
-                        (new_size.width as f32 / sf).max(1.0),
-                        (new_size.height as f32 / sf).max(1.0),
-                    );
-                    gpu.bridge.resize(logical);
-                    gpu.window.request_redraw();
-                    self.needs_relayout = true;
-                    self.needs_repaint = true;
-                    self.dirty_tracker.mark_full_dirty();
-                    self.dispatch_ui_event(&UiEvent::Resize {
-                        width: logical.width,
-                        height: logical.height,
-                    });
-                }
-            }
+            WindowEvent::Resized(new_size) => self.handle_resized(new_size.width, new_size.height),
             WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
-                let sf = scale_factor as f32;
-                if let Some(gpu) = self.gpu.as_mut() {
-                    gpu.bridge.set_scale_factor(sf);
-                    let phys = gpu.window.inner_size();
-                    let logical = Size::new(
-                        (phys.width as f32 / sf).max(1.0),
-                        (phys.height as f32 / sf).max(1.0),
-                    );
-                    gpu.bridge.resize(logical);
-                    gpu.window.request_redraw();
-                }
-                self.needs_relayout = true;
-                self.needs_repaint = true;
-                self.dirty_tracker.mark_full_dirty();
-                self.dispatch_ui_event(&UiEvent::ScaleFactorChanged { scale_factor: sf });
+                self.handle_scale_factor_changed(scale_factor);
             }
             WindowEvent::CursorMoved { position, .. } => {
                 let sf = self.gpu.as_ref().map_or(1.0, |g| g.bridge.scale_factor());
@@ -719,74 +904,15 @@ impl<V: View> ApplicationHandler for NativeWinitApp<V> {
                 self.cursor_pos = logical_pos;
                 let adj = Point::new(logical_pos.x, logical_pos.y + self.scroll_offset_y);
                 self.dispatch_ui_event(&UiEvent::MouseMove { position: adj });
-                if self.needs_repaint {
-                    if let Some(gpu) = self.gpu.as_ref() {
-                        gpu.window.request_redraw();
-                    }
-                }
-            }
-            WindowEvent::MouseInput { state, button, .. } => {
-                let Some(mapped_btn) = map_winit_mouse_button(button) else {
-                    return;
-                };
-                let adj = Point::new(self.cursor_pos.x, self.cursor_pos.y + self.scroll_offset_y);
-                let ui_evt = match state {
-                    ElementState::Pressed => UiEvent::MouseDown {
-                        button: mapped_btn,
-                        position: adj,
-                    },
-                    ElementState::Released => UiEvent::MouseUp {
-                        button: mapped_btn,
-                        position: adj,
-                    },
-                };
-                self.dispatch_ui_event(&ui_evt);
-                if self.needs_repaint || self.needs_relayout {
-                    if let Some(gpu) = self.gpu.as_ref() {
-                        gpu.window.request_redraw();
-                    }
-                }
-            }
-            WindowEvent::MouseWheel { delta, .. } => {
-                let (dx, dy) = match delta {
-                    MouseScrollDelta::LineDelta(x, y) => (x, y),
-                    MouseScrollDelta::PixelDelta(p) => (p.x as f32 / 20.0, p.y as f32 / 20.0),
-                };
-                self.scroll_offset_y = (self.scroll_offset_y - dy * 45.0).max(0.0);
-                self.needs_repaint = true;
-                self.dirty_tracker.mark_full_dirty();
-                self.dispatch_ui_event(&UiEvent::Scroll {
-                    delta_x: dx,
-                    delta_y: dy,
-                    position: self.cursor_pos,
-                });
-                if let Some(gpu) = self.gpu.as_ref() {
+                if self.needs_repaint
+                    && let Some(gpu) = self.gpu.as_ref()
+                {
                     gpu.window.request_redraw();
                 }
             }
-            WindowEvent::KeyboardInput { event, .. } => {
-                let key_code = map_winit_key_code(&event);
-                let ui_evt = match event.state {
-                    ElementState::Pressed => UiEvent::KeyDown { key_code },
-                    ElementState::Released => UiEvent::KeyUp { key_code },
-                };
-                self.dispatch_ui_event(&ui_evt);
-
-                if event.state == ElementState::Pressed {
-                    if let Some(ref text) = event.text {
-                        let filtered: String = text.chars().filter(|c| !c.is_control()).collect();
-                        if !filtered.is_empty() {
-                            self.dispatch_ui_event(&UiEvent::TextInput { text: filtered });
-                        }
-                    }
-                }
-
-                if self.needs_repaint || self.needs_relayout {
-                    if let Some(gpu) = self.gpu.as_ref() {
-                        gpu.window.request_redraw();
-                    }
-                }
-            }
+            WindowEvent::MouseInput { state, button, .. } => self.handle_mouse_input(state, button),
+            WindowEvent::MouseWheel { delta, .. } => self.handle_mouse_wheel(delta),
+            WindowEvent::KeyboardInput { event, .. } => self.handle_keyboard_input(&event),
             WindowEvent::Focused(focused) => {
                 let evt = if focused {
                     UiEvent::FocusGained

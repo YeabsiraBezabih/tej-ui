@@ -20,12 +20,13 @@ pub use geometry::{Insets, Point, Rect, Size};
 pub use grid_extended::{
     AnchorPositionArea, GridAutoFlow, JustifyItems, JustifySelf, PlaceContent, ResizeMode,
 };
-pub use logical::{LogicalCornerRadii, LogicalInsets, LogicalSize};
+pub use logical::{LogicalCornerRadii, LogicalInsets, LogicalSize, WritingAxis};
 pub use scroll_snap::{
     OverscrollBehavior, ScrollSnapAlign, ScrollSnapStop, ScrollSnapType, ScrollbarGutter,
     ScrollbarWidth,
 };
 pub use storage::LayoutArena;
 pub use style::{
-    AlignItems, Dimension, DisplayMode, FlexDirection, FlexWrap, JustifyContent, LayoutStyle,
+    AlignItems, AlignSelf, Dimension, DisplayMode, FlexDirection, FlexWrap, JustifyContent,
+    LayoutStyle, Overflow,
 };

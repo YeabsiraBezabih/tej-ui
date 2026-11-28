@@ -19,10 +19,10 @@ use tej_ui_hal::Color;
 pub fn get_rss_mb() -> f64 {
     if let Ok(statm) = fs::read_to_string("/proc/self/statm") {
         let parts: Vec<&str> = statm.split_whitespace().collect();
-        if parts.len() >= 2 {
-            if let Ok(resident_pages) = parts[1].parse::<u64>() {
-                return (resident_pages as f64 * 4.0) / 1024.0;
-            }
+        if parts.len() >= 2
+            && let Ok(resident_pages) = parts[1].parse::<u32>()
+        {
+            return (f64::from(resident_pages) * 4.0) / 1024.0;
         }
     }
     0.0
@@ -104,9 +104,9 @@ pub fn build_tier_3_studio_scene<S: mydb::Storage>(
     let tris_per_meshlet = 128;
 
     for i in 0..target_meshlets {
-        let x = ((i % 100) as f32 - 50.0) * 2.5;
-        let z = (((i / 100) % 100) as f32 - 50.0) * 2.5;
-        let y = ((i / 10000) as f32) * 2.0;
+        let x = (f32::from(u16::try_from(i % 100).unwrap_or(0)) - 50.0) * 2.5;
+        let z = (f32::from(u16::try_from((i / 100) % 100).unwrap_or(0)) - 50.0) * 2.5;
+        let y = f32::from(u16::try_from(i / 10000).unwrap_or(0)) * 2.0;
 
         let (hdr, page) =
             create_synthetic_meshlet_page(i as u32, [x, y, z], 1.25, tris_per_meshlet);
@@ -147,9 +147,9 @@ pub fn build_tier_4_out_of_core_disk(
     let mut engine = NaniteRenderEngine::new(vp, 1024);
 
     for i in 0..target_meshlets {
-        let x = ((i % 280) as f32 - 140.0) * 2.5;
-        let z = (((i / 280) % 280) as f32 - 140.0) * 2.5;
-        let y = ((i / 78400) as f32) * 2.0;
+        let x = (f32::from(u16::try_from(i % 280).unwrap_or(0)) - 140.0) * 2.5;
+        let z = (f32::from(u16::try_from((i / 280) % 280).unwrap_or(0)) - 140.0) * 2.5;
+        let y = f32::from(u16::try_from(i / 78400).unwrap_or(0)) * 2.0;
 
         let (hdr, page) =
             create_synthetic_meshlet_page(i as u32, [x, y, z], 1.25, tris_per_meshlet);

@@ -84,7 +84,7 @@ impl View for Alert {
     }
 
     fn rebuild(&self, state: &mut Self::State) {
-        state.title = self.title.clone();
+        state.title.clone_from(&self.title);
     }
 
     fn patch(&self, state: &mut Self::State, _dirty_bits: u64) {
@@ -117,8 +117,10 @@ impl View for Alert {
             .unwrap_or(state.bounds);
 
         let accent = match self.severity {
+            AlertSeverity::Info => ctx.theme.colors.info,
+            AlertSeverity::Success => ctx.theme.colors.success,
+            AlertSeverity::Warning => ctx.theme.colors.warning,
             AlertSeverity::Destructive => ctx.theme.colors.destructive,
-            _ => self.accent_color(),
         };
 
         // Outer border
@@ -128,10 +130,13 @@ impl View for Alert {
         let inner = Rect::new(
             bounds.origin.x + 1.0,
             bounds.origin.y + 1.0,
-            bounds.size.width - 2.0,
-            bounds.size.height - 2.0,
+            (bounds.size.width - 2.0).max(0.0),
+            (bounds.size.height - 2.0).max(0.0),
         );
-        ctx.fill_rounded_rect(inner, ctx.theme.radii.md - 1.0, ctx.theme.colors.card);
+        let inner_radius = (ctx.theme.radii.md - 1.0).max(0.0);
+        ctx.fill_rounded_rect(inner, inner_radius, ctx.theme.colors.card);
+
+        ctx.push_clip(inner, [inner_radius; 4]);
 
         // Left accent indicator bar
         let bar = Rect::new(bounds.origin.x, bounds.origin.y, 4.0, bounds.size.height);
@@ -156,5 +161,7 @@ impl View for Alert {
                 ctx.theme.colors.muted_foreground,
             );
         }
+
+        ctx.pop_clip();
     }
 }

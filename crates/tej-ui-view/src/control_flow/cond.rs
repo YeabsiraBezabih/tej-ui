@@ -53,30 +53,30 @@ impl<Then: View, Else: View> View for If<Then, Else> {
 
     fn rebuild(&self, state: &mut Self::State) {
         let cond = self.condition.get();
-        if cond != state.current_cond {
+        if cond == state.current_cond {
+            match &mut state.branch_state {
+                EitherState::Then(s) => self.then_view.rebuild(s),
+                EitherState::Else(s) => self.else_view.rebuild(s),
+            }
+        } else {
             state.current_cond = cond;
             state.branch_state = if cond {
                 EitherState::Then(self.then_view.build())
             } else {
                 EitherState::Else(self.else_view.build())
             };
-        } else {
-            match &mut state.branch_state {
-                EitherState::Then(s) => self.then_view.rebuild(s),
-                EitherState::Else(s) => self.else_view.rebuild(s),
-            }
         }
     }
 
     fn patch(&self, state: &mut Self::State, dirty_bits: u64) {
         let cond = self.condition.get();
-        if cond != state.current_cond {
-            self.rebuild(state);
-        } else {
+        if cond == state.current_cond {
             match &mut state.branch_state {
                 EitherState::Then(s) => self.then_view.patch(s, dirty_bits),
                 EitherState::Else(s) => self.else_view.patch(s, dirty_bits),
             }
+        } else {
+            self.rebuild(state);
         }
     }
 
@@ -84,6 +84,18 @@ impl<Then: View, Else: View> View for If<Then, Else> {
         match &mut state.branch_state {
             EitherState::Then(s) => self.then_view.layout(s, arena),
             EitherState::Else(s) => self.else_view.layout(s, arena),
+        }
+    }
+
+    fn layout_children(
+        &self,
+        state: &mut Self::State,
+        arena: &mut tej_ui_layout::LayoutArena,
+        parent: u32,
+    ) {
+        match &mut state.branch_state {
+            EitherState::Then(s) => self.then_view.layout_children(s, arena, parent),
+            EitherState::Else(s) => self.else_view.layout_children(s, arena, parent),
         }
     }
 

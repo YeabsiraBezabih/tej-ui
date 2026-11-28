@@ -96,20 +96,20 @@ pub fn pbr_shade_fragment(
     mat: PbrMaterialParams,
     sh: &SphericalHarmonics9,
 ) -> (u8, u8, u8) {
-    let n = normal.normalize();
-    let v = view_dir.normalize();
-    let l = light_dir.normalize();
-    let h = (v + l).normalize();
+    let normal_n = normal.normalize();
+    let view_v = view_dir.normalize();
+    let light_l = light_dir.normalize();
+    let half_vec = (view_v + light_l).normalize();
 
-    let ndotv = n.dot(v).max(1e-4);
-    let ndotl = n.dot(l).max(0.0);
-    let ndoth = n.dot(h).max(0.0);
-    let vdoth = v.dot(h).max(0.0);
+    let ndotv = normal_n.dot(view_v).max(1e-4);
+    let ndotl = normal_n.dot(light_l).max(0.0);
+    let ndoth = normal_n.dot(half_vec).max(0.0);
+    let vdoth = view_v.dot(half_vec).max(0.0);
 
     let albedo_vec = Vec3::new(
-        mat.albedo.r as f32 / 255.0,
-        mat.albedo.g as f32 / 255.0,
-        mat.albedo.b as f32 / 255.0,
+        f32::from(mat.albedo.r) / 255.0,
+        f32::from(mat.albedo.g) / 255.0,
+        f32::from(mat.albedo.b) / 255.0,
     );
 
     // Dielectric base reflectivity F0 = 0.04 (plastic/wood), pure metal F0 = albedo
@@ -143,7 +143,7 @@ pub fn pbr_shade_fragment(
     let direct = (kd * diffuse_brdf + specular_brdf) * light_color * ndotl;
 
     // Ambient diffuse irradiance from 9-coefficient Spherical Harmonics
-    let ambient_irr = sh.eval(n);
+    let ambient_irr = sh.eval(normal_n);
     let ambient = kd * albedo_vec * ambient_irr;
 
     // Tone mapping and clamp

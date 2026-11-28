@@ -76,7 +76,7 @@ impl AgentPlanState {
             .iter()
             .filter(|s| s.status == StepStatus::Done || s.status == StepStatus::Skipped)
             .count();
-        completed as f32 / self.steps.len() as f32
+        crate::count_to_f32(completed) / crate::count_to_f32(self.steps.len())
     }
 }
 
@@ -94,8 +94,8 @@ impl Default for AgentPlanCard {
         Self {
             bounds: Rect::ZERO,
             background: Color::WHITE,
-            border_color: Color::from_rgb_u32(0xEAECF0), // Tej Gray 200
-            corner_radius: 12.0,                         // Tej rounded-xl
+            border_color: Color::from_rgb_u32(0x00EA_ECF0), // Tej Gray 200
+            corner_radius: 12.0,                            // Tej rounded-xl
         }
     }
 }

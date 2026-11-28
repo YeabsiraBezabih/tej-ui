@@ -59,9 +59,9 @@ impl Default for NodeEditor {
     fn default() -> Self {
         Self {
             bounds: Rect::ZERO,
-            background: Color::from_rgb_u32(0x101828), // Tej Gray 900
-            grid_color: Color::from_rgb_u32(0x1D2939), // Tej Gray 800
-            link_color: Color::from_rgb_u32(0x7F56D9), // Tej Brand 600
+            background: Color::from_rgb_u32(0x0010_1828), // Tej Gray 900
+            grid_color: Color::from_rgb_u32(0x001D_2939), // Tej Gray 800
+            link_color: Color::from_rgb_u32(0x007F_56D9), // Tej Brand 600
         }
     }
 }

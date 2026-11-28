@@ -64,11 +64,11 @@ impl UptimeBar {
     #[must_use]
     pub fn color_for_uptime(&self, percentage: f32) -> Color {
         if percentage >= 99.9 {
-            Color::from_rgb_u32(0x12B76A) // Tej Success 500
+            Color::from_rgb_u32(0x0012_B76A) // Tej Success 500
         } else if percentage >= 95.0 {
-            Color::from_rgb_u32(0xF79009) // Tej Warning 500
+            Color::from_rgb_u32(0x00F7_9009) // Tej Warning 500
         } else {
-            Color::from_rgb_u32(0xF04438) // Tej Error 500
+            Color::from_rgb_u32(0x00F0_4438) // Tej Error 500
         }
     }
 }

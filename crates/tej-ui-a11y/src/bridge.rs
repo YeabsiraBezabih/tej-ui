@@ -30,9 +30,14 @@ impl A11yBridge {
         Self::default()
     }
 
-    /// Sets whether an active screen reader (e.g. Narrator, VoiceOver, Orca) was detected by the OS.
-    pub fn set_screen_reader_active(&mut self, active: bool) {
-        self.is_screen_reader_active = active;
+    /// Marks an active screen reader (e.g. Narrator, VoiceOver, Orca) as detected by the OS.
+    pub fn activate_screen_reader(&mut self) {
+        self.is_screen_reader_active = true;
+    }
+
+    /// Marks the screen reader as inactive.
+    pub fn deactivate_screen_reader(&mut self) {
+        self.is_screen_reader_active = false;
     }
 
     /// Returns true if a screen reader is actively consuming accessibility events.

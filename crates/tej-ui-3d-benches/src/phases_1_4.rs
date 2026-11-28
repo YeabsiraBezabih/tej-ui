@@ -114,17 +114,17 @@ pub fn run_phase_2_culling_throughput<S: Storage>(
     let max_error = 0.05;
 
     // Benchmark 10k cluster iterations using zero-allocation SIMD frustum & LOD culling
-    let iterations = 1000;
+    let iterations: u32 = 1000;
     let t0 = Instant::now();
     for _ in 0..iterations {
         let _ = viewport.cull_frustum_simd(&frustum_100, camera_pos, max_error);
     }
     let total_elapsed = t0.elapsed();
-    let cluster_count = viewport.cluster_count().max(1);
-    let per_call_us = (total_elapsed.as_nanos() as f64 / 1000.0) / (iterations as f64);
-    let latency_10k_us = per_call_us * (10_000.0 / cluster_count as f64);
+    let cluster_count = u32::try_from(viewport.cluster_count().max(1)).unwrap_or(u32::MAX);
+    let per_call_us = (total_elapsed.as_secs_f64() * 1e6) / f64::from(iterations);
+    let latency_10k_us = per_call_us * (10_000.0 / f64::from(cluster_count));
 
-    let total_clusters_evaluated = (cluster_count * iterations) as f64;
+    let total_clusters_evaluated = f64::from(cluster_count) * f64::from(iterations);
     let culling_throughput_clusters_per_sec =
         total_clusters_evaluated / total_elapsed.as_secs_f64().max(1e-6);
 
@@ -183,12 +183,12 @@ pub fn run_phase_3_differential_streaming<S: Storage>(
     }
 
     let elapsed = t0.elapsed();
-    let delta_diff_latency_us = (elapsed.as_micros() as f64) / (iterations as f64);
+    let delta_diff_latency_us = (elapsed.as_secs_f64() * 1e6) / f64::from(iterations);
 
     // Bandwidth: 4 KiB per uploaded page
-    let total_bytes = uploader.bytes_uploaded;
+    let total_bytes = u32::try_from(uploader.bytes_uploaded).unwrap_or(u32::MAX);
     let zero_copy_page_stream_gb_per_sec =
-        (total_bytes as f64 / (1024.0 * 1024.0 * 1024.0)) / elapsed.as_secs_f64().max(1e-6);
+        (f64::from(total_bytes) / (1024.0 * 1024.0 * 1024.0)) / elapsed.as_secs_f64().max(1e-6);
 
     Phase3Result {
         delta_diff_latency_us,
@@ -234,14 +234,14 @@ pub fn run_phase_4_rasterization_throughput() -> Phase4Result {
 
     // Scenario B: High Overdraw (8.0x) - 20 stacked meshes along Z axis
     let mut scene_high = Scene::new();
-    for i in 0..20 {
+    for i in 0..20u8 {
         let mut obj = Object3D::new(
-            i + 1,
+            u64::from(i) + 1,
             "StackedLayer",
             mesh.clone(),
-            StandardMaterial::new(Color::rgb(50 + (i as u8) * 10, 120, 180)),
+            StandardMaterial::new(Color::rgb(50 + i * 10, 120, 180)),
         );
-        obj.transform.position.z = -((i as f32) * 0.1);
+        obj.transform.position.z = -(f32::from(i) * 0.1);
         scene_high.add_object(obj);
     }
 
@@ -254,8 +254,8 @@ pub fn run_phase_4_rasterization_throughput() -> Phase4Result {
 
     let pixels = 1920.0 * 1080.0;
     let pixel_fill_rate_mpixels_per_sec = (pixels / (frame_render_ms / 1000.0)) / 1_000_000.0;
-    let triangle_rate_mtris_per_sec =
-        ((mesh.indices.len() / 3) as f64 / (frame_render_ms / 1000.0)) / 1_000_000.0;
+    let tris = u32::try_from(mesh.indices.len() / 3).unwrap_or(u32::MAX);
+    let triangle_rate_mtris_per_sec = (f64::from(tris) / (frame_render_ms / 1000.0)) / 1_000_000.0;
 
     Phase4Result {
         frame_render_ms,

@@ -33,6 +33,7 @@ impl ToastItem {
     }
 
     /// Add descriptive message.
+    #[must_use]
     pub fn message(mut self, message: impl Into<String>) -> Self {
         self.message = Some(message.into());
         self

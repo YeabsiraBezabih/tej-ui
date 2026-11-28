@@ -73,24 +73,21 @@ impl TextShaper {
         let mut iter = text.char_indices().peekable();
         while let Some((idx, c)) = iter.next() {
             // Check for programming ligatures: "->", "==", "!=", "=>", "<="
-            if let Some(&(_, next_c)) = iter.peek() {
-                if matches!(
-                    (c, next_c),
-                    ('-', '>') | ('=', '=') | ('!', '=') | ('=', '>') | ('<', '=')
-                ) {
-                    let _ = iter.next(); // Consume second ligature character
-                    let adv = char_width * 1.8; // Compact ligature width
-                    glyphs.push(GlyphCluster {
-                        cluster_index: idx,
-                        char_count: 2,
-                        advance: adv,
-                        x_offset: 0.0,
-                        y_offset: 0.0,
-                        is_ligature: true,
-                    });
-                    total_width += adv;
-                    continue;
-                }
+            if let Some(&(_, next_c)) = iter.peek()
+                && matches!((c, next_c), ('-' | '=', '>') | ('=' | '!' | '<', '='))
+            {
+                let _ = iter.next(); // Consume second ligature character
+                let adv = char_width * 1.8; // Compact ligature width
+                glyphs.push(GlyphCluster {
+                    cluster_index: idx,
+                    char_count: 2,
+                    advance: adv,
+                    x_offset: 0.0,
+                    y_offset: 0.0,
+                    is_ligature: true,
+                });
+                total_width += adv;
+                continue;
             }
 
             let adv = if Self::is_fullwidth(c) {

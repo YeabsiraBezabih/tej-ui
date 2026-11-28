@@ -199,20 +199,14 @@ impl GpuCompositor {
         bounds: [f32; 4],
         uv_bounds: [f32; 4],
         color: PremulColor,
-        is_color_emoji: bool,
+        kind: super::text_pipeline::GlyphKind,
     ) {
         if self.clip_stack.is_culled() {
             return;
         }
 
         let cur_clip = self.clip_stack.current();
-        let inst = GlyphInstance::new(
-            bounds,
-            uv_bounds,
-            color,
-            cur_clip.clip_bounds,
-            is_color_emoji,
-        );
+        let inst = GlyphInstance::new(bounds, uv_bounds, color, cur_clip.clip_bounds, kind);
         self.text_pipeline.push_glyph(inst, cur_clip.scissor);
     }
 
@@ -246,11 +240,11 @@ impl GpuCompositor {
 
         let uniform = ViewportUniform {
             viewport_size: [
-                self.viewport_width_px as f32,
-                self.viewport_height_px as f32,
+                f32::from(u16::try_from(self.viewport_width_px).unwrap_or(u16::MAX)),
+                f32::from(u16::try_from(self.viewport_height_px).unwrap_or(u16::MAX)),
             ],
             scale_factor: self.scale_factor,
-            _pad: 0.0,
+            pad: 0.0,
         };
         ctx.queue()
             .write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
@@ -327,34 +321,7 @@ impl GpuCompositor {
             + self.text_pipeline.glyph_count()
             + vector_triangles) as u32;
 
-        let uniform = ViewportUniform {
-            viewport_size: [
-                self.viewport_width_px as f32,
-                self.viewport_height_px as f32,
-            ],
-            scale_factor: self.scale_factor,
-            _pad: 0.0,
-        };
-        ctx.queue()
-            .write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
-
-        let buffer_reallocated = self.buffer_pool.upload(ctx.device(), ctx.queue());
-        if buffer_reallocated {
-            self.bind_group = create_quad_bind_group(
-                ctx.device(),
-                &self.bind_group_layout,
-                &self.uniform_buffer,
-                self.buffer_pool.buffer(),
-            );
-        }
-
-        self.text_pipeline
-            .upload(ctx.device(), ctx.queue(), &self.uniform_buffer);
-
-        if let Some(mesh) = vector_mesh {
-            self.vector_pipeline.upload(ctx.device(), ctx.queue(), mesh);
-        }
-
+        let buffer_reallocated = self.upload_frame_state(ctx, vector_mesh);
         let atlas_bind_group = if let Some(ref mut a) = atlas {
             a.flush(ctx.queue());
             Some(self.text_pipeline.create_atlas_bind_group(ctx.device(), a))
@@ -381,79 +348,14 @@ impl GpuCompositor {
             RenderTarget::Headless(headless) => headless.view().clone(),
         };
 
-        let clear_wgpu = wgpu::Color {
-            r: f64::from(self.clear_color.channels[0]),
-            g: f64::from(self.clear_color.channels[1]),
-            b: f64::from(self.clear_color.channels[2]),
-            a: f64::from(self.clear_color.channels[3]),
-        };
-
-        let mut scissor_changes = 0u32;
         let batch_count =
             (self.buffer_pool.batches().len() + self.text_pipeline.batches().len()) as u32;
-
-        {
-            let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("tej_compositor_render_pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &target_view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(clear_wgpu),
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                timestamp_writes: None,
-                occlusion_query_set: None,
-            });
-
-            if !self.buffer_pool.batches().is_empty() {
-                rpass.set_pipeline(&self.pipeline);
-                rpass.set_bind_group(0, &self.bind_group, &[]);
-
-                let mut active_scissor: Option<ScissorRect> = None;
-
-                for batch in self.buffer_pool.batches() {
-                    let clamped = batch
-                        .scissor
-                        .clamp_to_viewport(self.viewport_width_px, self.viewport_height_px);
-                    if clamped.is_empty() {
-                        continue;
-                    }
-
-                    if active_scissor != Some(clamped) {
-                        rpass.set_scissor_rect(clamped.x, clamped.y, clamped.width, clamped.height);
-                        active_scissor = Some(clamped);
-                        scissor_changes += 1;
-                    }
-
-                    rpass.draw(0..4, batch.instance_range.clone());
-                }
-            }
-
-            if let Some(mesh) = vector_mesh {
-                if !mesh.is_empty() {
-                    // Reset scissor to full viewport so the last quad batch's scissor does not clip vectors.
-                    rpass.set_scissor_rect(0, 0, self.viewport_width_px, self.viewport_height_px);
-                    self.vector_pipeline.render(
-                        &mut rpass,
-                        None,
-                        self.viewport_width_px,
-                        self.viewport_height_px,
-                    );
-                }
-            }
-
-            if let Some(ref bg) = atlas_bind_group {
-                self.text_pipeline.render(
-                    &mut rpass,
-                    bg,
-                    self.viewport_width_px,
-                    self.viewport_height_px,
-                );
-            }
-        }
+        let scissor_changes = self.encode_render_pass(
+            &mut encoder,
+            &target_view,
+            atlas_bind_group.as_ref(),
+            vector_mesh,
+        );
 
         ctx.queue().submit(Some(encoder.finish()));
 
@@ -467,6 +369,120 @@ impl GpuCompositor {
             scissor_changes,
             buffer_reallocated,
         })
+    }
+
+    fn upload_frame_state(
+        &mut self,
+        ctx: &GpuContext,
+        vector_mesh: Option<&TessellatedMesh>,
+    ) -> bool {
+        let uniform = ViewportUniform {
+            viewport_size: [
+                f32::from(u16::try_from(self.viewport_width_px).unwrap_or(u16::MAX)),
+                f32::from(u16::try_from(self.viewport_height_px).unwrap_or(u16::MAX)),
+            ],
+            scale_factor: self.scale_factor,
+            pad: 0.0,
+        };
+        ctx.queue()
+            .write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
+
+        let buffer_reallocated = self.buffer_pool.upload(ctx.device(), ctx.queue());
+        if buffer_reallocated {
+            self.bind_group = create_quad_bind_group(
+                ctx.device(),
+                &self.bind_group_layout,
+                &self.uniform_buffer,
+                self.buffer_pool.buffer(),
+            );
+        }
+
+        self.text_pipeline
+            .upload(ctx.device(), ctx.queue(), &self.uniform_buffer);
+
+        if let Some(mesh) = vector_mesh {
+            self.vector_pipeline.upload(ctx.device(), ctx.queue(), mesh);
+        }
+
+        buffer_reallocated
+    }
+
+    fn encode_render_pass(
+        &self,
+        encoder: &mut wgpu::CommandEncoder,
+        target_view: &wgpu::TextureView,
+        atlas_bind_group: Option<&wgpu::BindGroup>,
+        vector_mesh: Option<&TessellatedMesh>,
+    ) -> u32 {
+        let clear_wgpu = wgpu::Color {
+            r: f64::from(self.clear_color.channels[0]),
+            g: f64::from(self.clear_color.channels[1]),
+            b: f64::from(self.clear_color.channels[2]),
+            a: f64::from(self.clear_color.channels[3]),
+        };
+
+        let mut scissor_changes = 0u32;
+        let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("tej_compositor_render_pass"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: target_view,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(clear_wgpu),
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            depth_stencil_attachment: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
+        });
+
+        if !self.buffer_pool.batches().is_empty() {
+            rpass.set_pipeline(&self.pipeline);
+            rpass.set_bind_group(0, &self.bind_group, &[]);
+
+            let mut active_scissor: Option<ScissorRect> = None;
+            for batch in self.buffer_pool.batches() {
+                let clamped = batch
+                    .scissor
+                    .clamp_to_viewport(self.viewport_width_px, self.viewport_height_px);
+                if clamped.is_empty() {
+                    continue;
+                }
+
+                if active_scissor != Some(clamped) {
+                    rpass.set_scissor_rect(clamped.x, clamped.y, clamped.width, clamped.height);
+                    active_scissor = Some(clamped);
+                    scissor_changes += 1;
+                }
+
+                rpass.draw(0..4, batch.instance_range.clone());
+            }
+        }
+
+        if let Some(mesh) = vector_mesh
+            && !mesh.is_empty()
+        {
+            // Reset scissor to full viewport so the last quad batch's scissor does not clip vectors.
+            rpass.set_scissor_rect(0, 0, self.viewport_width_px, self.viewport_height_px);
+            self.vector_pipeline.render(
+                &mut rpass,
+                None,
+                self.viewport_width_px,
+                self.viewport_height_px,
+            );
+        }
+
+        if let Some(bg) = atlas_bind_group {
+            self.text_pipeline.render(
+                &mut rpass,
+                bg,
+                self.viewport_width_px,
+                self.viewport_height_px,
+            );
+        }
+
+        scissor_changes
     }
 
     #[must_use]

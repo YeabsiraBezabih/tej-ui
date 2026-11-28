@@ -2,7 +2,6 @@
 
 use std::sync::Arc;
 use tej_ui_core::Signal;
-use tej_ui_hal::Color;
 use tej_ui_layout::{
     Dimension, FlexDirection, Insets, JustifyContent, LayoutArena, LayoutStyle, Point, Rect, Size,
 };
@@ -152,6 +151,17 @@ impl View for Sheet {
         state.panel_node = panel_node;
         arena.add_child(root, panel_node);
 
+        // Header row positions the [X] close button on the right edge so it never overlaps the title
+        let header_row_style = LayoutStyle {
+            direction: FlexDirection::Row,
+            justify_content: JustifyContent::FlexEnd,
+            width: Dimension::Percent(1.0),
+            height: Dimension::Points(28.0),
+            ..Default::default()
+        };
+        let header_row = arena.allocate_node(header_row_style);
+        arena.add_child(panel_node, header_row);
+
         let close_style = LayoutStyle {
             width: Dimension::Points(28.0),
             height: Dimension::Points(28.0),
@@ -159,7 +169,7 @@ impl View for Sheet {
         };
         let close_node = arena.allocate_node(close_style);
         state.close_node = close_node;
-        arena.add_child(panel_node, close_node);
+        arena.add_child(header_row, close_node);
 
         root
     }
@@ -171,7 +181,7 @@ impl View for Sheet {
 
         // Dimmed backdrop covering viewport
         if let Some(backdrop_bounds) = ctx.arena.computed_bounds.get(state.node as usize).copied() {
-            ctx.fill_rect(backdrop_bounds, Color::rgba(0, 0, 0, 140));
+            ctx.fill_rect(backdrop_bounds, ctx.theme.colors.scrim);
         }
 
         // Drawer panel surface
@@ -191,16 +201,24 @@ impl View for Sheet {
         );
         ctx.fill_rect(inner, ctx.theme.colors.card);
 
-        // Header title
+        // Header title clipped before the right-aligned close button
+        let title_clip = Rect::new(
+            panel_bounds.origin.x + 16.0,
+            panel_bounds.origin.y + 12.0,
+            (panel_bounds.size.width - 68.0).max(0.0),
+            36.0,
+        );
         let title_pt = Point::new(panel_bounds.origin.x + 16.0, panel_bounds.origin.y + 18.0);
+        ctx.push_clip(title_clip, [0.0; 4]);
         ctx.draw_text(
             &self.title,
             title_pt,
             ctx.theme.typography.h3.font_size,
             ctx.theme.colors.card_foreground,
         );
+        ctx.pop_clip();
 
-        // Close button
+        // Close button positioned on the right edge of the header
         if let Some(close_bounds) = ctx
             .arena
             .computed_bounds

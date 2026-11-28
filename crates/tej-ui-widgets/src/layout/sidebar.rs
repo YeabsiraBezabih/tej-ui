@@ -39,8 +39,14 @@ impl SidebarItem {
     }
 
     #[must_use]
-    pub const fn active(mut self, active: bool) -> Self {
-        self.is_active = active;
+    pub const fn mark_active(mut self) -> Self {
+        self.is_active = true;
+        self
+    }
+
+    #[must_use]
+    pub const fn inactive(mut self) -> Self {
+        self.is_active = false;
         self
     }
 }
@@ -151,6 +157,7 @@ impl View for Sidebar {
 
         for _ in 0..self.items.len() {
             let item_style = tej_ui_layout::LayoutStyle {
+                width: tej_ui_layout::Dimension::Percent(1.0),
                 height: tej_ui_layout::Dimension::Points(36.0),
                 ..Default::default()
             };
@@ -190,7 +197,7 @@ impl View for Sidebar {
                     .copied()
                     .unwrap_or(Rect::new(
                         bounds.origin.x + 8.0,
-                        bounds.origin.y + 8.0 + (i as f32) * 40.0,
+                        bounds.origin.y + 8.0 + crate::count_to_f32(i) * 40.0,
                         bounds.size.width - 16.0,
                         36.0,
                     ));
@@ -206,7 +213,7 @@ impl View for Sidebar {
                     );
                 }
 
-                // Item label
+                // Item label clipped to item bounds
                 if !state.is_collapsed {
                     let text_color = if item.is_active {
                         ctx.theme.colors.accent_foreground
@@ -217,12 +224,14 @@ impl View for Sidebar {
                         item_bounds.origin.x + 12.0,
                         item_bounds.origin.y + (item_bounds.size.height - 14.0) * 0.5,
                     );
+                    ctx.push_clip(item_bounds, [6.0; 4]);
                     ctx.draw_text(
                         &item.label,
                         text_pt,
                         ctx.theme.typography.body_small.font_size,
                         text_color,
                     );
+                    ctx.pop_clip();
                 }
             }
         }

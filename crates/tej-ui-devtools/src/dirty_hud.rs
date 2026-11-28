@@ -48,9 +48,14 @@ impl DirtyHudOverlay {
         }
     }
 
-    /// Toggles the HUD on or off.
-    pub fn set_enabled(&mut self, enabled: bool) {
-        self.enabled = enabled;
+    /// Enables the dirty-rect HUD overlay.
+    pub fn enable(&mut self) {
+        self.enabled = true;
+    }
+
+    /// Disables the dirty-rect HUD overlay.
+    pub fn disable(&mut self) {
+        self.enabled = false;
     }
 
     /// Whether the HUD is currently enabled.
@@ -100,7 +105,8 @@ impl DirtyHudOverlay {
             return 0.0;
         }
         let total: Duration = self.recent_metrics.iter().map(|m| m.frame_duration).sum();
-        (total.as_secs_f32() * 1000.0) / (self.recent_metrics.len() as f32)
+        let sample_count = f32::from(u16::try_from(self.recent_metrics.len()).unwrap_or(u16::MAX));
+        (total.as_secs_f32() * 1000.0) / sample_count
     }
 
     /// Estimates current Frames Per Second (FPS).

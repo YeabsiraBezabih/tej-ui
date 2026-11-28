@@ -59,7 +59,7 @@ impl LayoutArena {
         self.dirty.reserve(count);
 
         for (offset, &style) in styles.iter().enumerate() {
-            let _idx = start_idx + offset as u32;
+            let _ = offset;
             self.styles.push(style);
             self.computed_bounds.push(Rect::ZERO);
             self.children.push(SmallVec::new());
@@ -185,10 +185,10 @@ impl LayoutArena {
             self.mark_dirty(old_parent);
         }
 
-        if let Some(children_vec) = self.children.get_mut(parent as usize) {
-            if !children_vec.contains(&child) {
-                children_vec.push(child);
-            }
+        if let Some(children_vec) = self.children.get_mut(parent as usize)
+            && !children_vec.contains(&child)
+        {
+            children_vec.push(child);
         }
         if let Some(parent_slot) = self.parents.get_mut(child as usize) {
             *parent_slot = Some(parent);

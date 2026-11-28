@@ -57,7 +57,7 @@ impl CloseVetoToken {
     /// Check if any handler has vetoed the close request.
     #[must_use]
     pub fn is_vetoed(&self) -> bool {
-        self.vetoed.read().map(|v| *v).unwrap_or(false)
+        self.vetoed.read().is_ok_and(|v| *v)
     }
 
     /// Returns all registered veto reasons.
@@ -163,11 +163,12 @@ impl LifecycleManager {
     /// Dispatch an incoming lifecycle event and execute registered hooks.
     pub fn dispatch(&mut self, event: LifecycleEvent) {
         match event {
-            LifecycleEvent::ForegroundActive => self.transition_to(AppLifecycleState::Active),
+            LifecycleEvent::ForegroundActive | LifecycleEvent::Resume => {
+                self.transition_to(AppLifecycleState::Active);
+            }
             LifecycleEvent::ForegroundInactive => self.transition_to(AppLifecycleState::Inactive),
             LifecycleEvent::BackgroundHidden => self.transition_to(AppLifecycleState::Hidden),
             LifecycleEvent::Suspend => self.transition_to(AppLifecycleState::Suspended),
-            LifecycleEvent::Resume => self.transition_to(AppLifecycleState::Active),
             LifecycleEvent::LowMemory(level) => {
                 for listener in &self.memory_listeners {
                     listener(level);

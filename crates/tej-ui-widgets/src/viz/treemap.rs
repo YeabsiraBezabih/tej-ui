@@ -47,7 +47,7 @@ impl Default for Treemap {
             bounds: Rect::ZERO,
             gap: 2.0,
             corner_radius: 4.0,
-            border_color: Color::from_rgb_u32(0xEAECF0), // Tej Gray 200
+            border_color: Color::from_rgb_u32(0x00EA_ECF0), // Tej Gray 200
         }
     }
 }

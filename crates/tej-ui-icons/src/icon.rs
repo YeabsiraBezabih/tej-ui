@@ -113,10 +113,13 @@ impl Icon {
                     let p1 = Point::new(origin.x + control.x, origin.y + control.y);
                     let p2 = Point::new(origin.x + end.x, origin.y + end.y);
                     let poly_len = dist(p0, p1) + dist(p1, p2);
-                    let steps = ((poly_len * 0.5).ceil() as usize).clamp(4, 24);
+                    let steps = u16::try_from((poly_len * 0.5).ceil() as usize)
+                        .unwrap_or(24)
+                        .clamp(4, 24);
+                    let steps_f = f32::from(steps);
                     let mut prev = p0;
                     for i in 1..=steps {
-                        let t = (i as f32) / (steps as f32);
+                        let t = f32::from(i) / steps_f;
                         let mt = 1.0 - t;
                         let pt = if i == steps {
                             p2
@@ -137,10 +140,13 @@ impl Icon {
                     let p2 = Point::new(origin.x + ctrl2.x, origin.y + ctrl2.y);
                     let p3 = Point::new(origin.x + end.x, origin.y + end.y);
                     let poly_len = dist(p0, p1) + dist(p1, p2) + dist(p2, p3);
-                    let steps = ((poly_len * 0.5).ceil() as usize).clamp(6, 32);
+                    let steps = u16::try_from((poly_len * 0.5).ceil() as usize)
+                        .unwrap_or(32)
+                        .clamp(6, 32);
+                    let steps_f = f32::from(steps);
                     let mut prev = p0;
                     for i in 1..=steps {
-                        let t = (i as f32) / (steps as f32);
+                        let t = f32::from(i) / steps_f;
                         let mt = 1.0 - t;
                         let mt2 = mt * mt;
                         let t2 = t * t;

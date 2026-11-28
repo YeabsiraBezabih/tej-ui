@@ -41,8 +41,8 @@ fn bench_tej_cursor_blink() -> IdleBlinkMetric {
     let elapsed = t0.elapsed();
     let (alloc_count, _bytes, _peak) = TrackingAllocator::delta_since(snap);
 
-    let total_us = elapsed.as_micros() as f64;
-    let us_per_blink = total_us / (blinks as f64);
+    let total_us = elapsed.as_secs_f64() * 1e6;
+    let us_per_blink = total_us / crate::count_to_f64(blinks);
 
     IdleBlinkMetric {
         framework: "tej-ui (Dirty-Rect OS Compositor)",
@@ -88,8 +88,8 @@ fn bench_immediate_cursor_blink() -> IdleBlinkMetric {
     let elapsed = t0.elapsed();
     let (alloc_count, _bytes, _peak) = TrackingAllocator::delta_since(snap);
 
-    let total_us = elapsed.as_micros() as f64;
-    let us_per_blink = total_us / (blinks as f64);
+    let total_us = elapsed.as_secs_f64() * 1e6;
+    let us_per_blink = total_us / crate::count_to_f64(blinks);
 
     IdleBlinkMetric {
         framework: "egui (Full-Frame Repaint)",
@@ -113,8 +113,8 @@ fn bench_gpui_cursor_blink() -> IdleBlinkMetric {
     let elapsed = t0.elapsed();
     let (alloc_count, _bytes, _peak) = TrackingAllocator::delta_since(snap);
 
-    let total_us = elapsed.as_micros() as f64;
-    let us_per_blink = total_us / (blinks as f64);
+    let total_us = elapsed.as_secs_f64() * 1e6;
+    let us_per_blink = total_us / crate::count_to_f64(blinks);
 
     IdleBlinkMetric {
         framework: "GPUI (GPU Surface Swap)",

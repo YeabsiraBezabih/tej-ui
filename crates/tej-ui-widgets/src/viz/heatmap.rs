@@ -35,7 +35,7 @@ impl CalendarHeatmapState {
     #[must_use]
     pub fn intensity_for_day(&self, index: usize) -> f32 {
         if let Some(&count) = self.daily_counts.get(index) {
-            (count as f32 / self.max_count as f32).clamp(0.0, 1.0)
+            (crate::u32_to_f32(count) / crate::u32_to_f32(self.max_count)).clamp(0.0, 1.0)
         } else {
             0.0
         }
@@ -60,8 +60,8 @@ impl Default for CalendarHeatmap {
             cell_size: 11.0,
             cell_gap: 3.0,
             corner_radius: 2.0,
-            empty_color: Color::from_rgb_u32(0xEAECF0), // Tej Gray 200
-            max_color: Color::from_rgb_u32(0x12B76A),   // Tej Success 500
+            empty_color: Color::from_rgb_u32(0x00EA_ECF0), // Tej Gray 200
+            max_color: Color::from_rgb_u32(0x0012_B76A),   // Tej Success 500
         }
     }
 }

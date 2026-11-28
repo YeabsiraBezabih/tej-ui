@@ -339,7 +339,7 @@ impl GuiBenchHarness for EguiAdapter {
         let output = self.ctx.run(self.raw_input.clone(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
                 for i in 0..count {
-                    let val = ((i * 17) % 100) as f32 / 100.0;
+                    let val = crate::count_to_f32((i * 17) % 100) / 100.0;
                     ui.add(egui::ProgressBar::new(val).text(format!("{:.1}%", val * 100.0)));
                     ui.label(format!("Sensor #{i}: {:.4}", val * 42.195));
                 }

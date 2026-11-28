@@ -18,7 +18,7 @@ impl BiometricVerifier for StaticBiometricVerifier {
 #[test]
 fn test_clipboard_provider_rich_formats() {
     let cb: Box<dyn ClipboardProvider> = Box::new(Clipboard::new());
-    assert!(cb.formats().is_empty());
+    assert_eq!(cb.formats(), [] as [std::string::String; 0]);
 
     // HTML with plain text fallback
     cb.set_html("<h1>Headline</h1>", Some("Headline"))
@@ -47,7 +47,7 @@ fn test_clipboard_provider_rich_formats() {
     assert!(formats.contains(&"image/png".to_string()));
 
     cb.clear().expect("clear clipboard");
-    assert!(cb.formats().is_empty());
+    assert_eq!(cb.formats(), [] as [std::string::String; 0]);
 }
 
 #[test]
@@ -57,7 +57,7 @@ fn test_file_dialog_provider_multi_file_and_parent() {
         .title("Select Source Files")
         .initial_directory(&base_dir)
         .default_name("main.rs")
-        .multiple(true)
+        .allow_multiple()
         .filter("Rust", &["rs"]);
 
     assert!(dialog.allows_multiple);
@@ -79,14 +79,22 @@ fn test_secure_keystore_biometrics_and_memory_wipe() {
     let mut store = SecureKeyStore::new();
 
     // Store without biometrics
-    store.store_secret("app_token", b"tok_live_12345", false);
+    store.store_secret(
+        "app_token",
+        b"tok_live_12345",
+        tej_ui_services::SecretProtection::Standard,
+    );
     assert_eq!(
         store.retrieve_secret("app_token", None),
         Some(b"tok_live_12345".as_slice())
     );
 
     // Store with biometrics
-    store.store_secret("vault_master", b"super_secret_master_key", true);
+    store.store_secret(
+        "vault_master",
+        b"super_secret_master_key",
+        tej_ui_services::SecretProtection::BiometricRequired,
+    );
 
     // Access fails closed without a configured verifier
     assert_eq!(store.retrieve_secret("vault_master", None), None);

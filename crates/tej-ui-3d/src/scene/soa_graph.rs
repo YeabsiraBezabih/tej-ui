@@ -128,10 +128,10 @@ impl SceneGraphSoA {
 
         for i in 0..count {
             let parent = self.parent_ids[i];
-            let parent_dirty = if parent != NO_PARENT {
-                self.dirty_bits[parent as usize]
-            } else {
+            let parent_dirty = if parent == NO_PARENT {
                 false
+            } else {
+                self.dirty_bits[parent as usize]
             };
 
             let is_dirty = self.dirty_bits[i] || parent_dirty;
@@ -188,18 +188,18 @@ impl SceneGraphSoA {
 
     /// Converts a normalized unit quaternion `[x, y, z, w]` into a 4x4 rotation matrix.
     #[must_use]
-    pub fn quat_to_mat4(q: [f32; 4]) -> Mat4 {
-        let [x, y, z, w] = q;
+    pub fn quat_to_mat4(quat: [f32; 4]) -> Mat4 {
+        let [qx, qy, qz, qw] = quat;
 
-        let xx = x * x;
-        let yy = y * y;
-        let zz = z * z;
-        let xy = x * y;
-        let xz = x * z;
-        let yz = y * z;
-        let wx = w * x;
-        let wy = w * y;
-        let wz = w * z;
+        let xx = qx * qx;
+        let yy = qy * qy;
+        let zz = qz * qz;
+        let xy = qx * qy;
+        let xz = qx * qz;
+        let yz = qy * qz;
+        let wx = qw * qx;
+        let wy = qw * qy;
+        let wz = qw * qz;
 
         Mat4 {
             cols: [

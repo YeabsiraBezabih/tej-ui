@@ -10,7 +10,7 @@ use super::types::GpuBufferAllocation;
 /// and recycles evicted slots in $O(1)$ time to prevent memory fragmentation and GC pauses.
 #[derive(Debug, Clone)]
 pub struct GpuMeshletRing {
-    max_slots: u32,
+    capacity: u32,
     free_slots: Vec<u32>,
     resident_slots: HashMap<u32, GpuBufferAllocation>,
 }
@@ -18,15 +18,15 @@ pub struct GpuMeshletRing {
 impl GpuMeshletRing {
     /// Creates a new GPU meshlet ring with a maximum slot capacity.
     #[must_use]
-    pub fn new(max_slots: u32) -> Self {
-        let mut free_slots = Vec::with_capacity(max_slots as usize);
-        for i in (0..max_slots).rev() {
+    pub fn new(capacity: u32) -> Self {
+        let mut free_slots = Vec::with_capacity(capacity as usize);
+        for i in (0..capacity).rev() {
             free_slots.push(i);
         }
         Self {
-            max_slots,
+            capacity,
             free_slots,
-            resident_slots: HashMap::with_capacity(max_slots as usize),
+            resident_slots: HashMap::with_capacity(capacity as usize),
         }
     }
 
@@ -65,8 +65,8 @@ impl GpuMeshletRing {
 
     /// Returns the maximum slot capacity.
     #[must_use]
-    pub const fn max_slots(&self) -> u32 {
-        self.max_slots
+    pub const fn capacity(&self) -> u32 {
+        self.capacity
     }
 
     /// Returns the allocation descriptor for a cluster if resident in GPU memory.

@@ -53,6 +53,10 @@ pub enum BreakRule {
 
 /// Advanced modern modules and specialized specifications.
 #[derive(Clone, PartialEq, Debug, Default)]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "CSS modern properties struct with public boolean CSS flags"
+)]
 pub struct ModernProps {
     // Anchor Positioning
     pub anchor_name: Option<Cow<'static, str>>,

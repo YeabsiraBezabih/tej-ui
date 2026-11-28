@@ -156,7 +156,7 @@ impl MultiCursorSelection {
             return;
         }
 
-        self.selections.sort_by_key(|s| s.start());
+        self.selections.sort_by_key(TextSelection::start);
 
         let mut merged: Vec<TextSelection> = Vec::with_capacity(self.selections.len());
         for sel in &self.selections {

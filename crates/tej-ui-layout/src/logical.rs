@@ -139,13 +139,20 @@ impl LogicalSize {
 
     /// Resolves logical dimensions to physical (width, height) constraints.
     #[must_use]
-    pub const fn to_physical(&self, is_vertical_writing_mode: bool) -> (Dimension, Dimension) {
-        if is_vertical_writing_mode {
-            (self.block_size, self.inline_size)
-        } else {
-            (self.inline_size, self.block_size)
+    pub const fn to_physical(&self, writing_axis: WritingAxis) -> (Dimension, Dimension) {
+        match writing_axis {
+            WritingAxis::Vertical => (self.block_size, self.inline_size),
+            WritingAxis::Horizontal => (self.inline_size, self.block_size),
         }
     }
+}
+
+/// Writing orientation used when resolving logical inline/block sizes to physical width/height.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum WritingAxis {
+    #[default]
+    Horizontal,
+    Vertical,
 }
 
 /// Directional corner radii for logical internationalized surfaces (e.g. chat bubbles).

@@ -18,7 +18,7 @@ impl Locale {
         let code_str = code.into();
         let mut parts = code_str.split(&['-', '_'][..]);
         let lang = parts.next().unwrap_or("en").to_ascii_lowercase();
-        let reg = parts.next().map(|r| r.to_ascii_uppercase());
+        let reg = parts.next().map(str::to_ascii_uppercase);
         Self {
             code: code_str,
             language: lang,
@@ -59,13 +59,6 @@ impl PluralCategory {
     #[must_use]
     pub fn for_count(locale: &Locale, count: i64) -> Self {
         match locale.language() {
-            "en" | "de" | "nl" | "sv" | "da" | "no" | "es" | "it" | "pt" => {
-                if count.abs() == 1 {
-                    Self::One
-                } else {
-                    Self::Other
-                }
-            }
             "fr" => {
                 if count.abs() == 0 || count.abs() == 1 {
                     Self::One
@@ -216,7 +209,7 @@ impl L10nManager {
         let len = int_str.len();
 
         for (i, ch) in int_str.chars().enumerate() {
-            if i > 0 && (len - i) % 3 == 0 {
+            if i > 0 && (len - i).is_multiple_of(3) {
                 formatted_int.push(thousands_sep);
             }
             formatted_int.push(ch);
@@ -227,11 +220,7 @@ impl L10nManager {
         }
 
         if decimals > 0 {
-            format!(
-                "{formatted_int}{decimal_sep}{:0width$}",
-                frac_part,
-                width = decimals
-            )
+            format!("{formatted_int}{decimal_sep}{frac_part:0decimals$}")
         } else {
             formatted_int
         }

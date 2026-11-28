@@ -5,6 +5,15 @@ use tej_ui_layout::Point;
 /// Windows mouse wheel standard detent quantum (`WHEEL_DELTA` = 120).
 pub const WHEEL_DELTA: f32 = 120.0;
 
+/// Mouse wheel scroll axis (`WM_MOUSEWHEEL` vs `WM_MOUSEHWHEEL`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WheelAxis {
+    /// Vertical scroll wheel (`WM_MOUSEWHEEL`).
+    Vertical,
+    /// Horizontal tilt/scroll wheel (`WM_MOUSEHWHEEL`).
+    Horizontal,
+}
+
 /// Windows kinetic scroll model with acceleration and friction damping.
 #[derive(Debug, Clone)]
 pub struct Win32ScrollPhysics {
@@ -33,17 +42,16 @@ impl Win32ScrollPhysics {
     }
 
     /// Handles a `WM_MOUSEWHEEL` (vertical) or `WM_MOUSEHWHEEL` (horizontal) message.
-    pub fn handle_wheel_message(&mut self, raw_delta: f32, is_horizontal: bool) -> f32 {
+    pub fn handle_wheel_message(&mut self, raw_delta: f32, axis: WheelAxis) -> f32 {
         self.accumulated_wheel_delta += raw_delta;
 
         // High-precision smooth scrolling (fractional WHEEL_DELTA)
         let normalized = raw_delta / WHEEL_DELTA;
         let pixel_delta = normalized * self.scroll_lines_per_click * self.line_height_pixels;
 
-        if is_horizontal {
-            self.velocity.x += pixel_delta * 12.0;
-        } else {
-            self.velocity.y += pixel_delta * 12.0;
+        match axis {
+            WheelAxis::Horizontal => self.velocity.x += pixel_delta * 12.0,
+            WheelAxis::Vertical => self.velocity.y += pixel_delta * 12.0,
         }
 
         pixel_delta

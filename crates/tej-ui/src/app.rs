@@ -65,8 +65,16 @@ impl<V: View> App<V> {
     }
 
     /// Set window configuration.
+    #[must_use]
     pub fn window(mut self, config: WindowConfig) -> Self {
         self.config = config;
+        self
+    }
+
+    /// Provide a custom theme into the reactive theme context for this application.
+    #[must_use]
+    pub fn with_theme(self, theme: tej_ui_view::Theme) -> Self {
+        tej_ui_view::provide_theme(theme);
         self
     }
 
@@ -98,6 +106,7 @@ impl<V: View> App<V> {
         let mut paint_ctx =
             tej_ui_view::PaintContext::new(surface, &layout_arena, &theme, dirty_tracker.rects());
         self.root_view.paint(&state, &mut paint_ctx);
+        paint_ctx.flush_overlays();
 
         surface.end_frame();
         dirty_tracker.reset();
@@ -133,73 +142,17 @@ impl<V: View> App<V> {
             let mut needs_repaint = false;
 
             for event in &events {
-                match event {
-                    tej_ui_hal::UiEvent::Resize { width, height } => {
-                        let new_size = tej_ui_layout::Size::new(*width, *height);
-                        surface.resize(new_size);
-                        needs_relayout = true;
-                    }
-                    tej_ui_hal::UiEvent::Scroll { delta_y, .. } => {
-                        scroll_offset_y = (scroll_offset_y - delta_y * 45.0).max(0.0);
-                        needs_repaint = true;
-                        dirty_tracker.mark_full_dirty();
-                    }
-                    tej_ui_hal::UiEvent::MouseMove { position } => {
-                        let adj_pos =
-                            tej_ui_layout::Point::new(position.x, position.y + scroll_offset_y);
-                        let adj_event = tej_ui_hal::UiEvent::MouseMove { position: adj_pos };
-                        let res = dispatcher.dispatch(&adj_event, &layout_arena, root_node);
-                        if res.handled || res.needs_repaint {
-                            needs_repaint = true;
-                            dirty_tracker.mark_full_dirty();
-                        }
-                    }
-                    tej_ui_hal::UiEvent::MouseDown { button, position } => {
-                        let adj_pos =
-                            tej_ui_layout::Point::new(position.x, position.y + scroll_offset_y);
-                        let adj_event = tej_ui_hal::UiEvent::MouseDown {
-                            button: *button,
-                            position: adj_pos,
-                        };
-                        let res = dispatcher.dispatch(&adj_event, &layout_arena, root_node);
-                        if res.handled {
-                            needs_relayout = true;
-                            needs_repaint = true;
-                            dirty_tracker.mark_full_dirty();
-                        } else if res.needs_repaint {
-                            needs_repaint = true;
-                            dirty_tracker.mark_full_dirty();
-                        }
-                    }
-                    tej_ui_hal::UiEvent::MouseUp { button, position } => {
-                        let adj_pos =
-                            tej_ui_layout::Point::new(position.x, position.y + scroll_offset_y);
-                        let adj_event = tej_ui_hal::UiEvent::MouseUp {
-                            button: *button,
-                            position: adj_pos,
-                        };
-                        let res = dispatcher.dispatch(&adj_event, &layout_arena, root_node);
-                        if res.handled {
-                            needs_relayout = true;
-                            needs_repaint = true;
-                            dirty_tracker.mark_full_dirty();
-                        } else if res.needs_repaint {
-                            needs_repaint = true;
-                            dirty_tracker.mark_full_dirty();
-                        }
-                    }
-                    _ => {
-                        let res = dispatcher.dispatch(event, &layout_arena, root_node);
-                        if res.handled {
-                            needs_relayout = true;
-                            needs_repaint = true;
-                            dirty_tracker.mark_full_dirty();
-                        } else if res.needs_repaint {
-                            needs_repaint = true;
-                            dirty_tracker.mark_full_dirty();
-                        }
-                    }
-                }
+                let outcome = dispatch_app_event(
+                    event,
+                    &mut surface,
+                    &mut dispatcher,
+                    &layout_arena,
+                    root_node,
+                    &mut scroll_offset_y,
+                    &mut dirty_tracker,
+                );
+                needs_relayout |= outcome.relayout;
+                needs_repaint |= outcome.repaint;
             }
 
             // Detect external or background reactive signal mutations via epoch delta
@@ -245,6 +198,7 @@ impl<V: View> App<V> {
                     dispatcher.pressed_node,
                 );
                 self.root_view.paint(&state, &mut paint_ctx);
+                paint_ctx.flush_overlays();
                 surface.end_frame();
                 present_native_surface(&window, &surface);
                 dirty_tracker.reset();
@@ -289,10 +243,85 @@ impl<V: View> App<V> {
             dirty_tracker.rects(),
         );
         self.root_view.paint(&state, &mut paint_ctx);
+        paint_ctx.flush_overlays();
 
         surface.end_frame();
         dirty_tracker.reset();
 
         state
     }
+}
+
+struct EventOutcome {
+    relayout: bool,
+    repaint: bool,
+}
+
+fn dispatch_app_event(
+    event: &tej_ui_hal::UiEvent,
+    surface: &mut impl SurfaceCompositor,
+    dispatcher: &mut tej_ui_view::EventDispatcher,
+    layout_arena: &LayoutArena,
+    root_node: u32,
+    scroll_offset_y: &mut f32,
+    dirty_tracker: &mut DirtyRectTracker,
+) -> EventOutcome {
+    let mut outcome = EventOutcome {
+        relayout: false,
+        repaint: false,
+    };
+    match event {
+        tej_ui_hal::UiEvent::Resize { width, height } => {
+            surface.resize(tej_ui_layout::Size::new(*width, *height));
+            outcome.relayout = true;
+        }
+        tej_ui_hal::UiEvent::Scroll { delta_y, .. } => {
+            *scroll_offset_y = (*scroll_offset_y - delta_y * 45.0).max(0.0);
+            outcome.repaint = true;
+            dirty_tracker.mark_full_dirty();
+        }
+        tej_ui_hal::UiEvent::MouseMove { position } => {
+            let adj_event = tej_ui_hal::UiEvent::MouseMove {
+                position: tej_ui_layout::Point::new(position.x, position.y + *scroll_offset_y),
+            };
+            let res = dispatcher.dispatch(&adj_event, layout_arena, root_node);
+            if res.handled || res.needs_repaint {
+                outcome.repaint = true;
+                dirty_tracker.mark_full_dirty();
+            }
+        }
+        tej_ui_hal::UiEvent::MouseDown { button, position } => {
+            let adj_event = tej_ui_hal::UiEvent::MouseDown {
+                button: *button,
+                position: tej_ui_layout::Point::new(position.x, position.y + *scroll_offset_y),
+            };
+            let res = dispatcher.dispatch(&adj_event, layout_arena, root_node);
+            if res.handled || res.needs_repaint {
+                outcome.relayout = res.handled;
+                outcome.repaint = true;
+                dirty_tracker.mark_full_dirty();
+            }
+        }
+        tej_ui_hal::UiEvent::MouseUp { button, position } => {
+            let adj_event = tej_ui_hal::UiEvent::MouseUp {
+                button: *button,
+                position: tej_ui_layout::Point::new(position.x, position.y + *scroll_offset_y),
+            };
+            let res = dispatcher.dispatch(&adj_event, layout_arena, root_node);
+            if res.handled || res.needs_repaint {
+                outcome.relayout = res.handled;
+                outcome.repaint = true;
+                dirty_tracker.mark_full_dirty();
+            }
+        }
+        _ => {
+            let res = dispatcher.dispatch(event, layout_arena, root_node);
+            if res.handled || res.needs_repaint {
+                outcome.relayout = res.handled;
+                outcome.repaint = true;
+                dirty_tracker.mark_full_dirty();
+            }
+        }
+    }
+    outcome
 }

@@ -104,10 +104,10 @@ impl FocusManager {
 
     /// Pushes a modal focus trap scope, restricting Tab traversal strictly to `allowed` elements.
     pub fn push_trap_scope(&mut self, allowed: Vec<FocusId>) {
-        if let Some(&first) = allowed.first() {
-            if !allowed.contains(&self.current_focus.unwrap_or(FocusId(0))) {
-                self.current_focus = Some(first);
-            }
+        if let Some(&first) = allowed.first()
+            && !allowed.contains(&self.current_focus.unwrap_or(FocusId(0)))
+        {
+            self.current_focus = Some(first);
         }
         self.trap_stack.push(allowed);
     }

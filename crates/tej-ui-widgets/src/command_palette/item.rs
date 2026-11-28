@@ -21,7 +21,7 @@ impl fmt::Debug for CommandItem {
             .field("title", &self.title)
             .field("category", &self.category)
             .field("shortcut", &self.shortcut)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -43,18 +43,21 @@ impl CommandItem {
     }
 
     /// Add an action callback when this command is selected.
+    #[must_use]
     pub fn on_select<F: Fn() + Send + Sync + 'static>(mut self, action: F) -> Self {
         self.action = Some(Arc::new(action));
         self
     }
 
     /// Set keyboard shortcut badge.
+    #[must_use]
     pub fn shortcut(mut self, shortcut: impl Into<String>) -> Self {
         self.shortcut = Some(shortcut.into());
         self
     }
 
     /// Set descriptive subtitle.
+    #[must_use]
     pub fn subtitle(mut self, subtitle: impl Into<String>) -> Self {
         self.subtitle = Some(subtitle.into());
         self

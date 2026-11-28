@@ -73,7 +73,7 @@ impl<T: Clone + Debug + Send + Sync + 'static, E: Clone + Debug + Send + Sync + 
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Resource")
             .field("state", &self.state.get())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

@@ -18,94 +18,54 @@ use std::sync::Arc;
 use std::time::Instant;
 use tej_ui::prelude::*;
 
+fn model_switch_button(
+    canvas_3d: &Canvas3D,
+    models: &Arc<Vec<ModelAsset>>,
+    index: usize,
+    active_idx: Signal<usize>,
+) -> impl View + use<> {
+    let c = canvas_3d.clone();
+    let m = Arc::clone(models);
+    Button::new(Text::new(models[index].label))
+        .size(ButtonSize::Sm)
+        .on_click(move || {
+            switch_active_model(&c, &m, index, active_idx);
+        })
+}
+
+fn camera_preset_button(
+    canvas_3d: &Canvas3D,
+    label: &'static str,
+    preset: CameraPreset,
+) -> impl View + use<> {
+    let cp = canvas_3d.clone();
+    Button::new(Text::new(label))
+        .size(ButtonSize::Sm)
+        .on_click(move || {
+            let cam_arc = cp.camera();
+            let mut cam = cam_arc.write();
+            let ctrl_arc = cp.controls();
+            let mut ctrl = ctrl_arc.write();
+            ctrl.set_preset(preset, &mut cam);
+        })
+}
+
 fn blender_viewer_ui(
     canvas_3d: Canvas3D,
     active_idx: Signal<usize>,
-    models: Arc<Vec<ModelAsset>>,
-) -> impl View {
-    // Model switcher button handlers
-    let c1 = canvas_3d.clone();
-    let m1 = Arc::clone(&models);
-    let s1 = active_idx;
-    let btn_suzanne = Button::new(Text::new(models[0].label))
-        .size(ButtonSize::Sm)
-        .on_click(move || {
-            switch_active_model(&c1, &m1, 0, s1);
-        });
+    models: &Arc<Vec<ModelAsset>>,
+) -> impl View + use<> {
+    let btn_suzanne = model_switch_button(&canvas_3d, models, 0, active_idx);
+    let btn_bunny = model_switch_button(&canvas_3d, models, 1, active_idx);
+    let btn_teapot = model_switch_button(&canvas_3d, models, 2, active_idx);
+    let btn_splash = model_switch_button(&canvas_3d, models, 3, active_idx);
 
-    let c2 = canvas_3d.clone();
-    let m2 = Arc::clone(&models);
-    let s2 = active_idx;
-    let btn_bunny = Button::new(Text::new(models[1].label))
-        .size(ButtonSize::Sm)
-        .on_click(move || {
-            switch_active_model(&c2, &m2, 1, s2);
-        });
+    let btn_reset_cam = camera_preset_button(&canvas_3d, "Reset Target", CameraPreset::Reset);
+    let btn_iso = camera_preset_button(&canvas_3d, "Isometric", CameraPreset::Isometric);
+    let btn_top = camera_preset_button(&canvas_3d, "Top View", CameraPreset::Top);
+    let btn_front = camera_preset_button(&canvas_3d, "Front View", CameraPreset::Front);
 
-    let c3 = canvas_3d.clone();
-    let m3 = Arc::clone(&models);
-    let s3 = active_idx;
-    let btn_teapot = Button::new(Text::new(models[2].label))
-        .size(ButtonSize::Sm)
-        .on_click(move || {
-            switch_active_model(&c3, &m3, 2, s3);
-        });
-
-    let c4 = canvas_3d.clone();
-    let m4 = Arc::clone(&models);
-    let s4 = active_idx;
-    let btn_splash = Button::new(Text::new(models[3].label))
-        .size(ButtonSize::Sm)
-        .on_click(move || {
-            switch_active_model(&c4, &m4, 3, s4);
-        });
-
-    // Dynamic Camera View Preset Handlers
-    let cp1 = canvas_3d.clone();
-    let btn_reset_cam = Button::new(Text::new("Reset Target"))
-        .size(ButtonSize::Sm)
-        .on_click(move || {
-            let cam_arc = cp1.camera();
-            let mut cam = cam_arc.write();
-            let ctrl_arc = cp1.controls();
-            let mut ctrl = ctrl_arc.write();
-            ctrl.set_preset(CameraPreset::Reset, &mut cam);
-        });
-
-    let cp2 = canvas_3d.clone();
-    let btn_iso = Button::new(Text::new("Isometric"))
-        .size(ButtonSize::Sm)
-        .on_click(move || {
-            let cam_arc = cp2.camera();
-            let mut cam = cam_arc.write();
-            let ctrl_arc = cp2.controls();
-            let mut ctrl = ctrl_arc.write();
-            ctrl.set_preset(CameraPreset::Isometric, &mut cam);
-        });
-
-    let cp3 = canvas_3d.clone();
-    let btn_top = Button::new(Text::new("Top View"))
-        .size(ButtonSize::Sm)
-        .on_click(move || {
-            let cam_arc = cp3.camera();
-            let mut cam = cam_arc.write();
-            let ctrl_arc = cp3.controls();
-            let mut ctrl = ctrl_arc.write();
-            ctrl.set_preset(CameraPreset::Top, &mut cam);
-        });
-
-    let cp4 = canvas_3d.clone();
-    let btn_front = Button::new(Text::new("Front View"))
-        .size(ButtonSize::Sm)
-        .on_click(move || {
-            let cam_arc = cp4.camera();
-            let mut cam = cam_arc.write();
-            let ctrl_arc = cp4.controls();
-            let mut ctrl = ctrl_arc.write();
-            ctrl.set_preset(CameraPreset::Front, &mut cam);
-        });
-
-    let m_info = Arc::clone(&models);
+    let m_info = Arc::clone(models);
     let cur = active_idx.get().min(models.len().saturating_sub(1));
     let asset = &m_info[cur];
 
@@ -258,9 +218,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             };
 
             let start = Instant::now();
-            let test_frames = 200;
+            let test_frames: u16 = 200;
             for frame in 0..test_frames {
-                let angle = (frame as f32 / test_frames as f32) * std::f32::consts::PI * 2.0;
+                let angle =
+                    (f32::from(frame) / f32::from(test_frames)) * std::f32::consts::PI * 2.0;
                 cam.position = Vec3::new(3.2 * angle.cos(), 0.5, 3.2 * angle.sin());
 
                 let view = Mat4::look_at(cam.position, cam.target, Vec3::new(0.0, 1.0, 0.0));
@@ -279,7 +240,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!(
                 "    ✓ 200 orbit frames in {:?} ({:.2} µs / frame) - 120 FPS achieved!",
                 el,
-                el.as_micros() as f64 / test_frames as f64
+                (el.as_secs_f64() * 1_000_000.0) / f64::from(test_frames)
             );
         }
 
@@ -313,7 +274,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .height(Dimension::Points(560.0));
 
     let active_idx = Signal::new(0usize);
-    let view = blender_viewer_ui(canvas_widget, active_idx, Arc::clone(&models));
+    let view = blender_viewer_ui(canvas_widget, active_idx, &models);
     let app = App::new(view).window(WindowConfig {
         title: "tej-ui - Responsive Blender 3D Nanite Engine (Out-of-Core MyDb)".into(),
         size: Size::new(1080.0, 800.0),

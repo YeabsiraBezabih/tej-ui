@@ -33,9 +33,9 @@ impl VisPixel {
         } else {
             depth
         };
-        let d_bits = clamped.to_bits() as u64;
-        let slot_bits = ((meshlet_slot as u64) & Self::SLOT_MASK) << 12;
-        let tri_bits = (tri_id as u64) & Self::TRI_MASK;
+        let d_bits = u64::from(clamped.to_bits());
+        let slot_bits = (u64::from(meshlet_slot) & Self::SLOT_MASK) << 12;
+        let tri_bits = u64::from(tri_id) & Self::TRI_MASK;
         Self((d_bits << 32) | slot_bits | tri_bits)
     }
 
@@ -90,9 +90,9 @@ impl VisPixel {
         };
         let d_bits = clamped.to_bits();
         if d_bits > self.depth_bits() {
-            let slot_bits = ((meshlet_slot as u64) & Self::SLOT_MASK) << 12;
-            let tri_bits = (tri_id as u64) & Self::TRI_MASK;
-            self.0 = ((d_bits as u64) << 32) | slot_bits | tri_bits;
+            let slot_bits = (u64::from(meshlet_slot) & Self::SLOT_MASK) << 12;
+            let tri_bits = u64::from(tri_id) & Self::TRI_MASK;
+            self.0 = (u64::from(d_bits) << 32) | slot_bits | tri_bits;
             true
         } else {
             false
@@ -200,9 +200,9 @@ impl VisBuffer {
                 depth
             };
             let d_bits = clamped.to_bits();
-            let slot_bits = ((meshlet_slot as u64) & VisPixel::SLOT_MASK) << 12;
-            let tri_bits = (tri_id as u64) & VisPixel::TRI_MASK;
-            self.pixels[idx] = VisPixel(((d_bits as u64) << 32) | slot_bits | tri_bits);
+            let slot_bits = (u64::from(meshlet_slot) & VisPixel::SLOT_MASK) << 12;
+            let tri_bits = u64::from(tri_id) & VisPixel::TRI_MASK;
+            self.pixels[idx] = VisPixel((u64::from(d_bits) << 32) | slot_bits | tri_bits);
         }
     }
 

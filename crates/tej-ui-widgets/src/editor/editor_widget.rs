@@ -56,16 +56,7 @@ impl RichTextEditorCore {
             return;
         }
 
-        if !self.selection.is_collapsed() {
-            let s = self.selection.start();
-            let e = self.selection.end();
-            let deleted = self.buffer.delete_range(s, e);
-            self.history.push(EditAction::Delete {
-                pos: s,
-                text: deleted,
-            });
-            self.selection = TextSelection::cursor(s);
-        } else {
+        if self.selection.is_collapsed() {
             let head = self.buffer.clamp_pos(self.selection.head);
             let prev_pos = if head.col > 0 {
                 Some(CursorPos::new(head.line, head.col - 1))
@@ -86,15 +77,7 @@ impl RichTextEditorCore {
                     self.selection = TextSelection::cursor(start);
                 }
             }
-        }
-    }
-
-    fn delete_forward(&mut self) {
-        if self.read_only {
-            return;
-        }
-
-        if !self.selection.is_collapsed() {
+        } else {
             let s = self.selection.start();
             let e = self.selection.end();
             let deleted = self.buffer.delete_range(s, e);
@@ -103,7 +86,15 @@ impl RichTextEditorCore {
                 text: deleted,
             });
             self.selection = TextSelection::cursor(s);
-        } else {
+        }
+    }
+
+    fn delete_forward(&mut self) {
+        if self.read_only {
+            return;
+        }
+
+        if self.selection.is_collapsed() {
             let head = self.buffer.clamp_pos(self.selection.head);
             let line_len = self.buffer.line_len(head.line);
             let next_pos = if head.col < line_len {
@@ -124,6 +115,15 @@ impl RichTextEditorCore {
                     self.selection = TextSelection::cursor(head);
                 }
             }
+        } else {
+            let s = self.selection.start();
+            let e = self.selection.end();
+            let deleted = self.buffer.delete_range(s, e);
+            self.history.push(EditAction::Delete {
+                pos: s,
+                text: deleted,
+            });
+            self.selection = TextSelection::cursor(s);
         }
     }
 
@@ -161,7 +161,7 @@ impl RichTextEditorCore {
         }
     }
 
-    fn move_cursor_left(&mut self, select: bool) {
+    fn move_cursor_left(&mut self, mode: CursorMoveMode) {
         let head = self.selection.head;
         let new_head = if head.col > 0 {
             CursorPos::new(head.line, head.col - 1)
@@ -172,14 +172,13 @@ impl RichTextEditorCore {
             head
         };
 
-        if select {
-            self.selection.head = new_head;
-        } else {
-            self.selection = TextSelection::cursor(new_head);
+        match mode {
+            CursorMoveMode::Extend => self.selection.head = new_head,
+            CursorMoveMode::Collapse => self.selection = TextSelection::cursor(new_head),
         }
     }
 
-    fn move_cursor_right(&mut self, select: bool) {
+    fn move_cursor_right(&mut self, mode: CursorMoveMode) {
         let head = self.selection.head;
         let line_len = self.buffer.line_len(head.line);
         let new_head = if head.col < line_len {
@@ -190,14 +189,13 @@ impl RichTextEditorCore {
             head
         };
 
-        if select {
-            self.selection.head = new_head;
-        } else {
-            self.selection = TextSelection::cursor(new_head);
+        match mode {
+            CursorMoveMode::Extend => self.selection.head = new_head,
+            CursorMoveMode::Collapse => self.selection = TextSelection::cursor(new_head),
         }
     }
 
-    fn move_cursor_up(&mut self, select: bool) {
+    fn move_cursor_up(&mut self, mode: CursorMoveMode) {
         let head = self.selection.head;
         let new_head = if head.line > 0 {
             let target_line = head.line - 1;
@@ -207,14 +205,13 @@ impl RichTextEditorCore {
             CursorPos::zero()
         };
 
-        if select {
-            self.selection.head = new_head;
-        } else {
-            self.selection = TextSelection::cursor(new_head);
+        match mode {
+            CursorMoveMode::Extend => self.selection.head = new_head,
+            CursorMoveMode::Collapse => self.selection = TextSelection::cursor(new_head),
         }
     }
 
-    fn move_cursor_down(&mut self, select: bool) {
+    fn move_cursor_down(&mut self, mode: CursorMoveMode) {
         let head = self.selection.head;
         let new_head = if head.line + 1 < self.buffer.line_count() {
             let target_line = head.line + 1;
@@ -224,10 +221,9 @@ impl RichTextEditorCore {
             CursorPos::new(head.line, self.buffer.line_len(head.line))
         };
 
-        if select {
-            self.selection.head = new_head;
-        } else {
-            self.selection = TextSelection::cursor(new_head);
+        match mode {
+            CursorMoveMode::Extend => self.selection.head = new_head,
+            CursorMoveMode::Collapse => self.selection = TextSelection::cursor(new_head),
         }
     }
 }
@@ -242,6 +238,15 @@ pub struct RichTextEditor {
     line_height: f32,
     show_line_numbers: bool,
     read_only: bool,
+}
+
+/// Whether cursor movement collapses or extends the active text selection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CursorMoveMode {
+    /// Collapse the selection to the new cursor position.
+    Collapse,
+    /// Extend the selection from the anchor to the new cursor position.
+    Extend,
 }
 
 impl Default for RichTextEditor {
@@ -298,18 +303,33 @@ impl RichTextEditor {
         self
     }
 
-    /// Toggle line number display in left gutter.
+    /// Show line numbers in the left gutter.
     #[must_use]
-    pub const fn show_line_numbers(mut self, show: bool) -> Self {
-        self.show_line_numbers = show;
+    pub const fn with_line_numbers(mut self) -> Self {
+        self.show_line_numbers = true;
         self
     }
 
-    /// Set read-only state.
+    /// Hide line numbers in the left gutter.
     #[must_use]
-    pub fn read_only(mut self, read_only: bool) -> Self {
-        self.read_only = read_only;
-        self.shared.lock().read_only = read_only;
+    pub const fn hide_line_numbers(mut self) -> Self {
+        self.show_line_numbers = false;
+        self
+    }
+
+    /// Mark editor as read-only.
+    #[must_use]
+    pub fn make_read_only(mut self) -> Self {
+        self.read_only = true;
+        self.shared.lock().read_only = true;
+        self
+    }
+
+    /// Mark editor as editable.
+    #[must_use]
+    pub fn editable(mut self) -> Self {
+        self.read_only = false;
+        self.shared.lock().read_only = false;
         self
     }
 
@@ -399,24 +419,24 @@ impl RichTextEditor {
         ok
     }
 
-    /// Move cursor left, optionally extending selection.
-    pub fn move_cursor_left(&mut self, select: bool) {
-        self.shared.lock().move_cursor_left(select);
+    /// Move cursor left, collapsing or extending selection according to `mode`.
+    pub fn move_cursor_left(&mut self, mode: CursorMoveMode) {
+        self.shared.lock().move_cursor_left(mode);
     }
 
-    /// Move cursor right, optionally extending selection.
-    pub fn move_cursor_right(&mut self, select: bool) {
-        self.shared.lock().move_cursor_right(select);
+    /// Move cursor right, collapsing or extending selection according to `mode`.
+    pub fn move_cursor_right(&mut self, mode: CursorMoveMode) {
+        self.shared.lock().move_cursor_right(mode);
     }
 
-    /// Move cursor up by one line, optionally extending selection.
-    pub fn move_cursor_up(&mut self, select: bool) {
-        self.shared.lock().move_cursor_up(select);
+    /// Move cursor up by one line, collapsing or extending selection according to `mode`.
+    pub fn move_cursor_up(&mut self, mode: CursorMoveMode) {
+        self.shared.lock().move_cursor_up(mode);
     }
 
-    /// Move cursor down by one line, optionally extending selection.
-    pub fn move_cursor_down(&mut self, select: bool) {
-        self.shared.lock().move_cursor_down(select);
+    /// Move cursor down by one line, collapsing or extending selection according to `mode`.
+    pub fn move_cursor_down(&mut self, mode: CursorMoveMode) {
+        self.shared.lock().move_cursor_down(mode);
     }
 
     /// Handle incoming native OS IME composition update event.
@@ -460,7 +480,7 @@ impl View for RichTextEditor {
     fn build(&self) -> Self::State {
         let core = self.shared.lock();
         let line_count = core.buffer.line_count();
-        let height = (line_count as f32 * self.line_height).max(100.0);
+        let height = (crate::count_to_f32(line_count) * self.line_height).max(100.0);
         RichTextEditorState {
             bounds: Rect::from_origin_size(Point::ZERO, Size::new(f32::NAN, height)),
             line_count,
@@ -473,7 +493,7 @@ impl View for RichTextEditor {
         let core = self.shared.lock();
         state.line_count = core.buffer.line_count();
         state.is_composing = core.ime.is_composing;
-        let height = (state.line_count as f32 * self.line_height).max(100.0);
+        let height = (crate::count_to_f32(state.line_count) * self.line_height).max(100.0);
         state.bounds.size.height = height;
     }
 
@@ -483,7 +503,7 @@ impl View for RichTextEditor {
 
     fn layout(&self, state: &mut Self::State, arena: &mut tej_ui_layout::LayoutArena) -> u32 {
         let line_count = self.shared.lock().buffer.line_count();
-        let height = (line_count as f32 * self.line_height).max(100.0);
+        let height = (crate::count_to_f32(line_count) * self.line_height).max(100.0);
         let style = tej_ui_layout::LayoutStyle {
             width: tej_ui_layout::Dimension::Percent(1.0),
             height: tej_ui_layout::Dimension::Points(height),
@@ -516,11 +536,13 @@ impl View for RichTextEditor {
         let text_origin_x = bounds.origin.x + gutter_w + 8.0;
         let char_w = self.font_size * 0.6;
 
+        ctx.push_clip(bounds, [0.0; 4]);
+
         // Render selection highlight beneath text when selection is non-collapsed
         if !core.selection.is_collapsed() {
             let sel_start = core.buffer.clamp_pos(core.selection.start());
             let sel_end = core.buffer.clamp_pos(core.selection.end());
-            let highlight_color = tej_ui_hal::Color::rgba(59, 130, 246, 96);
+            let highlight_color = ctx.theme.colors.primary.with_alpha(96);
 
             for line_idx in sel_start.line..=sel_end.line {
                 let start_col = if line_idx == sel_start.line {
@@ -533,9 +555,11 @@ impl View for RichTextEditor {
                 } else {
                     core.buffer.line_len(line_idx).max(1)
                 };
-                let sel_x = text_origin_x + (start_col as f32) * char_w;
-                let sel_y = bounds.origin.y + 8.0 + (line_idx as f32) * self.line_height;
-                let sel_w = ((end_col.saturating_sub(start_col)) as f32 * char_w).max(4.0);
+                let sel_x = text_origin_x + crate::count_to_f32(start_col) * char_w;
+                let sel_y =
+                    bounds.origin.y + 8.0 + crate::count_to_f32(line_idx) * self.line_height;
+                let sel_w =
+                    ((crate::count_to_f32(end_col.saturating_sub(start_col))) * char_w).max(4.0);
                 ctx.fill_rect(
                     Rect::new(sel_x, sel_y, sel_w, self.line_height),
                     highlight_color,
@@ -544,7 +568,7 @@ impl View for RichTextEditor {
         }
 
         for (i, line_content) in core.buffer.lines().iter().enumerate() {
-            let line_y = bounds.origin.y + 8.0 + (i as f32) * self.line_height;
+            let line_y = bounds.origin.y + 8.0 + crate::count_to_f32(i) * self.line_height;
             if self.show_line_numbers {
                 let num_str = format!("{:>3}", i + 1);
                 let num_pt = Point::new(bounds.origin.x + 8.0, line_y);
@@ -565,14 +589,19 @@ impl View for RichTextEditor {
             );
         }
 
-        // Render active cursor caret
-        let caret = core.buffer.clamp_pos(core.selection.head);
-        let caret_x = text_origin_x + (caret.col as f32) * char_w;
-        let caret_y = bounds.origin.y + 8.0 + (caret.line as f32) * self.line_height;
-        ctx.fill_rect(
-            Rect::new(caret_x, caret_y, 2.0, self.line_height),
-            ctx.theme.colors.primary,
-        );
+        // Render active cursor caret only when focused
+        if ctx.is_focused(state.node) {
+            let caret = core.buffer.clamp_pos(core.selection.head);
+            let caret_x = text_origin_x + crate::count_to_f32(caret.col) * char_w;
+            let caret_y =
+                bounds.origin.y + 8.0 + crate::count_to_f32(caret.line) * self.line_height;
+            ctx.fill_rect(
+                Rect::new(caret_x, caret_y, 2.0, self.line_height),
+                ctx.theme.colors.primary,
+            );
+        }
+
+        ctx.pop_clip();
     }
 
     fn register_events(&self, state: &Self::State, dispatcher: &mut tej_ui_view::EventDispatcher) {
@@ -618,10 +647,10 @@ impl View for RichTextEditor {
                     8 if !read_only => core.backspace(),
                     46 | 127 if !read_only => core.delete_forward(),
                     13 if !read_only => core.newline(),
-                    37 => core.move_cursor_left(false),
-                    38 => core.move_cursor_up(false),
-                    39 => core.move_cursor_right(false),
-                    40 => core.move_cursor_down(false),
+                    37 => core.move_cursor_left(CursorMoveMode::Collapse),
+                    38 => core.move_cursor_up(CursorMoveMode::Collapse),
+                    39 => core.move_cursor_right(CursorMoveMode::Collapse),
+                    40 => core.move_cursor_down(CursorMoveMode::Collapse),
                     _ => {}
                 }
             }),

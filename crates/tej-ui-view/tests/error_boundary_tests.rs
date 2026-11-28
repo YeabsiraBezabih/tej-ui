@@ -11,21 +11,15 @@ impl View for PanickingView {
     type State = ();
 
     fn build(&self) -> Self::State {
-        if self.should_panic {
-            panic!("Test component failure");
-        }
+        assert!(!self.should_panic, "Test component failure");
     }
 
     fn rebuild(&self, _state: &mut Self::State) {
-        if self.should_panic {
-            panic!("Rebuild panic");
-        }
+        assert!(!self.should_panic, "Rebuild panic");
     }
 
     fn patch(&self, _state: &mut Self::State, _dirty_bits: u64) {
-        if self.should_panic {
-            panic!("Patch panic");
-        }
+        assert!(!self.should_panic, "Patch panic");
     }
 
     fn layout(&self, _state: &mut Self::State, arena: &mut tej_ui_layout::LayoutArena) -> u32 {
@@ -76,7 +70,7 @@ fn test_error_boundary_catches_panic_and_reports_telemetry() {
                 "Handled Crash: Test component failure"
             );
         }
-        ErrorBoundaryState::Normal(_) => {
+        ErrorBoundaryState::Normal(()) => {
             panic!("Expected recovered fallback state");
         }
     }

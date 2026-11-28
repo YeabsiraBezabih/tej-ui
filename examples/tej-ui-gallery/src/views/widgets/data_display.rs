@@ -51,8 +51,15 @@ pub fn data_display_view() -> impl View {
                                 3 => "Cardano Settlement".to_string(),
                                 _ => "Avalanche Subnet".to_string(),
                             },
-                            3 => format!("${:.2}", 50000.0 / ((coords.row % 10 + 1) as f32)),
-                            _ => format!("+{:0.2}%", (coords.row % 7) as f32 * 1.34),
+                            3 => format!(
+                                "${:.2}",
+                                50000.0
+                                    / f32::from(u16::try_from(coords.row % 10 + 1).unwrap_or(1))
+                            ),
+                            _ => format!(
+                                "+{:0.2}%",
+                                f32::from(u16::try_from(coords.row % 7).unwrap_or(0)) * 1.34
+                            ),
                         };
                         Text::new(sample_text)
                     }),

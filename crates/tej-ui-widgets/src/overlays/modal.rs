@@ -102,7 +102,7 @@ impl<V: View> View for Modal<V> {
         if state.is_open {
             if let Some(bounds) = ctx.arena.computed_bounds.get(state.node as usize).copied() {
                 // Dimmed backdrop
-                ctx.fill_rect(bounds, tej_ui_hal::Color::rgba(0, 0, 0, 160));
+                ctx.fill_rect(bounds, ctx.theme.colors.scrim);
             }
             if let Some(cs) = state.content_state.as_ref() {
                 self.content.paint(cs, ctx);

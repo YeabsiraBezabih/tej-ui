@@ -1,6 +1,6 @@
 use crate::paint::PaintContext;
 use std::fmt::Debug;
-use tej_ui_layout::{LayoutArena, LayoutStyle};
+use tej_ui_layout::{DisplayMode, LayoutArena, LayoutStyle};
 
 /// Statically typed, zero-vtable view tree trait.
 ///
@@ -65,8 +65,12 @@ impl View for () {
     fn rebuild(&self, _state: &mut Self::State) {}
     fn patch(&self, _state: &mut Self::State, _dirty_bits: u64) {}
     fn layout(&self, _state: &mut Self::State, arena: &mut LayoutArena) -> u32 {
-        arena.allocate_node(LayoutStyle::default())
+        arena.allocate_node(LayoutStyle {
+            display: DisplayMode::None,
+            ..Default::default()
+        })
     }
+    fn layout_children(&self, _state: &mut Self::State, _arena: &mut LayoutArena, _parent: u32) {}
     fn paint(&self, _state: &Self::State, _ctx: &mut PaintContext<'_>) {}
     fn register_events(
         &self,
@@ -103,7 +107,16 @@ impl<V: View> View for Option<V> {
         if let (Some(view), Some(s)) = (self, state.as_mut()) {
             view.layout(s, arena)
         } else {
-            arena.allocate_node(LayoutStyle::default())
+            arena.allocate_node(LayoutStyle {
+                display: DisplayMode::None,
+                ..Default::default()
+            })
+        }
+    }
+
+    fn layout_children(&self, state: &mut Self::State, arena: &mut LayoutArena, parent: u32) {
+        if let (Some(view), Some(s)) = (self, state.as_mut()) {
+            view.layout_children(s, arena, parent);
         }
     }
 

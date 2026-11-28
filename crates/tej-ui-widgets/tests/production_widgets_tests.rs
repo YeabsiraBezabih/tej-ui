@@ -131,7 +131,15 @@ fn test_command_palette_layout_paint_and_keyboard_click_nav() {
     assert!(compositor.has_text("Open Settings"));
     assert!(compositor.has_text("Cmd+,"));
     assert!(compositor.has_text("Reset Cache"));
-    assert!(!compositor.drawn_lines.is_empty());
+    assert_ne!(
+        compositor.drawn_lines,
+        [] as [(
+            tej_ui_layout::Point,
+            tej_ui_layout::Point,
+            f32,
+            tej_ui_hal::Color
+        ); 0]
+    );
 
     // Keyboard navigation: Down -> index 1, Up -> index 0, Down -> index 1, Enter -> executes item 2
     let mut dispatcher = EventDispatcher::new();
@@ -174,7 +182,7 @@ fn test_command_palette_layout_paint_and_keyboard_click_nav() {
     dispatcher3.focus(Some(state.node));
 
     dispatcher3.dispatch(&UiEvent::KeyDown { key_code: 27 }, &arena3, root3);
-    assert!(query.get().is_empty());
+    assert_eq!(query.get(), "");
     assert!(!is_open.get());
 }
 
@@ -263,8 +271,16 @@ fn test_feedback_widgets_avatar_progress_skeleton_tooltip_layout_and_paint() {
         let mut ctx = PaintContext::new(&mut comp_hidden, &arena, &theme, &dirty);
         tooltip.paint(&tt_state, &mut ctx);
     }
-    assert!(comp_hidden.all_rects().is_empty());
-    assert!(comp_hidden.drawn_texts.is_empty());
+    assert_eq!(comp_hidden.all_rects(), [] as [tej_ui_layout::Rect; 0]);
+    assert_eq!(
+        comp_hidden.drawn_texts,
+        [] as [(
+            std::string::String,
+            tej_ui_layout::Point,
+            f32,
+            tej_ui_hal::Color
+        ); 0]
+    );
 
     visible.set(true);
     tooltip.rebuild(&mut tt_state);
@@ -283,7 +299,7 @@ fn test_feedback_widgets_avatar_progress_skeleton_tooltip_layout_and_paint() {
         comp_vis
             .filled_rounded_rects
             .iter()
-            .any(|(_, _, c)| *c == Color::from_rgb_u32(0x18181B))
+            .any(|(_, _, c)| *c == Color::from_rgb_u32(0x0018_181B))
     );
 }
 
@@ -363,7 +379,7 @@ fn test_scroll_area_viewport_clipping_and_scrollbar_thumbs() {
     }
 
     // All painted rectangles must stay strictly clipped inside viewport bounds
-    assert!(!comp.all_rects().is_empty());
+    assert_ne!(comp.all_rects(), [] as [tej_ui_layout::Rect; 0]);
     for rect in comp.all_rects() {
         assert!(rect.origin.x >= vp.origin.x - 0.01);
         assert!(rect.origin.y >= vp.origin.y - 0.01);
@@ -394,7 +410,7 @@ fn test_breadcrumb_pagination_and_sheet_layout_paint_and_events() {
     let bc = Breadcrumb::new(vec![
         BreadcrumbItem::new("Home").href("/home"),
         BreadcrumbItem::new("Projects").href("/projects"),
-        BreadcrumbItem::new("Settings").current(true),
+        BreadcrumbItem::new("Settings").mark_current(),
     ])
     .separator(">")
     .on_navigate(move |href| {

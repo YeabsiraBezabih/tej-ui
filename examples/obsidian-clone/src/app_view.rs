@@ -99,7 +99,7 @@ pub fn build_obsidian_view(state: &ObsidianState, notes: &[NoteItem]) -> impl Vi
     let sidebar_items = vec![
         SidebarItem::new("nav_files", "Files")
             .icon("Folder")
-            .active(true),
+            .mark_active(),
         SidebarItem::new("nav_search", "Search").icon("Search"),
         SidebarItem::new("nav_bookmarks", "Bookmarks").icon("Bookmark"),
         SidebarItem::new("nav_tags", "Tags").badge(format!("{} tags", 8)),
@@ -114,7 +114,7 @@ pub fn build_obsidian_view(state: &ObsidianState, notes: &[NoteItem]) -> impl Vi
     let editor_widget = RichTextEditor::with_text(active_content)
         .font_size(15.0)
         .line_height(24.0)
-        .show_line_numbers(true);
+        .with_line_numbers();
 
     // 3. Tab headers
     let tab_items = vec![

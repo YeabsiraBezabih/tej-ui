@@ -27,6 +27,54 @@ pub enum MathNode {
 }
 
 /// Parse a LaTeX math string into a list of mathematical nodes.
+#[inline]
+fn len_f32(n: usize) -> f32 {
+    f32::from(u16::try_from(n).unwrap_or(u16::MAX))
+}
+
+fn parse_latex_command(chars: &[char], i: &mut usize) -> MathNode {
+    let start = *i;
+    while *i < chars.len() && chars[*i].is_alphabetic() {
+        *i += 1;
+    }
+    let cmd: String = chars[start..*i].iter().collect();
+    match cmd.as_str() {
+        "frac" => {
+            let num = extract_braced(chars, i);
+            let den = extract_braced(chars, i);
+            MathNode::Fraction(parse_latex(&num), parse_latex(&den))
+        }
+        "ddot" => MathNode::Overdot(extract_braced(chars, i), 2),
+        "dot" => MathNode::Overdot(extract_braced(chars, i), 1),
+        "sqrt" => MathNode::Sqrt(parse_latex(&extract_braced(chars, i))),
+        "alpha" => MathNode::Symbol("α".into()),
+        "beta" => MathNode::Symbol("β".into()),
+        "gamma" => MathNode::Symbol("γ".into()),
+        "delta" => MathNode::Symbol("δ".into()),
+        "Delta" => MathNode::Symbol("Δ".into()),
+        "omega" => MathNode::Symbol("ω".into()),
+        "pi" => MathNode::Symbol("π".into()),
+        "sum" => MathNode::Symbol("∑".into()),
+        "int" => MathNode::Symbol("∫".into()),
+        "times" => MathNode::Symbol("×".into()),
+        "cdot" => MathNode::Symbol("·".into()),
+        "pm" => MathNode::Symbol("±".into()),
+        _ => MathNode::Text(cmd),
+    }
+}
+
+fn parse_script_arg(chars: &[char], i: &mut usize) -> String {
+    if *i < chars.len() && chars[*i] == '{' {
+        extract_braced(chars, i)
+    } else if *i < chars.len() {
+        let s = chars[*i].to_string();
+        *i += 1;
+        s
+    } else {
+        String::new()
+    }
+}
+
 #[must_use]
 pub fn parse_latex(input: &str) -> Vec<MathNode> {
     let clean = input
@@ -47,44 +95,7 @@ pub fn parse_latex(input: &str) -> Vec<MathNode> {
         // 1. LaTeX Commands
         if chars[i] == '\\' {
             i += 1;
-            let start = i;
-            while i < chars.len() && chars[i].is_alphabetic() {
-                i += 1;
-            }
-            let cmd: String = chars[start..i].iter().collect();
-
-            match cmd.as_str() {
-                "frac" => {
-                    let num = extract_braced(&chars, &mut i);
-                    let den = extract_braced(&chars, &mut i);
-                    nodes.push(MathNode::Fraction(parse_latex(&num), parse_latex(&den)));
-                }
-                "ddot" => {
-                    let arg = extract_braced(&chars, &mut i);
-                    nodes.push(MathNode::Overdot(arg, 2));
-                }
-                "dot" => {
-                    let arg = extract_braced(&chars, &mut i);
-                    nodes.push(MathNode::Overdot(arg, 1));
-                }
-                "sqrt" => {
-                    let arg = extract_braced(&chars, &mut i);
-                    nodes.push(MathNode::Sqrt(parse_latex(&arg)));
-                }
-                "alpha" => nodes.push(MathNode::Symbol("α".into())),
-                "beta" => nodes.push(MathNode::Symbol("β".into())),
-                "gamma" => nodes.push(MathNode::Symbol("γ".into())),
-                "delta" => nodes.push(MathNode::Symbol("δ".into())),
-                "Delta" => nodes.push(MathNode::Symbol("Δ".into())),
-                "omega" => nodes.push(MathNode::Symbol("ω".into())),
-                "pi" => nodes.push(MathNode::Symbol("π".into())),
-                "sum" => nodes.push(MathNode::Symbol("∑".into())),
-                "int" => nodes.push(MathNode::Symbol("∫".into())),
-                "times" => nodes.push(MathNode::Symbol("×".into())),
-                "cdot" => nodes.push(MathNode::Symbol("·".into())),
-                "pm" => nodes.push(MathNode::Symbol("±".into())),
-                _ => nodes.push(MathNode::Text(cmd)),
-            }
+            nodes.push(parse_latex_command(&chars, &mut i));
             continue;
         }
 
@@ -92,16 +103,7 @@ pub fn parse_latex(input: &str) -> Vec<MathNode> {
         if (chars[i] == '^' || chars[i] == '_') && !nodes.is_empty() {
             let is_sup = chars[i] == '^';
             i += 1;
-            let script = if i < chars.len() && chars[i] == '{' {
-                extract_braced(&chars, &mut i)
-            } else if i < chars.len() {
-                let s = chars[i].to_string();
-                i += 1;
-                s
-            } else {
-                String::new()
-            };
-
+            let script = parse_script_arg(&chars, &mut i);
             let prev = nodes.pop().unwrap_or(MathNode::Text(String::new()));
             let base = match prev {
                 MathNode::Text(t) | MathNode::Symbol(t) => t,
@@ -111,12 +113,11 @@ pub fn parse_latex(input: &str) -> Vec<MathNode> {
                 MathNode::Subscript(b, s) => format!("{b}_{s}"),
                 MathNode::Sqrt(_) => "(sqrt)".to_string(),
             };
-
-            if is_sup {
-                nodes.push(MathNode::Superscript(base, script));
+            nodes.push(if is_sup {
+                MathNode::Superscript(base, script)
             } else {
-                nodes.push(MathNode::Subscript(base, script));
-            }
+                MathNode::Subscript(base, script)
+            });
             continue;
         }
 
@@ -124,15 +125,7 @@ pub fn parse_latex(input: &str) -> Vec<MathNode> {
             let base = chars[i].to_string();
             let is_sup = chars[i + 1] == '^';
             i += 2;
-            let script = if i < chars.len() && chars[i] == '{' {
-                extract_braced(&chars, &mut i)
-            } else if i < chars.len() {
-                let s = chars[i].to_string();
-                i += 1;
-                s
-            } else {
-                String::new()
-            };
+            let script = parse_script_arg(&chars, &mut i);
 
             if is_sup {
                 nodes.push(MathNode::Superscript(base, script));
@@ -213,11 +206,11 @@ pub fn render_latex_block(
         match node {
             MathNode::Text(t) => {
                 surface.draw_text(t, Point::new(cur_x, baseline), 15.0, COLOR_MATH_TEXT);
-                cur_x += (t.len() as f32) * 9.5;
+                cur_x += len_f32(t.len()) * 9.5;
             }
             MathNode::Symbol(s) => {
                 surface.draw_text(s, Point::new(cur_x, baseline), 15.0, COLOR_SYMBOL);
-                cur_x += (s.len() as f32) * 9.5;
+                cur_x += len_f32(s.len()) * 9.5;
             }
             MathNode::Overdot(var, count) => {
                 let dots = if *count >= 2 { "¨" } else { "˙" };
@@ -232,27 +225,27 @@ pub fn render_latex_block(
             }
             MathNode::Superscript(base, sup) => {
                 surface.draw_text(base, Point::new(cur_x, baseline), 15.0, COLOR_MATH_TEXT);
-                cur_x += (base.len() as f32) * 9.5;
+                cur_x += len_f32(base.len()) * 9.5;
                 surface.draw_text(sup, Point::new(cur_x, baseline - 6.0), 10.0, COLOR_ACCENT);
-                cur_x += (sup.len() as f32) * 7.0 + 3.0;
+                cur_x += len_f32(sup.len()) * 7.0 + 3.0;
             }
             MathNode::Subscript(base, sub) => {
                 surface.draw_text(base, Point::new(cur_x, baseline), 15.0, COLOR_MATH_TEXT);
-                cur_x += (base.len() as f32) * 9.5;
+                cur_x += len_f32(base.len()) * 9.5;
                 surface.draw_text(
                     sub,
                     Point::new(cur_x, baseline + 5.0),
                     10.0,
                     COLOR_TEXT_MUTED,
                 );
-                cur_x += (sub.len() as f32) * 7.0 + 3.0;
+                cur_x += len_f32(sub.len()) * 7.0 + 3.0;
             }
             MathNode::Fraction(num_nodes, den_nodes) => {
                 let num_str = nodes_to_str(num_nodes);
                 let den_str = nodes_to_str(den_nodes);
-                let frac_w = ((num_str.len().max(den_str.len()) as f32) * 8.5).max(28.0);
+                let frac_w = (len_f32(num_str.len().max(den_str.len())) * 8.5).max(28.0);
 
-                let num_x = cur_x + (frac_w - (num_str.len() as f32) * 8.0) / 2.0;
+                let num_x = cur_x + (frac_w - len_f32(num_str.len()) * 8.0) / 2.0;
                 surface.draw_text(
                     &num_str,
                     Point::new(num_x, baseline - 10.0),
@@ -267,7 +260,7 @@ pub fn render_latex_block(
                     COLOR_ACCENT,
                 );
 
-                let den_x = cur_x + (frac_w - (den_str.len() as f32) * 8.0) / 2.0;
+                let den_x = cur_x + (frac_w - len_f32(den_str.len()) * 8.0) / 2.0;
                 surface.draw_text(
                     &den_str,
                     Point::new(den_x, baseline + 12.0),
@@ -281,7 +274,7 @@ pub fn render_latex_block(
                 surface.draw_text("√", Point::new(cur_x, baseline - 1.0), 16.0, COLOR_ACCENT);
                 cur_x += 12.0;
                 let inner_str = nodes_to_str(inner);
-                let inner_w = (inner_str.len() as f32) * 8.5;
+                let inner_w = len_f32(inner_str.len()) * 8.5;
                 surface.draw_line(
                     Point::new(cur_x, baseline - 4.0),
                     Point::new(cur_x + inner_w, baseline - 4.0),

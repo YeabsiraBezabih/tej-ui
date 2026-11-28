@@ -51,12 +51,13 @@ impl ImageBuffer {
     /// Encode buffer into Netpbm PPM (P6 binary or P3 text) for zero-dependency inspection and export.
     #[must_use]
     pub fn to_ppm_string(&self) -> String {
+        use std::fmt::Write;
         let mut out = format!("P3\n{} {}\n255\n", self.width, self.height);
         for pixel in &self.pixels {
             let r = (pixel >> 16) & 0xFF;
             let g = (pixel >> 8) & 0xFF;
             let b = pixel & 0xFF;
-            out.push_str(&format!("{r} {g} {b} "));
+            let _ = write!(out, "{r} {g} {b} ");
         }
         out
     }
@@ -135,10 +136,10 @@ impl SnapshotComparator {
                 let b2 = (p2 & 0xFF) as u8;
                 let a2 = ((p2 >> 24) & 0xFF) as u8;
 
-                let dr = (r1 as i16 - r2 as i16).unsigned_abs() as u8;
-                let dg = (g1 as i16 - g2 as i16).unsigned_abs() as u8;
-                let db = (b1 as i16 - b2 as i16).unsigned_abs() as u8;
-                let da = (a1 as i16 - a2 as i16).unsigned_abs() as u8;
+                let dr = (i16::from(r1) - i16::from(r2)).unsigned_abs() as u8;
+                let dg = (i16::from(g1) - i16::from(g2)).unsigned_abs() as u8;
+                let db = (i16::from(b1) - i16::from(b2)).unsigned_abs() as u8;
+                let da = (i16::from(a1) - i16::from(a2)).unsigned_abs() as u8;
 
                 let max_d = dr.max(dg).max(db).max(da);
                 if max_d > max_channel_diff {
@@ -147,14 +148,16 @@ impl SnapshotComparator {
 
                 if max_d > self.channel_tolerance {
                     different_pixels += 1;
-                    diff_mask.set_pixel(x, y, 0xFFFF0000); // Red highlight for failure
+                    diff_mask.set_pixel(x, y, 0xFFFF_0000); // Red highlight for failure
                 } else {
                     diff_mask.set_pixel(x, y, p1);
                 }
             }
         }
 
-        let difference_percentage = (different_pixels as f32) / (total_pixels.max(1) as f32);
+        let diff_px = f64::from(u32::try_from(different_pixels).unwrap_or(u32::MAX));
+        let total_px = f64::from(u32::try_from(total_pixels.max(1)).unwrap_or(u32::MAX));
+        let difference_percentage = (diff_px / total_px) as f32;
         let is_match = difference_percentage <= self.max_diff_percentage;
 
         SnapshotDiffResult {

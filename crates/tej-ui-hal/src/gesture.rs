@@ -78,8 +78,10 @@ impl PanGesture {
                 let dy = touch.position.y - touch.start_position.y;
                 self.translation = Point::new(dx, dy);
 
-                let dt =
-                    (touch.timestamp_millis.saturating_sub(self.last_timestamp) as f32) / 1000.0;
+                let dt_ms =
+                    u16::try_from(touch.timestamp_millis.saturating_sub(self.last_timestamp))
+                        .unwrap_or(u16::MAX);
+                let dt = f32::from(dt_ms) / 1000.0;
                 if dt > 0.001 {
                     let vx = (touch.position.x - self.last_position.x) / dt;
                     let vy = (touch.position.y - self.last_position.y) / dt;
@@ -118,8 +120,8 @@ impl PinchGesture {
         let dy = p2.position.y - p1.position.y;
         let dist = (dx * dx + dy * dy).sqrt().max(1.0);
         let center = Point::new(
-            (p1.position.x + p2.position.x) * 0.5,
-            (p1.position.y + p2.position.y) * 0.5,
+            f32::midpoint(p1.position.x, p2.position.x),
+            f32::midpoint(p1.position.y, p2.position.y),
         );
 
         if self.state == GestureState::Possible || self.state == GestureState::Ended {

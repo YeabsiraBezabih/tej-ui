@@ -117,9 +117,9 @@ pub fn quantize_position(p: [f32; 3], min_pt: [f32; 3], scale_pt: [f32; 3]) -> [
 pub fn dequantize_position(q: [u16; 3], min_pt: [f32; 3], scale_pt: [f32; 3]) -> [f32; 3] {
     let inv = 1.0 / 65535.0;
     [
-        min_pt[0] + (q[0] as f32) * inv * scale_pt[0],
-        min_pt[1] + (q[1] as f32) * inv * scale_pt[1],
-        min_pt[2] + (q[2] as f32) * inv * scale_pt[2],
+        min_pt[0] + f32::from(q[0]) * inv * scale_pt[0],
+        min_pt[1] + f32::from(q[1]) * inv * scale_pt[1],
+        min_pt[2] + f32::from(q[2]) * inv * scale_pt[2],
     ]
 }
 

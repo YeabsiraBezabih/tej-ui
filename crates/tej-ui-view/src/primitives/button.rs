@@ -46,7 +46,7 @@ impl<V: View> fmt::Debug for Button<V> {
             .field("size", &self.size)
             .field("disabled", &self.disabled)
             .field("has_click_handler", &self.on_click.is_some())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -62,7 +62,7 @@ impl<S: Debug> fmt::Debug for ButtonState<S> {
         f.debug_struct("ButtonState")
             .field("child_state", &self.child_state)
             .field("has_click_handler", &self.on_click.is_some())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -86,10 +86,38 @@ impl<V: View> Button<V> {
         self
     }
 
+    /// Sets button width to fill its parent container (`Dimension::Fill`).
+    #[must_use]
+    pub const fn full_width(mut self) -> Self {
+        self.width = Some(tej_ui_layout::Dimension::Fill);
+        self
+    }
+
     /// Sets the visual style variant.
     #[must_use]
     pub const fn variant(mut self, variant: ButtonVariant) -> Self {
         self.variant = variant;
+        self
+    }
+
+    /// Convenience builder for `ButtonVariant::Ghost`.
+    #[must_use]
+    pub const fn ghost(mut self) -> Self {
+        self.variant = ButtonVariant::Ghost;
+        self
+    }
+
+    /// Convenience builder for `ButtonVariant::Secondary`.
+    #[must_use]
+    pub const fn secondary(mut self) -> Self {
+        self.variant = ButtonVariant::Secondary;
+        self
+    }
+
+    /// Convenience builder for `ButtonVariant::Outline`.
+    #[must_use]
+    pub const fn outline(mut self) -> Self {
+        self.variant = ButtonVariant::Outline;
         self
     }
 
@@ -100,14 +128,22 @@ impl<V: View> Button<V> {
         self
     }
 
-    /// Sets whether the button is disabled.
+    /// Disables the button so it ignores pointer clicks and renders dimmed.
     #[must_use]
-    pub const fn disabled(mut self, disabled: bool) -> Self {
-        self.disabled = disabled;
+    pub const fn disable(mut self) -> Self {
+        self.disabled = true;
+        self
+    }
+
+    /// Enables the button for normal interaction.
+    #[must_use]
+    pub const fn enable(mut self) -> Self {
+        self.disabled = false;
         self
     }
 
     /// Register a click event callback.
+    #[must_use]
     pub fn on_click<F: Fn() + Send + Sync + 'static>(mut self, handler: F) -> Self {
         self.on_click = Some(Arc::new(handler));
         self
@@ -127,7 +163,7 @@ impl<V: View> View for Button<V> {
 
     fn rebuild(&self, state: &mut Self::State) {
         self.child.rebuild(&mut state.child_state);
-        state.on_click = self.on_click.clone();
+        state.on_click.clone_from(&self.on_click);
     }
 
     fn patch(&self, state: &mut Self::State, dirty_bits: u64) {
@@ -157,6 +193,8 @@ impl<V: View> View for Button<V> {
             width,
             padding,
             height: tej_ui_layout::Dimension::Points(min_height),
+            align_items: tej_ui_layout::AlignItems::Center,
+            justify_content: tej_ui_layout::JustifyContent::Center,
             ..Default::default()
         };
         let node = arena.allocate_node(style);
@@ -182,12 +220,23 @@ impl<V: View> View for Button<V> {
             ButtonSize::Default | ButtonSize::Lg | ButtonSize::Icon => ctx.theme.radii.md,
         };
 
+        // Draw focus ring before any variant fill (including Outline) so it frames the button.
+        if is_focused && !self.disabled {
+            let ring = tej_ui_layout::Rect::new(
+                bounds.origin.x - 2.0,
+                bounds.origin.y - 2.0,
+                bounds.size.width + 4.0,
+                bounds.size.height + 4.0,
+            );
+            ctx.fill_rounded_rect(ring, radius + 2.0, ctx.theme.colors.ring);
+        }
+
         let bg = match self.variant {
             ButtonVariant::Default => {
                 if is_pressed {
                     ctx.theme.colors.accent
                 } else if is_hovered {
-                    tej_ui_hal::Color::from_rgb_u32(0x2563EB)
+                    ctx.theme.colors.primary_hover
                 } else {
                     ctx.theme.colors.primary
                 }
@@ -201,7 +250,7 @@ impl<V: View> View for Button<V> {
             }
             ButtonVariant::Destructive => {
                 if is_hovered {
-                    tej_ui_hal::Color::from_rgb_u32(0xB91C1C)
+                    ctx.theme.colors.destructive_hover
                 } else {
                     ctx.theme.colors.destructive
                 }
@@ -232,20 +281,24 @@ impl<V: View> View for Button<V> {
             ButtonVariant::Link => tej_ui_hal::Color::TRANSPARENT,
         };
 
-        if is_focused && !self.disabled {
-            let ring = tej_ui_layout::Rect::new(
-                bounds.origin.x - 2.0,
-                bounds.origin.y - 2.0,
-                bounds.size.width + 4.0,
-                bounds.size.height + 4.0,
-            );
-            ctx.fill_rounded_rect(ring, radius + 2.0, ctx.theme.colors.ring);
-        }
-
         if bg != tej_ui_hal::Color::TRANSPARENT {
             ctx.fill_rounded_rect(bounds, radius, bg);
         }
+
+        let fg = match self.variant {
+            ButtonVariant::Default => ctx.theme.colors.primary_foreground,
+            ButtonVariant::Secondary => ctx.theme.colors.secondary_foreground,
+            ButtonVariant::Destructive => ctx.theme.colors.destructive_foreground,
+            ButtonVariant::Outline | ButtonVariant::Ghost | ButtonVariant::Link => {
+                ctx.theme.colors.foreground
+            }
+        };
+
+        ctx.push_clip(bounds, [radius; 4]);
+        ctx.push_foreground(fg);
         self.child.paint(&state.child_state, ctx);
+        ctx.pop_foreground();
+        ctx.pop_clip();
     }
 
     fn register_events(
@@ -253,10 +306,10 @@ impl<V: View> View for Button<V> {
         state: &Self::State,
         dispatcher: &mut crate::events::EventDispatcher,
     ) {
-        if !self.disabled {
-            if let Some(handler) = &self.on_click {
-                dispatcher.register_click(state.node, Arc::clone(handler));
-            }
+        if !self.disabled
+            && let Some(handler) = &self.on_click
+        {
+            dispatcher.register_click(state.node, Arc::clone(handler));
         }
         self.child.register_events(&state.child_state, dispatcher);
     }

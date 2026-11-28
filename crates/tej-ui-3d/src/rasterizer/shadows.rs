@@ -82,7 +82,7 @@ impl ShadowMap {
         let ndc_z = clip[2] * inv_w;
 
         // Map NDC [-1, 1]^2 to texture coordinates [0, 1]^2
-        let u = (ndc_x + 1.0) * 0.5;
+        let u = f32::midpoint(ndc_x, 1.0);
         let v = (1.0 - ndc_y) * 0.5;
         let current_depth = ndc_z;
 
@@ -90,8 +90,8 @@ impl ShadowMap {
             return 1.0; // Outside shadow map bounds is unshadowed
         }
 
-        let w_f32 = self.width as f32;
-        let h_f32 = self.height as f32;
+        let w_f32 = crate::math::count_to_f32(self.width);
+        let h_f32 = crate::math::count_to_f32(self.height);
         let px = u * w_f32;
         let py = v * h_f32;
 

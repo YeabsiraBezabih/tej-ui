@@ -27,7 +27,7 @@ where
             .field("total_items", &self.total_items)
             .field("item_height", &self.item_height)
             .field("viewport_height", &self.viewport_height)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

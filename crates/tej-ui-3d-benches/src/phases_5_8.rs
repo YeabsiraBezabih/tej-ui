@@ -36,24 +36,23 @@ pub fn run_phase_5_picking_and_navigation<S: Storage>(
     let _ = viewport.on_camera_move(&frustum, camera_pos, 0.05);
 
     // 1,000 random pointer clicks
-    let iterations = 1000;
+    let iterations: u16 = 1000;
     let t_pick = Instant::now();
     for i in 0..iterations {
-        let sx = ((i * 37) % 1920) as f32;
-        let sy = ((i * 53) % 1080) as f32;
+        let sx = f32::from((i.wrapping_mul(37)) % 1920);
+        let sy = f32::from((i.wrapping_mul(53)) % 1080);
         let ray = tej_ui_3d::nanite::picking::screen_point_to_ray(
             sx, sy, 1920.0, 1080.0, &inv_vp, camera_pos,
         );
         let _ = viewport.pick_ray(&ray, mydb::RaycastScope::VisibleOnly);
     }
-    let raycast_pick_latency_us =
-        (t_pick.elapsed().as_nanos() as f64 / 1000.0) / (iterations as f64);
+    let raycast_pick_latency_us = (t_pick.elapsed().as_secs_f64() * 1e6) / f64::from(iterations);
 
     // 6-DOF matrix recomputation
     let t_cam = Instant::now();
-    let cam_iters = 100_000;
+    let cam_iters: u32 = 100_000;
     for i in 0..cam_iters {
-        let angle = (i as f32) * 0.001;
+        let angle = f32::from(u16::try_from(i % 6283).unwrap_or(0)) * 0.001;
         let view = Mat4::look_at(
             tej_ui_3d::Vec3::new(angle.cos() * 10.0, 5.0, angle.sin() * 10.0),
             tej_ui_3d::Vec3::ZERO,
@@ -62,7 +61,7 @@ pub fn run_phase_5_picking_and_navigation<S: Storage>(
         let proj = Mat4::perspective(45.0_f32.to_radians(), 1.777, 0.1, 1000.0);
         let _vp = proj.mul_mat(&view);
     }
-    let camera_orbit_6dof_update_ns = (t_cam.elapsed().as_nanos() as f64) / (cam_iters as f64);
+    let camera_orbit_6dof_update_ns = (t_cam.elapsed().as_secs_f64() * 1e9) / f64::from(cam_iters);
 
     Phase5Result {
         raycast_pick_latency_us,
@@ -96,7 +95,7 @@ pub fn run_phase_6_acid_gizmo<S: Storage>(
         };
         gizmo.apply_translation(viewport, delta)?;
     }
-    let in_place_gizmo_mutation_us = (t_mut.elapsed().as_micros() as f64) / (iters as f64);
+    let in_place_gizmo_mutation_us = (t_mut.elapsed().as_secs_f64() * 1e6) / f64::from(iters);
 
     // 10,000 AtomicU64 COW snapshot root swap evaluations
     let root_page = std::sync::atomic::AtomicU64::new(1024);
@@ -106,7 +105,7 @@ pub fn run_phase_6_acid_gizmo<S: Storage>(
         root_page.store(i as u64, std::sync::atomic::Ordering::Release);
         let _ = root_page.load(std::sync::atomic::Ordering::Acquire);
     }
-    let cow_undo_redo_latency_ns = (t_undo.elapsed().as_nanos() as f64) / (cow_iters as f64);
+    let cow_undo_redo_latency_ns = (t_undo.elapsed().as_secs_f64() * 1e9) / f64::from(cow_iters);
 
     // Write transaction test for recovery integrity
     let tx = db.begin_write()?;
@@ -129,11 +128,11 @@ pub struct Phase7Result {
 
 /// Simple 64-bit FNV-1a hash over rendered pixel buffers.
 fn fnv1a_hash(data: &[u32]) -> u64 {
-    let mut hash: u64 = 0xcbf29ce484222325;
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
     for &val in data {
         for &byte in &val.to_ne_bytes() {
-            hash ^= byte as u64;
-            hash = hash.wrapping_mul(0x100000001b3);
+            hash ^= u64::from(byte);
+            hash = hash.wrapping_mul(0x0100_0000_01b3);
         }
     }
     hash

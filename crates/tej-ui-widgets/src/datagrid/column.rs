@@ -53,18 +53,21 @@ impl GridColumn {
     }
 
     /// Set column width.
+    #[must_use]
     pub fn width(mut self, width: f32) -> Self {
         self.width = width.max(self.min_width);
         self
     }
 
     /// Pin column to Left or Right side of viewport.
+    #[must_use]
     pub fn pin(mut self, pin: PinState) -> Self {
         self.pin = pin;
         self
     }
 
     /// Set initial sort direction.
+    #[must_use]
     pub fn sort(mut self, sort: SortDirection) -> Self {
         self.sort = sort;
         self

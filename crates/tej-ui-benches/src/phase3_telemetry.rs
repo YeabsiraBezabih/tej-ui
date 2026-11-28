@@ -25,8 +25,14 @@ fn compute_percentiles(mut times: Vec<f64>) -> (f64, f64, f64) {
     }
     times.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     let p50 = times[times.len() / 2];
-    let p99 = times[(times.len() as f64 * 0.99) as usize];
-    let avg = times.iter().sum::<f64>() / times.len() as f64;
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "99th percentile index is bounded by times.len()"
+    )]
+    let p99_idx = ((crate::count_to_f64(times.len()) * 0.99) as usize).min(times.len() - 1);
+    let p99 = times[p99_idx];
+    let avg = times.iter().sum::<f64>() / crate::count_to_f64(times.len());
     (p50, p99, avg)
 }
 
@@ -50,13 +56,13 @@ fn bench_egui_telemetry(frames: usize) -> TelemetryBenchMetric {
             egui::CentralPanel::default().show(ctx, |ui| {
                 ui.horizontal(|ui| {
                     for i in 0..500 {
-                        let val = (((f + i) * 13) % 100) as f32 / 100.0;
+                        let val = crate::count_to_f32(((f + i) * 13) % 100) / 100.0;
                         ui.add(egui::ProgressBar::new(val));
                     }
                 });
                 ui.columns(4, |cols| {
                     for i in 0..500 {
-                        let val = (((f + i) * 7) as f64) * 0.1234;
+                        let val = crate::count_to_f64((f + i) * 7) * 0.1234;
                         cols[i % 4].label(format!("Count {i}: {val:.4}"));
                     }
                 });
@@ -78,14 +84,14 @@ fn bench_egui_telemetry(frames: usize) -> TelemetryBenchMetric {
 
     let (alloc_count, _bytes, _peak) = TrackingAllocator::delta_since(snap);
     let (p50, p99, avg) = compute_percentiles(frame_times);
-    let total_secs = (avg * frames as f64) / 1000.0;
+    let total_secs = (avg * crate::count_to_f64(frames)) / 1000.0;
 
     TelemetryBenchMetric {
         framework: "egui v0.32 (Immediate)",
         p50_frame_ms: p50,
         p99_frame_ms: p99,
         avg_frame_ms: avg,
-        vertices_per_sec: total_vertices as f64 / total_secs.max(0.001),
+        vertices_per_sec: crate::count_to_f64(total_vertices) / total_secs.max(0.001),
         allocations_per_frame: alloc_count / frames,
     }
 }

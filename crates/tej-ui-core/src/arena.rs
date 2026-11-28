@@ -140,11 +140,11 @@ impl SignalArena {
         }
 
         // Reuse existing boxed allocation if slot already contains type T (zero-allocation steady state)
-        if let Some(ref mut existing) = slot.value {
-            if let Some(target) = existing.downcast_mut::<T>() {
-                *target = value;
-                return Ok(());
-            }
+        if let Some(ref mut existing) = slot.value
+            && let Some(target) = existing.downcast_mut::<T>()
+        {
+            *target = value;
+            return Ok(());
         }
 
         slot.value = Some(Box::new(value));

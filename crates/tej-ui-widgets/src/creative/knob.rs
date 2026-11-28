@@ -58,9 +58,9 @@ impl Default for RotaryKnob {
         Self {
             bounds: Rect::ZERO,
             diameter: 44.0,
-            body_color: Color::from_rgb_u32(0x101828), // Tej Gray 900
-            indicator_color: Color::from_rgb_u32(0x7F56D9), // Tej Brand 600
-            track_color: Color::from_rgb_u32(0xEAECF0), // Tej Gray 200
+            body_color: Color::from_rgb_u32(0x0010_1828), // Tej Gray 900
+            indicator_color: Color::from_rgb_u32(0x007F_56D9), // Tej Brand 600
+            track_color: Color::from_rgb_u32(0x00EA_ECF0), // Tej Gray 200
         }
     }
 }

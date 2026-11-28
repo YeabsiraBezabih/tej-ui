@@ -38,7 +38,7 @@ impl std::fmt::Debug for SlintAdapter {
         f.debug_struct("SlintAdapter")
             .field("rows", &self.model.row_count())
             .field("dirty_rects", &self.dirty_rects)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -99,7 +99,7 @@ impl GuiBenchHarness for SlintAdapter {
             x: 0.0,
             y: 0.0,
             width: 1920.0,
-            height: (count as f32 * 36.0).min(1080.0),
+            height: (crate::count_to_f32(count) * 36.0).min(1080.0),
         });
         let layout_ns = t_layout.elapsed().as_nanos() as u64;
 
@@ -170,7 +170,7 @@ impl GuiBenchHarness for SlintAdapter {
                 self.model.set_row_data(i, r);
                 self.dirty_rects.push(DirtyRect {
                     x: 0.0,
-                    y: (i as f32 * 36.0).min(1080.0),
+                    y: (crate::count_to_f32(i) * 36.0).min(1080.0),
                     width: 1920.0,
                     height: 36.0,
                 });
@@ -203,7 +203,7 @@ impl GuiBenchHarness for SlintAdapter {
             self.model.set_row_data(index, r);
             self.dirty_rects.push(DirtyRect {
                 x: 0.0,
-                y: (index as f32 * 36.0).min(1080.0),
+                y: (crate::count_to_f32(index) * 36.0).min(1080.0),
                 width: 1920.0,
                 height: 36.0,
             });
@@ -237,13 +237,13 @@ impl GuiBenchHarness for SlintAdapter {
             self.model.set_row_data(idx_b, a);
             self.dirty_rects.push(DirtyRect {
                 x: 0.0,
-                y: (idx_a as f32 * 36.0).min(1080.0),
+                y: (crate::count_to_f32(idx_a) * 36.0).min(1080.0),
                 width: 1920.0,
                 height: 36.0,
             });
             self.dirty_rects.push(DirtyRect {
                 x: 0.0,
-                y: (idx_b as f32 * 36.0).min(1080.0),
+                y: (crate::count_to_f32(idx_b) * 36.0).min(1080.0),
                 width: 1920.0,
                 height: 36.0,
             });
@@ -285,9 +285,9 @@ impl GuiBenchHarness for SlintAdapter {
 
         self.dirty_rects.push(DirtyRect {
             x: 0.0,
-            y: (base as f32 * 36.0).min(1080.0),
+            y: (crate::count_to_f32(base) * 36.0).min(1080.0),
             width: 1920.0,
-            height: ((count as f32) * 36.0).min(1080.0),
+            height: (crate::count_to_f32(count) * 36.0).min(1080.0),
         });
 
         let paint_ns = self.simulate_software_render();
@@ -345,10 +345,10 @@ impl GuiBenchHarness for SlintAdapter {
         let per_col = node_count / 4;
         let col_w = width / 4.0;
         let mut accum = 0.0f32;
-        for c in 0..4 {
+        for c in 0u16..4 {
             for r in 0..per_col {
-                let x = c as f32 * col_w;
-                let y = r as f32 * 24.0;
+                let x = f32::from(c) * col_w;
+                let y = crate::count_to_f32(r) * 24.0;
                 accum += x + y;
             }
         }
@@ -401,10 +401,10 @@ impl GuiBenchHarness for SlintAdapter {
 
         let count = active_widgets / 3;
         for i in 0..count {
-            let val = ((i * 17) % 100) as f32 / 100.0;
+            let val = crate::count_to_f32((i * 17) % 100) / 100.0;
             self.dirty_rects.push(DirtyRect {
                 x: 10.0,
-                y: (i * 20) as f32,
+                y: crate::count_to_f32(i * 20),
                 width: val * 300.0,
                 height: 16.0,
             });

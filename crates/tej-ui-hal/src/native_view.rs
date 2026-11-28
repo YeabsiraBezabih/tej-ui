@@ -46,11 +46,11 @@ impl NativeViewHost {
 
     /// Updates layout geometry and returns true if geometry changed.
     pub fn update_bounds(&mut self, bounds: Rect) -> bool {
-        if self.bounds != bounds {
+        if self.bounds == bounds {
+            false
+        } else {
             self.bounds = bounds;
             true
-        } else {
-            false
         }
     }
 
@@ -64,9 +64,14 @@ impl NativeViewHost {
         self.clip_rect
     }
 
-    /// Sets visibility state.
-    pub fn set_visible(&mut self, visible: bool) {
-        self.is_visible = visible;
+    /// Shows the native view.
+    pub fn show(&mut self) {
+        self.is_visible = true;
+    }
+
+    /// Hides the native view.
+    pub fn hide(&mut self) {
+        self.is_visible = false;
     }
 
     /// Current visibility.

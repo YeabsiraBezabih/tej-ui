@@ -48,7 +48,7 @@ impl HeadlessTarget {
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        let buffer_size = (padded_bytes_per_row as u64).saturating_mul(u64::from(height));
+        let buffer_size = u64::from(padded_bytes_per_row).saturating_mul(u64::from(height));
         let readback_buffer = ctx.device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("tej_headless_readback"),
             size: buffer_size,
@@ -266,7 +266,7 @@ pub enum RenderTarget<'window> {
     Headless(HeadlessTarget),
 }
 
-impl<'window> RenderTarget<'window> {
+impl RenderTarget<'_> {
     #[must_use]
     pub const fn width(&self) -> u32 {
         match self {

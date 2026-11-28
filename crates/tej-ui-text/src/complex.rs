@@ -2,6 +2,10 @@
 
 /// Standard OpenType layout feature flags.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "Public OpenType feature toggle struct; callers and tests access boolean fields directly"
+)]
 pub struct OpenTypeFeatures {
     /// Standard ligatures (`liga`) - e.g. fi, fl.
     pub standard_ligatures: bool,
@@ -74,8 +78,8 @@ impl CursiveScriptJoiner {
             return ArabicJoiningForm::Isolated;
         }
 
-        let joins_prev = prev.map(Self::joins_left).unwrap_or(false);
-        let joins_next = next.map(Self::is_arabic).unwrap_or(false) && Self::joins_left(current);
+        let joins_prev = prev.is_some_and(Self::joins_left);
+        let joins_next = next.is_some_and(Self::is_arabic) && Self::joins_left(current);
 
         match (joins_prev, joins_next) {
             (true, true) => ArabicJoiningForm::Medial,

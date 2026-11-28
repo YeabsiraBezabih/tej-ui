@@ -22,6 +22,15 @@ pub struct MonitorInfo {
     pub is_primary: bool,
 }
 
+/// Whether a monitor is the primary system display or a secondary display.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MonitorRole {
+    /// Primary system display.
+    Primary,
+    /// Secondary/external display.
+    Secondary,
+}
+
 impl MonitorInfo {
     /// Creates a new `MonitorInfo`.
     #[must_use]
@@ -30,7 +39,7 @@ impl MonitorInfo {
         name: impl Into<String>,
         bounds: Rect,
         scale_factor: f32,
-        is_primary: bool,
+        role: MonitorRole,
     ) -> Self {
         Self {
             id,
@@ -41,7 +50,7 @@ impl MonitorInfo {
             } else {
                 1.0
             },
-            is_primary,
+            is_primary: matches!(role, MonitorRole::Primary),
         }
     }
 
@@ -90,7 +99,7 @@ impl MonitorManager {
                 "Primary Display",
                 Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(1920.0, 1080.0)),
                 1.0,
-                true,
+                MonitorRole::Primary,
             )],
         }
     }

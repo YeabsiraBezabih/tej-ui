@@ -64,54 +64,54 @@ impl Win32WindowFrame {
 
     /// Evaluates WM_NCHITTEST for a given point in window-local coordinates.
     pub fn hit_test(&self, point: Point) -> NcHitCode {
-        let x = point.x;
-        let y = point.y;
-        let b = self.resize_border_thickness;
-        let w = self.window_width;
-        let h = self.window_height;
+        let px = point.x;
+        let py = point.y;
+        let border = self.resize_border_thickness;
+        let win_w = self.window_width;
+        let win_h = self.window_height;
 
         // 1. Resizing corners and borders (checked first so borders overlap titlebar edges)
-        if y < b {
-            if x < b {
+        if py < border {
+            if px < border {
                 return NcHitCode::TopLeft;
             }
-            if x > w - b {
+            if px > win_w - border {
                 return NcHitCode::TopRight;
             }
             return NcHitCode::Top;
         }
 
-        if y > h - b {
-            if x < b {
+        if py > win_h - border {
+            if px < border {
                 return NcHitCode::BottomLeft;
             }
-            if x > w - b {
+            if px > win_w - border {
                 return NcHitCode::BottomRight;
             }
             return NcHitCode::Bottom;
         }
 
-        if x < b {
+        if px < border {
             return NcHitCode::Left;
         }
-        if x > w - b {
+        if px > win_w - border {
             return NcHitCode::Right;
         }
 
         // 2. Titlebar and native button regions
-        if y < self.titlebar_height {
+        if py < self.titlebar_height {
             let btn_width = 46.0;
 
             // Close button (rightmost)
-            if x >= w - btn_width {
+            if px >= win_w - btn_width {
                 return NcHitCode::Close;
             }
             // Maximize / Snap layout button
-            if x >= w - btn_width * 2.0 {
+            if px >= win_w - btn_width * 2.0 {
                 return NcHitCode::MaxButton;
             }
             // Minimize button
-            if x >= w - btn_width * 3.0 {
+            if px >= win_w - btn_width * 3.0 {
                 return NcHitCode::MinButton;
             }
 

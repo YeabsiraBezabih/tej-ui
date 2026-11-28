@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 use tej_ui_core::Signal;
-use tej_ui_layout::{Point, Rect, Size};
+use tej_ui_layout::{Dimension, Point, Rect, Size};
 use tej_ui_view::View;
 
 /// An option item inside a Select dropdown.
@@ -42,6 +42,7 @@ pub struct Select<T: Clone + PartialEq + Send + Sync + 'static> {
     is_open: Signal<bool>,
     options: Vec<SelectOption<T>>,
     placeholder: String,
+    width: Dimension,
     on_change: SelectCallback<T>,
 }
 
@@ -51,7 +52,7 @@ impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> std::fmt::D
             .field("selected", &self.selected.get())
             .field("is_open", &self.is_open.get())
             .field("options_count", &self.options.len())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -69,8 +70,16 @@ impl<T: Clone + PartialEq + Send + Sync + 'static> Select<T> {
             is_open,
             options,
             placeholder: placeholder.into(),
+            width: Dimension::Points(180.0),
             on_change: None,
         }
+    }
+
+    /// Sets explicit select trigger width constraint.
+    #[must_use]
+    pub const fn width(mut self, width: Dimension) -> Self {
+        self.width = width;
+        self
     }
 
     /// Selects an option by index and closes dropdown.
@@ -90,10 +99,12 @@ impl<T: Clone + PartialEq + Send + Sync + 'static> Select<T> {
     }
 }
 
+type SelectChangeFn<T> = Arc<dyn Fn(&T) + Send + Sync>;
+
 fn step_select_option<T: Clone + PartialEq + Send + Sync + 'static>(
     options: &[SelectOption<T>],
     selected: Signal<T>,
-    on_change: &SelectCallback<T>,
+    on_change: Option<&SelectChangeFn<T>>,
     delta: isize,
 ) {
     if options.is_empty() {
@@ -119,11 +130,14 @@ impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> View for Se
             .options
             .iter()
             .find(|o| o.value == val)
-            .map(|o| o.label.clone())
-            .unwrap_or_else(|| self.placeholder.clone());
+            .map_or_else(|| self.placeholder.clone(), |o| o.label.clone());
+        let default_w = match self.width {
+            Dimension::Points(w) => w,
+            _ => 180.0,
+        };
 
         SelectState {
-            bounds: Rect::from_origin_size(Point::ZERO, Size::new(180.0, 36.0)),
+            bounds: Rect::from_origin_size(Point::ZERO, Size::new(default_w, 36.0)),
             is_open: self.is_open.get(),
             selected_label,
             node: 0,
@@ -137,8 +151,7 @@ impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> View for Se
             .options
             .iter()
             .find(|o| o.value == val)
-            .map(|o| o.label.clone())
-            .unwrap_or_else(|| self.placeholder.clone());
+            .map_or_else(|| self.placeholder.clone(), |o| o.label.clone());
         state.is_open = self.is_open.get();
     }
 
@@ -148,8 +161,8 @@ impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> View for Se
 
     fn layout(&self, state: &mut Self::State, arena: &mut tej_ui_layout::LayoutArena) -> u32 {
         let trigger_style = tej_ui_layout::LayoutStyle {
-            width: tej_ui_layout::Dimension::Points(180.0),
-            height: tej_ui_layout::Dimension::Points(36.0),
+            width: self.width,
+            height: Dimension::Points(36.0),
             ..Default::default()
         };
         let root = arena.allocate_node(trigger_style);
@@ -159,8 +172,8 @@ impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> View for Se
         if state.is_open {
             for _ in 0..self.options.len() {
                 let opt_style = tej_ui_layout::LayoutStyle {
-                    width: tej_ui_layout::Dimension::Points(180.0),
-                    height: tej_ui_layout::Dimension::Points(32.0),
+                    width: self.width,
+                    height: Dimension::Points(32.0),
                     ..Default::default()
                 };
                 let opt_node = arena.allocate_node(opt_style);
@@ -191,32 +204,38 @@ impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> View for Se
             ctx.fill_rounded_rect(ring, 8.0, ctx.theme.colors.ring);
         }
 
-        // Trigger background & border
-        ctx.fill_rounded_rect(bounds, 6.0, ctx.theme.colors.input);
+        // Trigger background & border (base fill painted before hover overlay for clean blending)
+        ctx.fill_rounded_rect(bounds, 6.0, ctx.theme.colors.input_border);
         let inner_trigger = Rect::new(
             bounds.origin.x + 1.0,
             bounds.origin.y + 1.0,
-            bounds.size.width - 2.0,
-            bounds.size.height - 2.0,
+            (bounds.size.width - 2.0).max(0.0),
+            (bounds.size.height - 2.0).max(0.0),
         );
-        let bg = if ctx.is_hovered(state.node) {
-            ctx.theme.colors.accent.with_alpha(50)
-        } else {
-            ctx.theme.colors.background
-        };
-        ctx.fill_rounded_rect(inner_trigger, 5.0, bg);
+        ctx.fill_rounded_rect(inner_trigger, 5.0, ctx.theme.colors.input_bg);
+        if ctx.is_hovered(state.node) {
+            ctx.fill_rounded_rect(inner_trigger, 5.0, ctx.theme.colors.accent);
+        }
 
-        // Text & indicator
+        // Trigger label clipped before chevron
+        let label_clip = Rect::new(
+            bounds.origin.x,
+            bounds.origin.y,
+            (bounds.size.width - 22.0).max(0.0),
+            bounds.size.height,
+        );
         let text_pt = Point::new(
             bounds.origin.x + 12.0,
             bounds.origin.y + (bounds.size.height - 14.0) * 0.5,
         );
+        ctx.push_clip(label_clip, [0.0; 4]);
         ctx.draw_text(
             &state.selected_label,
             text_pt,
             ctx.theme.typography.body_small.font_size,
             ctx.theme.colors.foreground,
         );
+        ctx.pop_clip();
 
         let chevron_pt = Point::new(
             bounds.origin.x + bounds.size.width - 18.0,
@@ -231,7 +250,7 @@ impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> View for Se
 
         // Dropdown popover
         if state.is_open && !self.options.is_empty() {
-            let menu_h = (self.options.len() as f32) * 32.0 + 8.0;
+            let menu_h = crate::count_to_f32(self.options.len()) * 32.0 + 8.0;
             let menu_rect = Rect::new(
                 bounds.origin.x,
                 bounds.origin.y + bounds.size.height + 4.0,
@@ -242,18 +261,18 @@ impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> View for Se
             let inner_menu = Rect::new(
                 menu_rect.origin.x + 1.0,
                 menu_rect.origin.y + 1.0,
-                menu_rect.size.width - 2.0,
-                menu_rect.size.height - 2.0,
+                (menu_rect.size.width - 2.0).max(0.0),
+                (menu_rect.size.height - 2.0).max(0.0),
             );
             ctx.fill_rounded_rect(inner_menu, 5.0, ctx.theme.colors.popover);
 
             for (i, opt) in self.options.iter().enumerate() {
                 let opt_node = state.option_nodes.get(i).copied().unwrap_or(0);
-                let opt_y = menu_rect.origin.y + 4.0 + (i as f32) * 32.0;
+                let opt_y = menu_rect.origin.y + 4.0 + crate::count_to_f32(i) * 32.0;
                 let opt_rect = Rect::new(
                     menu_rect.origin.x + 4.0,
                     opt_y,
-                    menu_rect.size.width - 8.0,
+                    (menu_rect.size.width - 8.0).max(0.0),
                     28.0,
                 );
 
@@ -268,12 +287,14 @@ impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> View for Se
                 } else {
                     ctx.theme.colors.popover_foreground
                 };
+                ctx.push_clip(opt_rect, [4.0; 4]);
                 ctx.draw_text(
                     &opt.label,
                     opt_text_pt,
                     ctx.theme.typography.body_small.font_size,
                     text_color,
                 );
+                ctx.pop_clip();
             }
         }
     }
@@ -302,10 +323,10 @@ impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> View for Se
                     is_open_key.set(false);
                 }
                 37 | 38 => {
-                    step_select_option(&opts_key, sel_key, &on_change_key, -1);
+                    step_select_option(&opts_key, sel_key, on_change_key.as_ref(), -1);
                 }
                 39 | 40 => {
-                    step_select_option(&opts_key, sel_key, &on_change_key, 1);
+                    step_select_option(&opts_key, sel_key, on_change_key.as_ref(), 1);
                 }
                 _ => {}
             }),
@@ -348,10 +369,10 @@ impl<T: Clone + PartialEq + Send + Sync + std::fmt::Debug + 'static> View for Se
                                 is_open_opt.set(false);
                             }
                             37 | 38 => {
-                                step_select_option(&opts_opt, sig_opt, &on_change_opt, -1);
+                                step_select_option(&opts_opt, sig_opt, on_change_opt.as_ref(), -1);
                             }
                             39 | 40 => {
-                                step_select_option(&opts_opt, sig_opt, &on_change_opt, 1);
+                                step_select_option(&opts_opt, sig_opt, on_change_opt.as_ref(), 1);
                             }
                             _ => {}
                         }),

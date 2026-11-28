@@ -108,7 +108,7 @@ impl<S: Storage> NaniteRenderEngine<S> {
         let cull_result: CullResult =
             self.viewport
                 .on_camera_move(frustum, camera_pos, max_screen_error);
-        stats.culling_time_us = cull_start.elapsed().as_micros() as f64;
+        stats.culling_time_us = cull_start.elapsed().as_secs_f64() * 1_000_000.0;
         stats.clusters_visible = cull_result.visible_clusters.len() as usize;
 
         // 2. Zero-Copy Differential GPU Staging Upload (<0.20 ms)

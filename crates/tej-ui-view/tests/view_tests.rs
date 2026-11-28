@@ -151,7 +151,7 @@ fn test_snapshot_testing_and_diff_comparator() {
     let mut golden = ImageBuffer::new(10, 10);
     for y in 0..10 {
         for x in 0..10 {
-            golden.set_pixel(x, y, 0xFF00FF00); // Solid green
+            golden.set_pixel(x, y, 0xFF00_FF00); // Solid green
         }
     }
 
@@ -164,7 +164,7 @@ fn test_snapshot_testing_and_diff_comparator() {
 
     // 2. Tolerance check: slight rounding delta in blue channel (delta = 2)
     let mut actual_slight_diff = golden.clone();
-    actual_slight_diff.set_pixel(5, 5, 0xFF00FF02);
+    actual_slight_diff.set_pixel(5, 5, 0xFF00_FF02);
 
     let default_comp = SnapshotComparator::default(); // tolerance = 2
     let res_tolerated = default_comp.compare(&actual_slight_diff, &golden);
@@ -173,8 +173,8 @@ fn test_snapshot_testing_and_diff_comparator() {
 
     // 3. Significant failure: mismatched color (red vs green)
     let mut actual_bad = golden.clone();
-    actual_bad.set_pixel(0, 0, 0xFFFF0000); // Red
-    actual_bad.set_pixel(1, 1, 0xFFFF0000);
+    actual_bad.set_pixel(0, 0, 0xFFFF_0000); // Red
+    actual_bad.set_pixel(1, 1, 0xFFFF_0000);
 
     let res_bad = comparator.compare(&actual_bad, &golden);
     assert!(!res_bad.is_match);
@@ -182,7 +182,7 @@ fn test_snapshot_testing_and_diff_comparator() {
     assert!(res_bad.max_channel_diff > 200);
 
     // Diff mask highlighted mismatched pixel in failure red
-    assert_eq!(res_bad.diff_mask.get_pixel(0, 0), Some(0xFFFF0000));
+    assert_eq!(res_bad.diff_mask.get_pixel(0, 0), Some(0xFFFF_0000));
 
     // 4. PPM export format
     let ppm = golden.to_ppm_string();

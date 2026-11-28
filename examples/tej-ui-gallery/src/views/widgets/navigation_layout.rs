@@ -12,7 +12,7 @@ pub fn navigation_layout_view() -> impl View {
         BreadcrumbItem::new("Home").href("/"),
         BreadcrumbItem::new("Workspace").href("/workspace"),
         BreadcrumbItem::new("Components").href("/components"),
-        BreadcrumbItem::new("Storybook").current(true),
+        BreadcrumbItem::new("Storybook").mark_current(),
     ];
 
     let accordion_items = vec![

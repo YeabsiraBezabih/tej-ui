@@ -63,6 +63,7 @@ impl DragSession {
         }
     }
 
+    #[must_use]
     pub fn with_preview(mut self, preview: DragPreview) -> Self {
         self.preview = Some(preview);
         self

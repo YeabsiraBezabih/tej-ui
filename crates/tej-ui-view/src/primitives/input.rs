@@ -2,6 +2,7 @@ use crate::view::View;
 use std::fmt;
 use std::sync::Arc;
 use tej_ui_core::Signal;
+use tej_ui_layout::Dimension;
 
 pub type TextChangeHandler = Arc<dyn Fn(&str) + Send + Sync>;
 
@@ -11,6 +12,8 @@ pub struct Input {
     text: Signal<String>,
     placeholder: String,
     on_change: Option<TextChangeHandler>,
+    width: Dimension,
+    flex_grow: f32,
 }
 
 impl fmt::Debug for Input {
@@ -18,7 +21,9 @@ impl fmt::Debug for Input {
         f.debug_struct("Input")
             .field("text", &self.text)
             .field("placeholder", &self.placeholder)
-            .finish()
+            .field("width", &self.width)
+            .field("flex_grow", &self.flex_grow)
+            .finish_non_exhaustive()
     }
 }
 
@@ -37,16 +42,34 @@ impl Input {
             text,
             placeholder: String::new(),
             on_change: None,
+            width: Dimension::Points(240.0),
+            flex_grow: 0.0,
         }
     }
 
     /// Set placeholder text.
+    #[must_use]
     pub fn placeholder(mut self, text: impl Into<String>) -> Self {
         self.placeholder = text.into();
         self
     }
 
+    /// Set explicit width constraint.
+    #[must_use]
+    pub const fn width(mut self, width: Dimension) -> Self {
+        self.width = width;
+        self
+    }
+
+    /// Set flex grow factor (e.g. 1.0 to expand and fill remaining space).
+    #[must_use]
+    pub const fn flex_grow(mut self, flex_grow: f32) -> Self {
+        self.flex_grow = flex_grow;
+        self
+    }
+
     /// Register text change listener.
+    #[must_use]
     pub fn on_change<F: Fn(&str) + Send + Sync + 'static>(mut self, handler: F) -> Self {
         self.on_change = Some(Arc::new(handler));
         self
@@ -81,9 +104,10 @@ impl View for Input {
 
     fn layout(&self, state: &mut Self::State, arena: &mut tej_ui_layout::LayoutArena) -> u32 {
         let style = tej_ui_layout::LayoutStyle {
-            width: tej_ui_layout::Dimension::Points(240.0),
-            height: tej_ui_layout::Dimension::Points(36.0),
+            width: self.width,
+            height: Dimension::Points(36.0),
             padding: tej_ui_layout::Insets::symmetric(6.0, 12.0),
+            flex_grow: self.flex_grow,
             ..Default::default()
         };
         let node = arena.allocate_node(style);
@@ -98,23 +122,37 @@ impl View for Input {
             .get(state.node as usize)
             .copied()
             .unwrap_or(tej_ui_layout::Rect::ZERO);
-        let bg = ctx.theme.colors.input;
         let radius = ctx.theme.radii.sm;
+        let is_focused = ctx.is_focused(state.node);
 
-        if ctx.is_focused(state.node) {
-            let ring = tej_ui_layout::Rect::new(
-                bounds.origin.x - 2.0,
-                bounds.origin.y - 2.0,
-                bounds.size.width + 4.0,
-                bounds.size.height + 4.0,
-            );
-            ctx.fill_rounded_rect(ring, radius + 2.0, ctx.theme.colors.ring);
-        }
+        let border_color = if is_focused {
+            ctx.theme.colors.ring
+        } else {
+            ctx.theme.colors.input_border
+        };
 
-        ctx.fill_rounded_rect(bounds, radius, bg);
+        // 1px border rect + inset input_bg fill
+        ctx.fill_rounded_rect(bounds, radius, border_color);
+        let inner = tej_ui_layout::Rect::new(
+            bounds.origin.x + 1.0,
+            bounds.origin.y + 1.0,
+            (bounds.size.width - 2.0).max(0.0),
+            (bounds.size.height - 2.0).max(0.0),
+        );
+        ctx.fill_rounded_rect(inner, (radius - 1.0).max(0.0), ctx.theme.colors.input_bg);
+
+        let pad_x = 12.0;
+        let clip_rect = tej_ui_layout::Rect::new(
+            bounds.origin.x + pad_x,
+            bounds.origin.y + 1.0,
+            (bounds.size.width - pad_x * 2.0).max(0.0),
+            (bounds.size.height - 2.0).max(0.0),
+        );
+        ctx.push_clip(clip_rect, [0.0; 4]);
 
         let font_size = ctx.theme.typography.body_small.font_size;
-        let origin = tej_ui_layout::Point::new(bounds.origin.x + 8.0, bounds.origin.y + 8.0);
+        let text_y = bounds.origin.y + (bounds.size.height - font_size) * 0.5;
+        let origin = tej_ui_layout::Point::new(bounds.origin.x + pad_x, text_y);
         if !state.current_text.is_empty() {
             ctx.draw_text(
                 &state.current_text,
@@ -130,6 +168,32 @@ impl View for Input {
                 ctx.theme.colors.muted_foreground,
             );
         }
+
+        if is_focused {
+            let text_w = if state.current_text.is_empty() {
+                0.0
+            } else {
+                tej_ui_text::FontRegistry::global()
+                    .measure_text(
+                        &state.current_text,
+                        font_size,
+                        tej_ui_text::FontFamilyKind::SansSerif,
+                        400,
+                    )
+                    .width
+            };
+            let caret_h = (font_size * 1.25).min((bounds.size.height - 8.0).max(1.0));
+            let caret_y = bounds.origin.y + (bounds.size.height - caret_h) * 0.5;
+            let caret = tej_ui_layout::Rect::new(
+                bounds.origin.x + pad_x + text_w + 1.0,
+                caret_y,
+                1.5,
+                caret_h,
+            );
+            ctx.fill_rect(caret, ctx.theme.colors.foreground);
+        }
+
+        ctx.pop_clip();
     }
 
     fn register_events(

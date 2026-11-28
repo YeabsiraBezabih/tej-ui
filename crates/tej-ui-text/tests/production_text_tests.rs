@@ -129,7 +129,8 @@ fn test_multiline_word_wrapping() {
     );
     assert!(wrapped.width <= 100.0 + 0.01);
     assert!(wrapped.line_height > 0.0);
-    assert!((wrapped.height - (wrapped.lines.len() as f32) * wrapped.line_height).abs() < 0.01);
+    let line_count = f32::from(u16::try_from(wrapped.lines.len()).unwrap_or(u16::MAX));
+    assert!((wrapped.height - line_count * wrapped.line_height).abs() < 0.01);
     // Rejoined words match original text
     assert_eq!(wrapped.lines.join(" "), paragraph);
 

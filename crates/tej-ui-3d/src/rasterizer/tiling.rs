@@ -124,8 +124,8 @@ impl TileGrid {
             return None;
         }
 
-        let screen_w = (self.width - 1) as f32;
-        let screen_h = (self.height - 1) as f32;
+        let screen_w = crate::math::count_to_f32(self.width - 1);
+        let screen_h = crate::math::count_to_f32(self.height - 1);
 
         if max_x < 0.0 || max_y < 0.0 || min_x > screen_w || min_y > screen_h {
             return None;

@@ -45,8 +45,8 @@ impl Default for HistogramSlider {
             bounds: Rect::ZERO,
             bar_gap: 1.5,
             handle_diameter: 16.0,
-            unselected_bar_color: Color::from_rgb_u32(0xEAECF0), // Tej Gray 200
-            selected_bar_color: Color::from_rgb_u32(0x7F56D9),   // Tej Brand 600
+            unselected_bar_color: Color::from_rgb_u32(0x00EA_ECF0), // Tej Gray 200
+            selected_bar_color: Color::from_rgb_u32(0x007F_56D9),   // Tej Brand 600
             handle_color: Color::WHITE,
         }
     }

@@ -197,7 +197,7 @@ fn test_enterprise_devtools_and_i18n_pipeline() {
         "4K External Display",
         Rect::new(1920.0, 0.0, 3840.0, 2160.0),
         2.0,
-        false,
+        tej_ui_hal::MonitorRole::Secondary,
     ));
     let external = manager.monitor_at_point(Point::new(2000.0, 100.0)).unwrap();
     assert_eq!(external.scale_factor, 2.0);

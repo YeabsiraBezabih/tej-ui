@@ -116,20 +116,20 @@ impl Color {
     /// Construct color from hexadecimal string (e.g. `"#1E293B"`, `"#3B82F6"`).
     #[must_use]
     pub fn from_hex(hex: &str) -> Option<Self> {
-        let s = hex.strip_prefix('#').unwrap_or(hex);
-        match s.len() {
+        let digits = hex.strip_prefix('#').unwrap_or(hex);
+        match digits.len() {
             6 => {
-                let r = u8::from_str_radix(&s[0..2], 16).ok()?;
-                let g = u8::from_str_radix(&s[2..4], 16).ok()?;
-                let b = u8::from_str_radix(&s[4..6], 16).ok()?;
-                Some(Self::rgb(r, g, b))
+                let red = u8::from_str_radix(&digits[0..2], 16).ok()?;
+                let green = u8::from_str_radix(&digits[2..4], 16).ok()?;
+                let blue = u8::from_str_radix(&digits[4..6], 16).ok()?;
+                Some(Self::rgb(red, green, blue))
             }
             8 => {
-                let r = u8::from_str_radix(&s[0..2], 16).ok()?;
-                let g = u8::from_str_radix(&s[2..4], 16).ok()?;
-                let b = u8::from_str_radix(&s[4..6], 16).ok()?;
-                let a = u8::from_str_radix(&s[6..8], 16).ok()?;
-                Some(Self::rgba(r, g, b, a))
+                let red = u8::from_str_radix(&digits[0..2], 16).ok()?;
+                let green = u8::from_str_radix(&digits[2..4], 16).ok()?;
+                let blue = u8::from_str_radix(&digits[4..6], 16).ok()?;
+                let alpha = u8::from_str_radix(&digits[6..8], 16).ok()?;
+                Some(Self::rgba(red, green, blue, alpha))
             }
             _ => None,
         }
@@ -139,10 +139,10 @@ impl Color {
     #[must_use]
     pub fn to_linear(self) -> ColorLinear {
         ColorLinear {
-            r: srgb_to_linear_channel(self.r as f32 / 255.0),
-            g: srgb_to_linear_channel(self.g as f32 / 255.0),
-            b: srgb_to_linear_channel(self.b as f32 / 255.0),
-            a: self.a as f32 / 255.0,
+            r: srgb_to_linear_channel(f32::from(self.r) / 255.0),
+            g: srgb_to_linear_channel(f32::from(self.g) / 255.0),
+            b: srgb_to_linear_channel(f32::from(self.b) / 255.0),
+            a: f32::from(self.a) / 255.0,
         }
     }
 
@@ -190,7 +190,7 @@ fn srgb_to_linear_channel(c: f32) -> f32 {
 /// Converts a normalized linear RGB channel to non-linear sRGB.
 #[inline]
 fn linear_to_srgb_channel(c: f32) -> f32 {
-    if c <= 0.0031308 {
+    if c <= 0.003_130_8 {
         c * 12.92
     } else {
         1.055 * c.powf(1.0 / 2.4) - 0.055

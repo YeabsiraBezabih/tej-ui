@@ -67,20 +67,21 @@ impl WidgetInspector {
     /// Format widget hierarchy as an indented ASCII tree string.
     #[must_use]
     pub fn format_tree(&self, arena: &LayoutArena, root: u32) -> String {
+        use std::fmt::Write;
         let nodes = self.inspect_hierarchy(arena, root);
         let mut out = String::new();
         for n in nodes {
             let indent = "  ".repeat(n.depth);
-            out.push_str(&format!(
-                "{}[Node #{}] ({:.1}x{:.1} at {:.1},{:.1}) dirty={}\n",
-                indent,
+            let _ = writeln!(
+                out,
+                "{indent}[Node #{}] ({:.1}x{:.1} at {:.1},{:.1}) dirty={}",
                 n.id,
                 n.bounds.size.width,
                 n.bounds.size.height,
                 n.bounds.origin.x,
                 n.bounds.origin.y,
                 n.is_dirty
-            ));
+            );
         }
         out
     }
@@ -139,8 +140,14 @@ impl FrameFlamegraphProfiler {
         if self.samples.is_empty() {
             return 0.0;
         }
-        let total: u64 = self.samples.iter().map(|s| s.total_duration_us()).sum();
-        total as f64 / self.samples.len() as f64
+        let total: u64 = self
+            .samples
+            .iter()
+            .map(FrameTimingSample::total_duration_us)
+            .sum();
+        let total_us = f64::from(u32::try_from(total).unwrap_or(u32::MAX));
+        let count = f64::from(u16::try_from(self.samples.len()).unwrap_or(u16::MAX));
+        total_us / count
     }
 
     /// Count of dropped / jank frames (>16.6ms).

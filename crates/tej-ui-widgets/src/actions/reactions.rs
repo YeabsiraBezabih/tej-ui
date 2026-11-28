@@ -67,8 +67,8 @@ impl Default for ReactionBar {
         Self {
             bounds: Rect::ZERO,
             background: Color::WHITE,
-            active_pill_color: Color::from_rgb_u32(0xF9F5FF), // Tej Brand 50
-            corner_radius: 9999.0,                            // Full pill
+            active_pill_color: Color::from_rgb_u32(0x00F9_F5FF), // Tej Brand 50
+            corner_radius: 9999.0,                               // Full pill
         }
     }
 }

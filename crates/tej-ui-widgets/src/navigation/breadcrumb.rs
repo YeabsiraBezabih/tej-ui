@@ -32,8 +32,14 @@ impl BreadcrumbItem {
     }
 
     #[must_use]
-    pub const fn current(mut self, current: bool) -> Self {
-        self.is_current = current;
+    pub const fn mark_current(mut self) -> Self {
+        self.is_current = true;
+        self
+    }
+
+    #[must_use]
+    pub const fn inactive(mut self) -> Self {
+        self.is_current = false;
         self
     }
 }
@@ -60,7 +66,7 @@ impl std::fmt::Debug for Breadcrumb {
         f.debug_struct("Breadcrumb")
             .field("items", &self.items)
             .field("separator", &self.separator)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -93,7 +99,7 @@ impl Breadcrumb {
     }
 
     fn item_width(label: &str) -> f32 {
-        (label.chars().count() as f32) * 8.0 + 16.0
+        crate::count_to_f32(label.chars().count()) * 8.0 + 16.0
     }
 }
 
@@ -101,7 +107,7 @@ impl View for Breadcrumb {
     type State = BreadcrumbState;
 
     fn build(&self) -> Self::State {
-        let width = (self.items.len() as f32) * 80.0;
+        let width = crate::count_to_f32(self.items.len()) * 80.0;
         BreadcrumbState {
             bounds: Rect::from_origin_size(Point::ZERO, Size::new(width, 24.0)),
             count: self.items.len(),
@@ -154,7 +160,7 @@ impl View for Breadcrumb {
                 .computed_bounds
                 .get(item_node as usize)
                 .copied()
-                .unwrap_or(Rect::new((i as f32) * 94.0, 0.0, 80.0, 24.0));
+                .unwrap_or(Rect::new(crate::count_to_f32(i) * 94.0, 0.0, 80.0, 24.0));
 
             let is_hovered = ctx.is_hovered(item_node);
             let is_focused = ctx.is_focused(item_node);

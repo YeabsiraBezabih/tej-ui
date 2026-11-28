@@ -43,12 +43,14 @@ impl<V: View> Grid<V> {
     }
 
     /// Set number of columns (e.g. 12 for grid-cols-12, 6, 4, etc.).
+    #[must_use]
     pub fn columns(mut self, cols: u16) -> Self {
         self.columns = cols;
         self
     }
 
     /// Set uniform gap between grid items in pixels.
+    #[must_use]
     pub fn gap(mut self, gap: f32) -> Self {
         self.column_gap = gap;
         self.row_gap = gap;
@@ -56,36 +58,42 @@ impl<V: View> Grid<V> {
     }
 
     /// Set horizontal column gap in pixels.
+    #[must_use]
     pub fn column_gap(mut self, gap: f32) -> Self {
         self.column_gap = gap;
         self
     }
 
     /// Set vertical row gap in pixels.
+    #[must_use]
     pub fn row_gap(mut self, gap: f32) -> Self {
         self.row_gap = gap;
         self
     }
 
     /// Set padding around grid container.
+    #[must_use]
     pub fn padding(mut self, padding: u32) -> Self {
         self.padding = padding;
         self
     }
 
     /// Set explicit width constraint.
+    #[must_use]
     pub fn width(mut self, width: Dimension) -> Self {
         self.width = width;
         self
     }
 
     /// Set explicit height constraint.
+    #[must_use]
     pub fn height(mut self, height: Dimension) -> Self {
         self.height = height;
         self
     }
 
     /// Set flex grow factor when placed inside a flex parent.
+    #[must_use]
     pub fn flex_grow(mut self, flex_grow: f32) -> Self {
         self.flex_grow = flex_grow;
         self
@@ -122,7 +130,9 @@ impl<V: View> View for Grid<V> {
             grid_columns: self.columns,
             grid_column_gap: self.column_gap,
             grid_row_gap: self.row_gap,
-            padding: tej_ui_layout::Insets::all(self.padding as f32),
+            padding: tej_ui_layout::Insets::all(f32::from(
+                u16::try_from(self.padding).unwrap_or(u16::MAX),
+            )),
             width: self.width,
             height: self.height,
             flex_grow: self.flex_grow,

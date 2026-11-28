@@ -41,8 +41,7 @@ fn test_db_commit_hook_notification() {
         writes: vec![(b"tasks:1".to_vec(), b"New Task".to_vec())],
         deletes: vec![],
     };
-    use mydb_core::Hook;
-    hook.after_commit(&changes);
+    mydb_core::Hook::after_commit(&*hook, &changes);
 
     assert_eq!(signal.get(), 1);
 }
@@ -187,13 +186,13 @@ fn test_db_mmap_row_lens() {
     let key = b"order:00000042";
     let mut payload = Vec::new();
     payload.extend_from_slice(b"ITEM:Widget-Pro\0");
-    payload.extend_from_slice(&1234567890u64.to_le_bytes());
+    payload.extend_from_slice(&1_234_567_890_u64.to_le_bytes());
     payload.extend_from_slice(&99.95f32.to_le_bytes());
 
     let lens = DbRowLens::new(key, &payload);
     assert_eq!(lens.key_str().unwrap(), "order:00000042");
     assert_eq!(lens.slice_str(0, 15).unwrap(), "ITEM:Widget-Pro");
-    assert_eq!(lens.read_u64_le(16).unwrap(), 1234567890);
+    assert_eq!(lens.read_u64_le(16).unwrap(), 1_234_567_890);
     assert!((lens.read_f32_le(24).unwrap() - 99.95).abs() < 1e-4);
 
     // Test virtual window
@@ -241,21 +240,21 @@ fn test_rabitq_semantic_palette() {
     palette.register(
         1,
         "Create New File",
-        0b11110000_11110000_11110000_11110000u64,
+        0b1111_0000_1111_0000_1111_0000_1111_0000_u64,
     );
     palette.register(
         2,
         "Close Active Tab",
-        0b11110000_11110000_00000000_00000000u64,
+        0b1111_0000_1111_0000_0000_0000_0000_0000_u64,
     );
     palette.register(
         3,
         "Toggle Terminal",
-        0b00001111_00001111_00001111_00001111u64,
+        0b0000_1111_0000_1111_0000_1111_0000_1111_u64,
     );
 
     // Query closest to "Create New File"
-    let query_sig = 0b11110000_11110000_11110000_11111111u64;
+    let query_sig = 0b1111_0000_1111_0000_1111_0000_1111_1111_u64;
     let results = palette.search(query_sig, 2);
     assert_eq!(results.len(), 2);
     assert_eq!(results[0].item.id, 1); // Distance is 4 bits

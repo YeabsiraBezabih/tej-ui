@@ -47,15 +47,17 @@ impl ClipStack {
     /// Reset stack to viewport dimensions for a new frame without deallocating vector capacity.
     pub fn reset(&mut self, viewport_width_px: u32, viewport_height_px: u32, scale_factor: f32) {
         self.entries.clear();
+        let vp_w = f32::from(u16::try_from(viewport_width_px).unwrap_or(u16::MAX));
+        let vp_h = f32::from(u16::try_from(viewport_height_px).unwrap_or(u16::MAX));
         let logical_w = if scale_factor > 0.0 {
-            (viewport_width_px as f32) / scale_factor
+            vp_w / scale_factor
         } else {
-            viewport_width_px as f32
+            vp_w
         };
         let logical_h = if scale_factor > 0.0 {
-            (viewport_height_px as f32) / scale_factor
+            vp_h / scale_factor
         } else {
-            viewport_height_px as f32
+            vp_h
         };
 
         self.entries.push(ClipEntry {

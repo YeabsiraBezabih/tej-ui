@@ -34,7 +34,7 @@ impl fmt::Debug for Canvas3D {
         f.debug_struct("Canvas3D")
             .field("width", &self.width)
             .field("height", &self.height)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

@@ -115,7 +115,7 @@ impl View for Avatar {
 
         // Centered initials text
         let font_size = (diameter * 0.4).clamp(10.0, 24.0);
-        let approx_text_w = (state.initials.chars().count() as f32) * font_size * 0.6;
+        let approx_text_w = crate::count_to_f32(state.initials.chars().count()) * font_size * 0.6;
         let text_pt = Point::new(
             circle.origin.x + (diameter - approx_text_w) * 0.5,
             circle.origin.y + (diameter - font_size) * 0.5,

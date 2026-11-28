@@ -60,9 +60,9 @@ impl MeshletPacker {
             }
 
             let center = [
-                (min_pt[0] + max_pt[0]) * 0.5,
-                (min_pt[1] + max_pt[1]) * 0.5,
-                (min_pt[2] + max_pt[2]) * 0.5,
+                f32::midpoint(min_pt[0], max_pt[0]),
+                f32::midpoint(min_pt[1], max_pt[1]),
+                f32::midpoint(min_pt[2], max_pt[2]),
             ];
 
             let mut radius = 0.0f32;
@@ -90,20 +90,19 @@ impl MeshletPacker {
                     vertices.get(tri[0] as usize),
                     vertices.get(tri[1] as usize),
                     vertices.get(tri[2] as usize),
-                ) {
-                    if payload_offset + 3 * BYTES_PER_VERTEX <= PAGE_SIZE {
-                        for v in [v0, v1, v2] {
-                            page_bytes[payload_offset..payload_offset + 4]
-                                .copy_from_slice(&v[0].to_le_bytes());
-                            page_bytes[payload_offset + 4..payload_offset + 8]
-                                .copy_from_slice(&v[1].to_le_bytes());
-                            page_bytes[payload_offset + 8..payload_offset + 12]
-                                .copy_from_slice(&v[2].to_le_bytes());
-                            payload_offset += BYTES_PER_VERTEX;
-                            written_vertices += 1;
-                        }
-                        written_triangles += 1;
+                ) && payload_offset + 3 * BYTES_PER_VERTEX <= PAGE_SIZE
+                {
+                    for v in [v0, v1, v2] {
+                        page_bytes[payload_offset..payload_offset + 4]
+                            .copy_from_slice(&v[0].to_le_bytes());
+                        page_bytes[payload_offset + 4..payload_offset + 8]
+                            .copy_from_slice(&v[1].to_le_bytes());
+                        page_bytes[payload_offset + 8..payload_offset + 12]
+                            .copy_from_slice(&v[2].to_le_bytes());
+                        payload_offset += BYTES_PER_VERTEX;
+                        written_vertices += 1;
                     }
+                    written_triangles += 1;
                 }
             }
 
@@ -129,7 +128,7 @@ impl MeshletPacker {
                 sphere,
                 lod_level,
                 lod_error,
-                PageId(cluster_id as u64 + 1),
+                PageId(u64::from(cluster_id) + 1),
             );
 
             result.push(PackedMeshlet {
@@ -175,9 +174,9 @@ impl MeshletPacker {
             }
 
             let center = [
-                (min_pt[0] + max_pt[0]) * 0.5,
-                (min_pt[1] + max_pt[1]) * 0.5,
-                (min_pt[2] + max_pt[2]) * 0.5,
+                f32::midpoint(min_pt[0], max_pt[0]),
+                f32::midpoint(min_pt[1], max_pt[1]),
+                f32::midpoint(min_pt[2], max_pt[2]),
             ];
 
             let mut radius = 0.0f32;
@@ -247,7 +246,7 @@ impl MeshletPacker {
                 sphere,
                 lod_level,
                 lod_error,
-                PageId(cluster_id as u64 + 1),
+                PageId(u64::from(cluster_id) + 1),
             );
 
             result.push(PackedMeshlet {

@@ -41,6 +41,7 @@ impl CommandPalette {
     }
 
     /// Set maximum visible suggestions.
+    #[must_use]
     pub fn max_visible(mut self, max: usize) -> Self {
         self.max_visible = max;
         self
@@ -83,117 +84,12 @@ pub struct CommandPaletteState {
     pub item_nodes: Vec<u32>,
 }
 
-impl View for CommandPalette {
-    type State = CommandPaletteState;
-
-    fn build(&self) -> Self::State {
-        let visible_items = self.filtered_items();
-        let current_selection = if visible_items.is_empty() {
-            0
-        } else {
-            self.selected_index.get().min(visible_items.len() - 1)
-        };
-        CommandPaletteState {
-            current_query: self.query.get(),
-            current_selection,
-            visible_items,
-            node: 0,
-            search_node: 0,
-            item_nodes: Vec::new(),
-        }
-    }
-
-    fn rebuild(&self, state: &mut Self::State) {
-        state.current_query = self.query.get();
-        state.visible_items = self.filtered_items();
-        state.current_selection = if state.visible_items.is_empty() {
-            0
-        } else {
-            self.selected_index.get().min(state.visible_items.len() - 1)
-        };
-    }
-
-    fn patch(&self, state: &mut Self::State, _dirty_bits: u64) {
-        self.rebuild(state);
-    }
-
-    fn layout(&self, state: &mut Self::State, arena: &mut LayoutArena) -> u32 {
-        if let Some(open_sig) = self.is_open {
-            if !open_sig.get() {
-                let empty = arena.allocate_node(LayoutStyle {
-                    width: Dimension::Points(0.0),
-                    height: Dimension::Points(0.0),
-                    ..Default::default()
-                });
-                state.node = empty;
-                state.search_node = empty;
-                state.item_nodes.clear();
-                return empty;
-            }
-        }
-
-        let row_count = state.visible_items.len().max(1);
-        let total_height = 44.0 + 16.0 + (row_count as f32) * 38.0;
-
-        let root_style = LayoutStyle {
-            direction: FlexDirection::Column,
-            width: Dimension::Points(520.0),
-            height: Dimension::Points(total_height),
-            padding: Insets::all(8.0),
-            spacing: 4.0,
-            ..Default::default()
-        };
-        let root = arena.allocate_node(root_style);
-        state.node = root;
-
-        let search_style = LayoutStyle {
-            width: Dimension::Percent(1.0),
-            height: Dimension::Points(40.0),
-            padding: Insets::symmetric(8.0, 12.0),
-            ..Default::default()
-        };
-        let search_node = arena.allocate_node(search_style);
-        state.search_node = search_node;
-        arena.add_child(root, search_node);
-
-        state.item_nodes.clear();
-        for _ in 0..state.visible_items.len() {
-            let row_style = LayoutStyle {
-                width: Dimension::Percent(1.0),
-                height: Dimension::Points(34.0),
-                padding: Insets::symmetric(6.0, 10.0),
-                ..Default::default()
-            };
-            let row_node = arena.allocate_node(row_style);
-            state.item_nodes.push(row_node);
-            arena.add_child(root, row_node);
-        }
-
-        root
-    }
-
-    fn paint(&self, state: &Self::State, ctx: &mut PaintContext<'_>) {
-        if let Some(open_sig) = self.is_open {
-            if !open_sig.get() {
-                return;
-            }
-        }
-
-        let Some(bounds) = ctx.arena.computed_bounds.get(state.node as usize).copied() else {
-            return;
-        };
-
-        // Modal surface with border
-        ctx.fill_rounded_rect(bounds, ctx.theme.radii.lg, ctx.theme.colors.border);
-        let inner = Rect::new(
-            bounds.origin.x + 1.0,
-            bounds.origin.y + 1.0,
-            (bounds.size.width - 2.0).max(0.0),
-            (bounds.size.height - 2.0).max(0.0),
-        );
-        ctx.fill_rounded_rect(inner, ctx.theme.radii.lg, ctx.theme.colors.popover);
-
-        // Search input box
+impl CommandPalette {
+    fn paint_search_box(
+        state: &CommandPaletteState,
+        ctx: &mut PaintContext<'_>,
+        bounds: Rect,
+    ) -> Rect {
         let search_bounds = ctx
             .arena
             .computed_bounds
@@ -236,17 +132,15 @@ impl View for CommandPalette {
                 ctx.theme.colors.foreground,
             );
         }
+        search_bounds
+    }
 
-        // Divider below search input
-        let div_y = search_bounds.origin.y + search_bounds.size.height + 2.0;
-        ctx.draw_line(
-            Point::new(bounds.origin.x + 8.0, div_y),
-            Point::new(bounds.origin.x + bounds.size.width - 8.0, div_y),
-            1.0,
-            ctx.theme.colors.border,
-        );
-
-        // Filtered result rows
+    fn paint_result_rows(
+        state: &CommandPaletteState,
+        ctx: &mut PaintContext<'_>,
+        bounds: Rect,
+        div_y: f32,
+    ) {
         if state.visible_items.is_empty() {
             let empty_pt = Point::new(bounds.origin.x + 16.0, div_y + 12.0);
             ctx.draw_text(
@@ -267,7 +161,7 @@ impl View for CommandPalette {
                 .copied()
                 .unwrap_or(Rect::new(
                     bounds.origin.x + 8.0,
-                    div_y + 6.0 + (i as f32) * 38.0,
+                    div_y + 6.0 + crate::count_to_f32(i) * 38.0,
                     (bounds.size.width - 16.0).max(0.0),
                     34.0,
                 ));
@@ -302,7 +196,7 @@ impl View for CommandPalette {
             );
 
             if let Some(shortcut) = &item.shortcut {
-                let badge_w = (shortcut.chars().count() as f32) * 7.0 + 12.0;
+                let badge_w = crate::count_to_f32(shortcut.chars().count()) * 7.0 + 12.0;
                 let badge_rect = Rect::new(
                     row_bounds.origin.x + row_bounds.size.width - badge_w - 8.0,
                     row_bounds.origin.y + 6.0,
@@ -320,17 +214,11 @@ impl View for CommandPalette {
         }
     }
 
-    fn register_events(&self, state: &Self::State, dispatcher: &mut EventDispatcher) {
-        if let Some(open_sig) = self.is_open {
-            if !open_sig.get() {
-                return;
-            }
-        }
-
-        // Register click on search box for focusability
-        dispatcher.register_click(state.search_node, Arc::new(|| {}));
-
-        // Text input updates fuzzy query on both root and search node
+    fn register_input_and_key_handlers(
+        &self,
+        state: &CommandPaletteState,
+        dispatcher: &mut EventDispatcher,
+    ) {
         for target_node in [state.node, state.search_node] {
             let query_sig = self.query;
             let sel_sig = self.selected_index;
@@ -344,7 +232,6 @@ impl View for CommandPalette {
                 }),
             );
 
-            // Up (38), Down (40), Escape (27), Backspace (8)
             let items = self.items.clone();
             let max_visible = self.max_visible;
             let query_sig = self.query;
@@ -354,7 +241,6 @@ impl View for CommandPalette {
                 target_node,
                 Arc::new(move |key_code| match key_code {
                     38 => {
-                        // ArrowUp
                         let visible = filter_items(&items, &query_sig.get(), max_visible);
                         if !visible.is_empty() {
                             let cur = sel_sig.get();
@@ -363,7 +249,6 @@ impl View for CommandPalette {
                         }
                     }
                     40 => {
-                        // ArrowDown
                         let visible = filter_items(&items, &query_sig.get(), max_visible);
                         if !visible.is_empty() {
                             let cur = sel_sig.get();
@@ -372,7 +257,6 @@ impl View for CommandPalette {
                         }
                     }
                     27 => {
-                        // Escape
                         query_sig.set(String::new());
                         sel_sig.set(0);
                         if let Some(open) = is_open {
@@ -380,7 +264,6 @@ impl View for CommandPalette {
                         }
                     }
                     8 => {
-                        // Backspace
                         let mut q = query_sig.get();
                         if !q.is_empty() {
                             q.pop();
@@ -392,8 +275,13 @@ impl View for CommandPalette {
                 }),
             );
         }
+    }
 
-        // Bubble handler on root for Enter (13) so focused root or search_node executes active item
+    fn register_row_click_handlers(
+        &self,
+        state: &CommandPaletteState,
+        dispatcher: &mut EventDispatcher,
+    ) {
         let items_enter = self.items.clone();
         let max_visible_enter = self.max_visible;
         let query_enter = self.query;
@@ -419,7 +307,6 @@ impl View for CommandPalette {
             }),
         );
 
-        // Click selection on each visible row
         for (i, item) in state.visible_items.iter().enumerate() {
             if let Some(&row_node) = state.item_nodes.get(i) {
                 let sel_sig = self.selected_index;
@@ -429,8 +316,8 @@ impl View for CommandPalette {
                     row_node,
                     Arc::new(move || {
                         sel_sig.set(i);
-                        if let Some(act) = &action {
-                            act();
+                        if let Some(cb) = &action {
+                            cb();
                         }
                         if let Some(open) = is_open_click {
                             open.set(false);
@@ -439,5 +326,139 @@ impl View for CommandPalette {
                 );
             }
         }
+    }
+}
+
+impl View for CommandPalette {
+    type State = CommandPaletteState;
+
+    fn build(&self) -> Self::State {
+        let visible_items = self.filtered_items();
+        let current_selection = if visible_items.is_empty() {
+            0
+        } else {
+            self.selected_index.get().min(visible_items.len() - 1)
+        };
+        CommandPaletteState {
+            current_query: self.query.get(),
+            current_selection,
+            visible_items,
+            node: 0,
+            search_node: 0,
+            item_nodes: Vec::new(),
+        }
+    }
+
+    fn rebuild(&self, state: &mut Self::State) {
+        state.current_query = self.query.get();
+        state.visible_items = self.filtered_items();
+        state.current_selection = if state.visible_items.is_empty() {
+            0
+        } else {
+            self.selected_index.get().min(state.visible_items.len() - 1)
+        };
+    }
+
+    fn patch(&self, state: &mut Self::State, _dirty_bits: u64) {
+        self.rebuild(state);
+    }
+
+    fn layout(&self, state: &mut Self::State, arena: &mut LayoutArena) -> u32 {
+        if let Some(open_sig) = self.is_open
+            && !open_sig.get()
+        {
+            let empty = arena.allocate_node(LayoutStyle {
+                width: Dimension::Points(0.0),
+                height: Dimension::Points(0.0),
+                ..Default::default()
+            });
+            state.node = empty;
+            state.search_node = empty;
+            state.item_nodes.clear();
+            return empty;
+        }
+
+        let row_count = state.visible_items.len().max(1);
+        let total_height = 44.0 + 16.0 + crate::count_to_f32(row_count) * 38.0;
+
+        let root_style = LayoutStyle {
+            direction: FlexDirection::Column,
+            width: Dimension::Points(520.0),
+            height: Dimension::Points(total_height),
+            padding: Insets::all(8.0),
+            spacing: 4.0,
+            ..Default::default()
+        };
+        let root = arena.allocate_node(root_style);
+        state.node = root;
+
+        let search_style = LayoutStyle {
+            width: Dimension::Percent(1.0),
+            height: Dimension::Points(40.0),
+            padding: Insets::symmetric(8.0, 12.0),
+            ..Default::default()
+        };
+        let search_node = arena.allocate_node(search_style);
+        state.search_node = search_node;
+        arena.add_child(root, search_node);
+
+        state.item_nodes.clear();
+        for _ in 0..state.visible_items.len() {
+            let row_style = LayoutStyle {
+                width: Dimension::Percent(1.0),
+                height: Dimension::Points(34.0),
+                padding: Insets::symmetric(6.0, 10.0),
+                ..Default::default()
+            };
+            let row_node = arena.allocate_node(row_style);
+            state.item_nodes.push(row_node);
+            arena.add_child(root, row_node);
+        }
+
+        root
+    }
+
+    fn paint(&self, state: &Self::State, ctx: &mut PaintContext<'_>) {
+        if let Some(open_sig) = self.is_open
+            && !open_sig.get()
+        {
+            return;
+        }
+
+        let Some(bounds) = ctx.arena.computed_bounds.get(state.node as usize).copied() else {
+            return;
+        };
+
+        ctx.fill_rounded_rect(bounds, ctx.theme.radii.lg, ctx.theme.colors.border);
+        let inner = Rect::new(
+            bounds.origin.x + 1.0,
+            bounds.origin.y + 1.0,
+            (bounds.size.width - 2.0).max(0.0),
+            (bounds.size.height - 2.0).max(0.0),
+        );
+        ctx.fill_rounded_rect(inner, ctx.theme.radii.lg, ctx.theme.colors.popover);
+
+        let search_bounds = Self::paint_search_box(state, ctx, bounds);
+        let div_y = search_bounds.origin.y + search_bounds.size.height + 2.0;
+        ctx.draw_line(
+            Point::new(bounds.origin.x + 8.0, div_y),
+            Point::new(bounds.origin.x + bounds.size.width - 8.0, div_y),
+            1.0,
+            ctx.theme.colors.border,
+        );
+
+        Self::paint_result_rows(state, ctx, bounds, div_y);
+    }
+
+    fn register_events(&self, state: &Self::State, dispatcher: &mut EventDispatcher) {
+        if let Some(open_sig) = self.is_open
+            && !open_sig.get()
+        {
+            return;
+        }
+
+        dispatcher.register_click(state.search_node, Arc::new(|| {}));
+        self.register_input_and_key_handlers(state, dispatcher);
+        self.register_row_click_handlers(state, dispatcher);
     }
 }

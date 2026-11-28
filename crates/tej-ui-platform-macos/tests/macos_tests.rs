@@ -28,7 +28,7 @@ fn test_macos_traffic_lights_and_hover() {
     );
 
     // Inactive window turns buttons gray
-    ctrl.set_active_window(false);
+    ctrl.deactivate_window();
     let (gray, _, _) = ctrl.button_colors();
     assert_eq!(gray, Color::rgb(70, 70, 70));
 }

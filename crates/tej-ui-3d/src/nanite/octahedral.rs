@@ -30,11 +30,11 @@ pub fn encode_oct_normal(n: [f32; 3]) -> [i8; 2] {
 /// Decodes an octahedral normal `[i8; 2]` back into a normalized 3D unit vector `[f32; 3]`.
 ///
 /// Executes in 5 floating-point instructions without branching.
-#[inline(always)]
+#[inline]
 #[must_use]
 pub fn decode_oct_normal(oct: [i8; 2]) -> [f32; 3] {
-    let x = (oct[0] as f32) * (1.0 / 127.0);
-    let y = (oct[1] as f32) * (1.0 / 127.0);
+    let x = f32::from(oct[0]) * (1.0 / 127.0);
+    let y = f32::from(oct[1]) * (1.0 / 127.0);
     let z = 1.0 - x.abs() - y.abs();
 
     let t = (-z).max(0.0);

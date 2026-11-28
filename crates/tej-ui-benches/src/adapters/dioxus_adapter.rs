@@ -439,7 +439,7 @@ impl GuiBenchHarness for DioxusAdapter {
         let t_diff = Instant::now();
         let mut telemetry_mutations = Vec::with_capacity(count);
         for i in 0..count {
-            let val = ((i * 17) % 100) as f32 / 100.0;
+            let val = crate::count_to_f32((i * 17) % 100) / 100.0;
             telemetry_mutations.push(VDomMutation::SetAttribute {
                 id: i,
                 name: "value",

@@ -32,17 +32,21 @@ impl ContextMeterState {
     }
 
     #[must_use]
+    #[allow(
+        clippy::cast_possible_truncation,
+        reason = "ratio is clamped to 0.0..=1.0 so f32 precision loss is intentional"
+    )]
     pub fn usage_ratio(&self) -> f32 {
-        (self.current_tokens as f32 / self.max_tokens as f32).clamp(0.0, 1.0)
+        let current = f64::from(u32::try_from(self.current_tokens).unwrap_or(u32::MAX));
+        let max = f64::from(u32::try_from(self.max_tokens).unwrap_or(u32::MAX));
+        (current / max).clamp(0.0, 1.0) as f32
     }
 
     #[must_use]
     pub fn formatted_summary(&self) -> String {
-        format!(
-            "{:.1}k / {:.1}k tokens",
-            self.current_tokens as f32 / 1000.0,
-            self.max_tokens as f32 / 1000.0
-        )
+        let current = f64::from(u32::try_from(self.current_tokens).unwrap_or(u32::MAX));
+        let max = f64::from(u32::try_from(self.max_tokens).unwrap_or(u32::MAX));
+        format!("{:.1}k / {:.1}k tokens", current / 1000.0, max / 1000.0)
     }
 }
 
@@ -60,9 +64,9 @@ impl Default for ContextMeter {
     fn default() -> Self {
         Self {
             bounds: Rect::ZERO,
-            track_color: Color::from_rgb_u32(0xEAECF0), // Tej Gray 200
-            fill_color: Color::from_rgb_u32(0x7F56D9),  // Tej Brand 600
-            cache_color: Color::from_rgb_u32(0x9E77ED), // Tej Brand 500
+            track_color: Color::from_rgb_u32(0x00EA_ECF0), // Tej Gray 200
+            fill_color: Color::from_rgb_u32(0x007F_56D9),  // Tej Brand 600
+            cache_color: Color::from_rgb_u32(0x009E_77ED), // Tej Brand 500
             corner_radius: 4.0,
         }
     }

@@ -97,249 +97,253 @@ fn test_svg_parser_arcs_curves_and_implicit_repeats() {
     );
 }
 
+const ALL_LUCIDE_ICONS: [LucideIcon; 128] = [
+    // Navigation (23)
+    LucideIcon::ChevronDown,
+    LucideIcon::ChevronUp,
+    LucideIcon::ChevronLeft,
+    LucideIcon::ChevronRight,
+    LucideIcon::ChevronsDown,
+    LucideIcon::ChevronsUp,
+    LucideIcon::ChevronsLeft,
+    LucideIcon::ChevronsRight,
+    LucideIcon::ArrowDown,
+    LucideIcon::ArrowUp,
+    LucideIcon::ArrowLeft,
+    LucideIcon::ArrowRight,
+    LucideIcon::ArrowUpRight,
+    LucideIcon::ArrowDownRight,
+    LucideIcon::CornerUpLeft,
+    LucideIcon::CornerDownRight,
+    LucideIcon::Home,
+    LucideIcon::Menu,
+    LucideIcon::MoreHorizontal,
+    LucideIcon::MoreVertical,
+    LucideIcon::ExternalLink,
+    LucideIcon::Compass,
+    LucideIcon::MapPin,
+    // Actions (20)
+    LucideIcon::Plus,
+    LucideIcon::Minus,
+    LucideIcon::Check,
+    LucideIcon::X,
+    LucideIcon::Trash,
+    LucideIcon::Trash2,
+    LucideIcon::Edit,
+    LucideIcon::Edit2,
+    LucideIcon::Copy,
+    LucideIcon::Save,
+    LucideIcon::Share,
+    LucideIcon::Download,
+    LucideIcon::Upload,
+    LucideIcon::RefreshCw,
+    LucideIcon::RefreshCcw,
+    LucideIcon::Filter,
+    LucideIcon::ZoomIn,
+    LucideIcon::ZoomOut,
+    LucideIcon::Maximize,
+    LucideIcon::Minimize,
+    // Media (16)
+    LucideIcon::Play,
+    LucideIcon::Pause,
+    LucideIcon::Square,
+    LucideIcon::SkipForward,
+    LucideIcon::SkipBack,
+    LucideIcon::Volume,
+    LucideIcon::Volume1,
+    LucideIcon::Volume2,
+    LucideIcon::VolumeX,
+    LucideIcon::Mic,
+    LucideIcon::MicOff,
+    LucideIcon::Video,
+    LucideIcon::VideoOff,
+    LucideIcon::Camera,
+    LucideIcon::Image,
+    LucideIcon::Music,
+    // Devices & Hardware (15)
+    LucideIcon::Laptop,
+    LucideIcon::Monitor,
+    LucideIcon::Smartphone,
+    LucideIcon::Tablet,
+    LucideIcon::Tv,
+    LucideIcon::HardDrive,
+    LucideIcon::Cpu,
+    LucideIcon::Battery,
+    LucideIcon::BatteryCharging,
+    LucideIcon::Wifi,
+    LucideIcon::WifiOff,
+    LucideIcon::Bluetooth,
+    LucideIcon::Server,
+    LucideIcon::Database,
+    LucideIcon::Terminal,
+    // Communication (12)
+    LucideIcon::Mail,
+    LucideIcon::Inbox,
+    LucideIcon::Send,
+    LucideIcon::AtSign,
+    LucideIcon::MessageSquare,
+    LucideIcon::MessageCircle,
+    LucideIcon::Phone,
+    LucideIcon::PhoneCall,
+    LucideIcon::PhoneOff,
+    LucideIcon::Bell,
+    LucideIcon::BellOff,
+    LucideIcon::Globe,
+    // Editor & Text (13)
+    LucideIcon::Bold,
+    LucideIcon::Italic,
+    LucideIcon::Underline,
+    LucideIcon::AlignLeft,
+    LucideIcon::AlignCenter,
+    LucideIcon::AlignRight,
+    LucideIcon::AlignJustify,
+    LucideIcon::List,
+    LucideIcon::Code,
+    LucideIcon::Link,
+    LucideIcon::Link2,
+    LucideIcon::Scissors,
+    LucideIcon::Hash,
+    // System & Status (29)
+    LucideIcon::Search,
+    LucideIcon::Settings,
+    LucideIcon::Tool,
+    LucideIcon::User,
+    LucideIcon::Users,
+    LucideIcon::UserPlus,
+    LucideIcon::UserCheck,
+    LucideIcon::UserX,
+    LucideIcon::Lock,
+    LucideIcon::Unlock,
+    LucideIcon::Key,
+    LucideIcon::Shield,
+    LucideIcon::ShieldCheck,
+    LucideIcon::Eye,
+    LucideIcon::EyeOff,
+    LucideIcon::Sun,
+    LucideIcon::Moon,
+    LucideIcon::Info,
+    LucideIcon::HelpCircle,
+    LucideIcon::AlertCircle,
+    LucideIcon::AlertTriangle,
+    LucideIcon::CheckCircle,
+    LucideIcon::XCircle,
+    LucideIcon::Clock,
+    LucideIcon::Calendar,
+    LucideIcon::Bookmark,
+    LucideIcon::Star,
+    LucideIcon::Heart,
+    LucideIcon::Flag,
+];
+
 #[test]
 fn test_all_128_lucide_icons_parse_valid_geometry() {
-    let all_icons: [LucideIcon; 128] = [
-        // Navigation (23)
-        LucideIcon::ChevronDown,
-        LucideIcon::ChevronUp,
-        LucideIcon::ChevronLeft,
-        LucideIcon::ChevronRight,
-        LucideIcon::ChevronsDown,
-        LucideIcon::ChevronsUp,
-        LucideIcon::ChevronsLeft,
-        LucideIcon::ChevronsRight,
-        LucideIcon::ArrowDown,
-        LucideIcon::ArrowUp,
-        LucideIcon::ArrowLeft,
-        LucideIcon::ArrowRight,
-        LucideIcon::ArrowUpRight,
-        LucideIcon::ArrowDownRight,
-        LucideIcon::CornerUpLeft,
-        LucideIcon::CornerDownRight,
-        LucideIcon::Home,
-        LucideIcon::Menu,
-        LucideIcon::MoreHorizontal,
-        LucideIcon::MoreVertical,
-        LucideIcon::ExternalLink,
-        LucideIcon::Compass,
-        LucideIcon::MapPin,
-        // Actions (20)
-        LucideIcon::Plus,
-        LucideIcon::Minus,
-        LucideIcon::Check,
-        LucideIcon::X,
-        LucideIcon::Trash,
-        LucideIcon::Trash2,
-        LucideIcon::Edit,
-        LucideIcon::Edit2,
-        LucideIcon::Copy,
-        LucideIcon::Save,
-        LucideIcon::Share,
-        LucideIcon::Download,
-        LucideIcon::Upload,
-        LucideIcon::RefreshCw,
-        LucideIcon::RefreshCcw,
-        LucideIcon::Filter,
-        LucideIcon::ZoomIn,
-        LucideIcon::ZoomOut,
-        LucideIcon::Maximize,
-        LucideIcon::Minimize,
-        // Media (16)
-        LucideIcon::Play,
-        LucideIcon::Pause,
-        LucideIcon::Square,
-        LucideIcon::SkipForward,
-        LucideIcon::SkipBack,
-        LucideIcon::Volume,
-        LucideIcon::Volume1,
-        LucideIcon::Volume2,
-        LucideIcon::VolumeX,
-        LucideIcon::Mic,
-        LucideIcon::MicOff,
-        LucideIcon::Video,
-        LucideIcon::VideoOff,
-        LucideIcon::Camera,
-        LucideIcon::Image,
-        LucideIcon::Music,
-        // Devices & Hardware (15)
-        LucideIcon::Laptop,
-        LucideIcon::Monitor,
-        LucideIcon::Smartphone,
-        LucideIcon::Tablet,
-        LucideIcon::Tv,
-        LucideIcon::HardDrive,
-        LucideIcon::Cpu,
-        LucideIcon::Battery,
-        LucideIcon::BatteryCharging,
-        LucideIcon::Wifi,
-        LucideIcon::WifiOff,
-        LucideIcon::Bluetooth,
-        LucideIcon::Server,
-        LucideIcon::Database,
-        LucideIcon::Terminal,
-        // Communication (12)
-        LucideIcon::Mail,
-        LucideIcon::Inbox,
-        LucideIcon::Send,
-        LucideIcon::AtSign,
-        LucideIcon::MessageSquare,
-        LucideIcon::MessageCircle,
-        LucideIcon::Phone,
-        LucideIcon::PhoneCall,
-        LucideIcon::PhoneOff,
-        LucideIcon::Bell,
-        LucideIcon::BellOff,
-        LucideIcon::Globe,
-        // Editor & Text (13)
-        LucideIcon::Bold,
-        LucideIcon::Italic,
-        LucideIcon::Underline,
-        LucideIcon::AlignLeft,
-        LucideIcon::AlignCenter,
-        LucideIcon::AlignRight,
-        LucideIcon::AlignJustify,
-        LucideIcon::List,
-        LucideIcon::Code,
-        LucideIcon::Link,
-        LucideIcon::Link2,
-        LucideIcon::Scissors,
-        LucideIcon::Hash,
-        // System & Status (29)
-        LucideIcon::Search,
-        LucideIcon::Settings,
-        LucideIcon::Tool,
-        LucideIcon::User,
-        LucideIcon::Users,
-        LucideIcon::UserPlus,
-        LucideIcon::UserCheck,
-        LucideIcon::UserX,
-        LucideIcon::Lock,
-        LucideIcon::Unlock,
-        LucideIcon::Key,
-        LucideIcon::Shield,
-        LucideIcon::ShieldCheck,
-        LucideIcon::Eye,
-        LucideIcon::EyeOff,
-        LucideIcon::Sun,
-        LucideIcon::Moon,
-        LucideIcon::Info,
-        LucideIcon::HelpCircle,
-        LucideIcon::AlertCircle,
-        LucideIcon::AlertTriangle,
-        LucideIcon::CheckCircle,
-        LucideIcon::XCircle,
-        LucideIcon::Clock,
-        LucideIcon::Calendar,
-        LucideIcon::Bookmark,
-        LucideIcon::Star,
-        LucideIcon::Heart,
-        LucideIcon::Flag,
-    ];
+    assert_eq!(ALL_LUCIDE_ICONS.len(), 128);
 
-    assert_eq!(all_icons.len(), 128);
+    for icon in ALL_LUCIDE_ICONS {
+        verify_icon_geometry(icon);
+    }
+}
 
-    for icon in all_icons {
-        let d = icon.svg_path();
-        assert!(!d.is_empty(), "{icon:?} has empty SVG path");
+fn verify_icon_geometry(icon: LucideIcon) {
+    let d = icon.svg_path();
+    assert!(!d.is_empty(), "{icon:?} has empty SVG path");
 
-        // Verify no unknown command letters exist in the catalog SVG data
-        for ch in d.chars() {
-            if ch.is_ascii_alphabetic() {
-                assert!(
-                    matches!(
-                        ch,
-                        'M' | 'm'
-                            | 'L'
-                            | 'l'
-                            | 'H'
-                            | 'h'
-                            | 'V'
-                            | 'v'
-                            | 'C'
-                            | 'c'
-                            | 'S'
-                            | 's'
-                            | 'Q'
-                            | 'q'
-                            | 'T'
-                            | 't'
-                            | 'A'
-                            | 'a'
-                            | 'Z'
-                            | 'z'
-                            | 'e'
-                            | 'E'
-                    ),
-                    "{icon:?} contains unsupported SVG token '{ch}'"
-                );
-            }
+    // Verify no unknown command letters exist in the catalog SVG data
+    for ch in d.chars() {
+        if ch.is_ascii_alphabetic() {
+            assert!(
+                matches!(
+                    ch,
+                    'M' | 'm'
+                        | 'L'
+                        | 'l'
+                        | 'H'
+                        | 'h'
+                        | 'V'
+                        | 'v'
+                        | 'C'
+                        | 'c'
+                        | 'S'
+                        | 's'
+                        | 'Q'
+                        | 'q'
+                        | 'T'
+                        | 't'
+                        | 'A'
+                        | 'a'
+                        | 'Z'
+                        | 'z'
+                        | 'e'
+                        | 'E'
+                ),
+                "{icon:?} contains unsupported SVG token '{ch}'"
+            );
         }
+    }
 
-        let path = icon.to_vector_path();
-        assert!(
-            !path.commands.is_empty(),
-            "{icon:?} parsed into empty VectorPath"
-        );
+    let path = icon.to_vector_path();
+    assert!(
+        !path.commands.is_empty(),
+        "{icon:?} parsed into empty VectorPath"
+    );
 
-        let has_drawable = path.commands.iter().any(|cmd| {
+    let has_drawable = path.commands.iter().any(|cmd| {
+        matches!(
+            cmd,
+            PathCommand::LineTo(_) | PathCommand::QuadTo { .. } | PathCommand::CubicTo { .. }
+        )
+    });
+    assert!(
+        has_drawable,
+        "{icon:?} has no drawable segments (only MoveTo/Close)"
+    );
+
+    let has_arc_or_curve_token = d
+        .chars()
+        .any(|c| matches!(c, 'A' | 'a' | 'C' | 'c' | 'S' | 's' | 'Q' | 'q' | 'T' | 't'));
+    if has_arc_or_curve_token {
+        let has_curve_cmd = path.commands.iter().any(|cmd| {
             matches!(
                 cmd,
-                PathCommand::LineTo(_) | PathCommand::QuadTo { .. } | PathCommand::CubicTo { .. }
+                PathCommand::QuadTo { .. } | PathCommand::CubicTo { .. }
             )
         });
         assert!(
-            has_drawable,
-            "{icon:?} has no drawable segments (only MoveTo/Close)"
+            has_curve_cmd,
+            "{icon:?} has arc/curve tokens in SVG `{d}` but produced zero QuadTo/CubicTo commands"
         );
+    }
 
-        let has_arc_or_curve_token = d
-            .chars()
-            .any(|c| matches!(c, 'A' | 'a' | 'C' | 'c' | 'S' | 's' | 'Q' | 'q' | 'T' | 't'));
-        if has_arc_or_curve_token {
-            let has_curve_cmd = path.commands.iter().any(|cmd| {
-                matches!(
-                    cmd,
-                    PathCommand::QuadTo { .. } | PathCommand::CubicTo { .. }
-                )
-            });
-            assert!(
-                has_curve_cmd,
-                "{icon:?} has arc/curve tokens in SVG `{d}` but produced zero QuadTo/CubicTo commands"
-            );
-        }
-
-        // Verify all coordinates are finite
-        for cmd in &path.commands {
-            match *cmd {
-                PathCommand::MoveTo(p) | PathCommand::LineTo(p) => {
-                    assert!(
-                        p.x.is_finite() && p.y.is_finite(),
-                        "{icon:?} non-finite point"
-                    );
-                }
-                PathCommand::QuadTo { control, end } => {
-                    assert!(
-                        control.x.is_finite()
-                            && control.y.is_finite()
-                            && end.x.is_finite()
-                            && end.y.is_finite(),
-                        "{icon:?} non-finite quad"
-                    );
-                }
-                PathCommand::CubicTo { ctrl1, ctrl2, end } => {
-                    assert!(
-                        ctrl1.x.is_finite()
-                            && ctrl1.y.is_finite()
-                            && ctrl2.x.is_finite()
-                            && ctrl2.y.is_finite()
-                            && end.x.is_finite()
-                            && end.y.is_finite(),
-                        "{icon:?} non-finite cubic"
-                    );
-                }
-                PathCommand::Close => {}
+    // Verify all coordinates are finite
+    for cmd in &path.commands {
+        match *cmd {
+            PathCommand::MoveTo(p) | PathCommand::LineTo(p) => {
+                assert!(
+                    p.x.is_finite() && p.y.is_finite(),
+                    "{icon:?} non-finite point"
+                );
             }
+            PathCommand::QuadTo { control, end } => {
+                assert!(
+                    control.x.is_finite()
+                        && control.y.is_finite()
+                        && end.x.is_finite()
+                        && end.y.is_finite(),
+                    "{icon:?} non-finite quad"
+                );
+            }
+            PathCommand::CubicTo { ctrl1, ctrl2, end } => {
+                assert!(
+                    ctrl1.x.is_finite()
+                        && ctrl1.y.is_finite()
+                        && ctrl2.x.is_finite()
+                        && ctrl2.y.is_finite()
+                        && end.x.is_finite()
+                        && end.y.is_finite(),
+                    "{icon:?} non-finite cubic"
+                );
+            }
+            PathCommand::Close => {}
         }
     }
 }
@@ -347,24 +351,24 @@ fn test_all_128_lucide_icons_parse_valid_geometry() {
 #[test]
 fn test_expanded_lucide_catalog_coverage() {
     // Navigation icons
-    assert!(!NavigationIcon::ChevronDown.svg_path().is_empty());
-    assert!(!NavigationIcon::ArrowUpRight.svg_path().is_empty());
-    assert!(!NavigationIcon::Compass.svg_path().is_empty());
+    assert_ne!(NavigationIcon::ChevronDown.svg_path(), "");
+    assert_ne!(NavigationIcon::ArrowUpRight.svg_path(), "");
+    assert_ne!(NavigationIcon::Compass.svg_path(), "");
 
     // Action icons
-    assert!(!ActionIcon::Plus.svg_path().is_empty());
-    assert!(!ActionIcon::Trash2.svg_path().is_empty());
-    assert!(!ActionIcon::Share.svg_path().is_empty());
+    assert_ne!(ActionIcon::Plus.svg_path(), "");
+    assert_ne!(ActionIcon::Trash2.svg_path(), "");
+    assert_ne!(ActionIcon::Share.svg_path(), "");
 
     // Device icons
-    assert!(!DeviceIcon::Laptop.svg_path().is_empty());
-    assert!(!DeviceIcon::Cpu.svg_path().is_empty());
-    assert!(!DeviceIcon::Database.svg_path().is_empty());
+    assert_ne!(DeviceIcon::Laptop.svg_path(), "");
+    assert_ne!(DeviceIcon::Cpu.svg_path(), "");
+    assert_ne!(DeviceIcon::Database.svg_path(), "");
 
     // System icons
-    assert!(!SystemIcon::ShieldCheck.svg_path().is_empty());
-    assert!(!SystemIcon::Star.svg_path().is_empty());
-    assert!(!SystemIcon::AlertTriangle.svg_path().is_empty());
+    assert_ne!(SystemIcon::ShieldCheck.svg_path(), "");
+    assert_ne!(SystemIcon::Star.svg_path(), "");
+    assert_ne!(SystemIcon::AlertTriangle.svg_path(), "");
 
     // Unified LucideIcon conversions
     assert!(!LucideIcon::Search.to_vector_path().commands.is_empty());
@@ -437,7 +441,10 @@ fn test_icon_view_widget_and_paint() {
 
     let mut comp = MockCompositor::default();
     icon.paint(&mut comp, Rect::new(10.0, 10.0, 16.0, 16.0));
-    assert!(!comp.lines.is_empty());
+    assert_ne!(
+        comp.lines,
+        [] as [(tej_ui_layout::Point, tej_ui_layout::Point); 0]
+    );
 }
 
 #[test]

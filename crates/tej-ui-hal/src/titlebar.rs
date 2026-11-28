@@ -85,9 +85,14 @@ impl CustomTitlebar {
         TitlebarHitRegion::CaptionDrag
     }
 
-    /// Enables or disables snap layout hover zone.
-    pub fn set_snap_zone_enabled(&mut self, enabled: bool) {
-        self.snap_zone_enabled = enabled;
+    /// Enables the snap layout hover zone.
+    pub fn enable_snap_zone(&mut self) {
+        self.snap_zone_enabled = true;
+    }
+
+    /// Disables the snap layout hover zone.
+    pub fn disable_snap_zone(&mut self) {
+        self.snap_zone_enabled = false;
     }
 
     /// Titlebar bounds.

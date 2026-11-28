@@ -39,12 +39,9 @@ fn test_premul_color_srgb_to_linear_decoding() {
 #[test]
 fn test_vram_atlas_insert_validates_buffer_length() {
     let config = BackendConfig::default();
-    let ctx = match GpuContext::new_headless(&config) {
-        Ok(c) => c,
-        Err(_) => {
-            eprintln!("Skipping test: no compatible GPU or software rasterizer found.");
-            return;
-        }
+    let Ok(ctx) = GpuContext::new_headless(&config) else {
+        eprintln!("Skipping test: no compatible GPU or software rasterizer found.");
+        return;
     };
 
     let mut gray_atlas =
@@ -94,18 +91,14 @@ fn test_compositor_scissor_reset_for_vectors_and_text_batch_count() {
         allow_software_fallback: true,
         ..Default::default()
     };
-    let ctx = match GpuContext::new_headless(&config) {
-        Ok(c) => c,
-        Err(_) => {
-            eprintln!("Skipping test: no compatible GPU adapter found.");
-            return;
-        }
+    let Ok(ctx) = GpuContext::new_headless(&config) else {
+        eprintln!("Skipping test: no compatible GPU adapter found.");
+        return;
     };
 
     let format = wgpu::TextureFormat::Rgba8Unorm;
-    let headless = match HeadlessTarget::new(&ctx, 64, 64, format) {
-        Ok(t) => t,
-        Err(_) => return,
+    let Ok(headless) = HeadlessTarget::new(&ctx, 64, 64, format) else {
+        return;
     };
 
     let mut atlas =
@@ -129,7 +122,7 @@ fn test_compositor_scissor_reset_for_vectors_and_text_batch_count() {
         [2.0, 2.0, 8.0, 8.0],
         alloc.uv_bounds,
         PremulColor::WHITE,
-        false,
+        tej_ui_hal::gpu::GlyphKind::AlphaMask,
     );
     compositor.pop_clip().expect("pop clip");
 
@@ -139,7 +132,7 @@ fn test_compositor_scissor_reset_for_vectors_and_text_batch_count() {
         [34.0, 34.0, 8.0, 8.0],
         alloc.uv_bounds,
         PremulColor::WHITE,
-        false,
+        tej_ui_hal::gpu::GlyphKind::AlphaMask,
     );
     compositor.pop_clip().expect("pop clip");
 

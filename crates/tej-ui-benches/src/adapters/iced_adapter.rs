@@ -65,8 +65,8 @@ impl IcedAdapter {
         }
     }
 
-    fn update(&mut self, message: Message) {
-        match message {
+    fn update(&mut self, message: &Message) {
+        match *message {
             Message::Create(count) => {
                 self.rows = (0..count)
                     .map(|i| IcedRow {
@@ -146,7 +146,7 @@ impl IcedAdapter {
         self.texts.clear();
 
         for (idx, row) in self.rows.iter().enumerate() {
-            let y = idx as f32 * 36.0;
+            let y = crate::count_to_f32(idx) * 36.0;
             self.quads.push(IcedQuadPrimitive {
                 bounds: Rectangle::new(Point::new(0.0, y), Size::new(1920.0, 36.0)),
                 color: if row.selected {
@@ -181,7 +181,7 @@ impl IcedAdapter {
         t_paint_start.elapsed().as_nanos() as u64
     }
 
-    fn execute_cycle(&mut self, msg: Message) -> FrameMetrics {
+    fn execute_cycle(&mut self, msg: &Message) -> FrameMetrics {
         let snap = TrackingAllocator::reset_and_snapshot();
         let t_start = Instant::now();
 
@@ -213,31 +213,31 @@ impl GuiBenchHarness for IcedAdapter {
     }
 
     fn create_rows(&mut self, count: usize) -> FrameMetrics {
-        self.execute_cycle(Message::Create(count))
+        self.execute_cycle(&Message::Create(count))
     }
 
     fn replace_all_rows(&mut self, count: usize) -> FrameMetrics {
-        self.execute_cycle(Message::Replace(count))
+        self.execute_cycle(&Message::Replace(count))
     }
 
     fn partial_update_every_10th(&mut self) -> FrameMetrics {
-        self.execute_cycle(Message::PartialUpdate)
+        self.execute_cycle(&Message::PartialUpdate)
     }
 
     fn select_single_row(&mut self, index: usize) -> FrameMetrics {
-        self.execute_cycle(Message::Select(index))
+        self.execute_cycle(&Message::Select(index))
     }
 
     fn swap_two_rows(&mut self, idx_a: usize, idx_b: usize) -> FrameMetrics {
-        self.execute_cycle(Message::Swap(idx_a, idx_b))
+        self.execute_cycle(&Message::Swap(idx_a, idx_b))
     }
 
     fn append_rows(&mut self, count: usize) -> FrameMetrics {
-        self.execute_cycle(Message::Append(count))
+        self.execute_cycle(&Message::Append(count))
     }
 
     fn clear_all_rows(&mut self) -> FrameMetrics {
-        self.execute_cycle(Message::Clear)
+        self.execute_cycle(&Message::Clear)
     }
 
     fn layout_deep_dashboard(&mut self, node_count: usize, resize_step: f32) -> FrameMetrics {
@@ -257,8 +257,10 @@ impl GuiBenchHarness for IcedAdapter {
                 leaves.push(leaf);
                 y += 24.0;
             }
-            let col = Node::with_children(Size::new(width / 4.0, y), leaves)
-                .move_to(Point::new(c as f32 * (width / 4.0), 0.0));
+            let col = Node::with_children(Size::new(width / 4.0, y), leaves).move_to(Point::new(
+                f32::from(u16::try_from(c).unwrap_or(0)) * (width / 4.0),
+                0.0,
+            ));
             col_nodes.push(col);
         }
 
@@ -288,7 +290,7 @@ impl GuiBenchHarness for IcedAdapter {
         for (i, p) in paragraphs.iter().enumerate() {
             self.texts.push(IcedTextPrimitive {
                 content: p.clone(),
-                position: Point::new(20.0, (i * 24) as f32),
+                position: Point::new(20.0, crate::count_to_f32(i * 24)),
                 size: 14.0,
             });
         }
@@ -317,17 +319,17 @@ impl GuiBenchHarness for IcedAdapter {
         self.texts.clear();
 
         for i in 0..count {
-            let val = ((i * 17) % 100) as f32 / 100.0;
+            let val = crate::count_to_f32((i * 17) % 100) / 100.0;
             self.quads.push(IcedQuadPrimitive {
                 bounds: Rectangle::new(
-                    Point::new(10.0, (i * 20) as f32),
+                    Point::new(10.0, crate::count_to_f32(i * 20)),
                     Size::new(val * 300.0, 16.0),
                 ),
                 color: [0.1, 0.6, 0.8, 1.0],
             });
             self.texts.push(IcedTextPrimitive {
                 content: format!("Iced Telemetry #{i}: {:.2}", val * 100.0),
-                position: Point::new(320.0, (i * 20 + 14) as f32),
+                position: Point::new(320.0, crate::count_to_f32(i * 20 + 14)),
                 size: 12.0,
             });
         }

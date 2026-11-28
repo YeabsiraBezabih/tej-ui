@@ -28,7 +28,19 @@ pub struct FontRasterizer {
 impl FontRasterizer {
     /// Create a new font rasterizer from raw TTF or OTF font file bytes.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, &'static str> {
-        let font = Font::from_bytes(bytes, FontSettings::default())
+        Self::from_bytes_with_index(bytes, 0)
+    }
+
+    /// Create a new font rasterizer from raw TTF, OTF, or TTC bytes at a specific collection index.
+    pub fn from_bytes_with_index(
+        bytes: &[u8],
+        collection_index: u32,
+    ) -> Result<Self, &'static str> {
+        let settings = FontSettings {
+            collection_index,
+            ..FontSettings::default()
+        };
+        let font = Font::from_bytes(bytes, settings)
             .map_err(|_| "Failed to parse TrueType/OpenType font")?;
         Ok(Self {
             font,
@@ -50,6 +62,20 @@ impl FontRasterizer {
         } else {
             1.0
         }
+    }
+
+    /// Return horizontal line metrics `(ascent, descent, new_line_size)` for `size_px`.
+    ///
+    /// Falls back to `(safe * 0.8, -safe * 0.2, safe * 1.35)` if the font does not provide
+    /// horizontal line metrics.
+    #[must_use]
+    pub fn horizontal_line_metrics(&self, size_px: f32) -> (f32, f32, f32) {
+        let safe = Self::sanitize_size_px(size_px);
+        self.font
+            .horizontal_line_metrics(safe)
+            .map_or((safe * 0.8, -safe * 0.2, safe * 1.35), |m| {
+                (m.ascent, m.descent, m.new_line_size)
+            })
     }
 
     /// Rasterize or retrieve cached glyph mask at a given point size.

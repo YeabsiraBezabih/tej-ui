@@ -1,7 +1,6 @@
 //! Hover helper tooltip popup (shadcn `Tooltip`).
 
 use tej_ui_core::Signal;
-use tej_ui_hal::Color;
 use tej_ui_layout::{Dimension, LayoutArena, LayoutStyle, Point, Rect, Size};
 use tej_ui_view::{PaintContext, View};
 
@@ -31,13 +30,18 @@ impl Tooltip {
         }
     }
 
-    /// Sets tooltip visibility.
-    pub fn set_visible(&self, visible: bool) {
-        self.is_visible.set(visible);
+    /// Shows the tooltip.
+    pub fn show(&self) {
+        self.is_visible.set(true);
+    }
+
+    /// Hides the tooltip.
+    pub fn hide(&self) {
+        self.is_visible.set(false);
     }
 
     fn measured_width(&self) -> f32 {
-        (self.text.chars().count() as f32) * 7.5 + 16.0
+        crate::count_to_f32(self.text.chars().count()) * 7.5 + 16.0
     }
 }
 
@@ -56,7 +60,7 @@ impl View for Tooltip {
 
     fn rebuild(&self, state: &mut Self::State) {
         state.is_visible = self.is_visible.get();
-        state.text = self.text.clone();
+        state.text.clone_from(&self.text);
         state.bounds.size = Size::new(self.measured_width(), 28.0);
     }
 
@@ -95,9 +99,8 @@ impl View for Tooltip {
             .copied()
             .unwrap_or(state.bounds);
 
-        // Dark tooltip pill (uses dark zinc surface in both light and dark themes)
-        let pill_bg = Color::from_rgb_u32(0x18181B);
-        let pill_fg = Color::from_rgb_u32(0xFAFAFA);
+        let pill_bg = ctx.theme.colors.popover;
+        let pill_fg = ctx.theme.colors.popover_foreground;
         let radius = ctx.theme.radii.md;
 
         ctx.fill_rounded_rect(bounds, radius, ctx.theme.colors.border);
@@ -107,13 +110,16 @@ impl View for Tooltip {
             (bounds.size.width - 2.0).max(0.0),
             (bounds.size.height - 2.0).max(0.0),
         );
-        ctx.fill_rounded_rect(inner, (radius - 1.0).max(0.0), pill_bg);
+        let inner_radius = (radius - 1.0).max(0.0);
+        ctx.fill_rounded_rect(inner, inner_radius, pill_bg);
 
         let font_size = ctx.theme.typography.caption.font_size;
         let text_pt = Point::new(
             bounds.origin.x + 8.0,
             bounds.origin.y + (bounds.size.height - font_size) * 0.5,
         );
+        ctx.push_clip(inner, [inner_radius; 4]);
         ctx.draw_text(&state.text, text_pt, font_size, pill_fg);
+        ctx.pop_clip();
     }
 }

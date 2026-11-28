@@ -36,9 +36,7 @@ fn test_gallery_all_tabs_layout_generation() {
         let count = arena.len();
         assert!(
             count > 5,
-            "Tab {:?} produced only {} layout nodes, expected rich tree",
-            tab,
-            count
+            "Tab {tab:?} produced only {count} layout nodes, expected rich tree"
         );
     }
 }

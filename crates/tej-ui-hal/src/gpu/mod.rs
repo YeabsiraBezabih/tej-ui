@@ -25,7 +25,7 @@ pub use image_pipeline::{
 };
 pub use stencil::{DepthStencilTarget, StencilMode};
 pub use surface::{HeadlessTarget, RenderTarget, WindowSurface};
-pub use text_pipeline::{GlyphInstance, TextBatch, TextPipeline};
+pub use text_pipeline::{GlyphInstance, GlyphKind, TextBatch, TextPipeline};
 pub use types::{
     BackendConfig, GpuError, PremulColor, PrimitiveKind, QuadInstance, ScissorRect, ViewportUniform,
 };

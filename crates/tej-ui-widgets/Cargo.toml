@@ -18,6 +18,7 @@ tej-ui-core.workspace = true
 tej-ui-view.workspace = true
 tej-ui-layout.workspace = true
 tej-ui-hal.workspace = true
+tej-ui-text.workspace = true
 tej-ui-db-sync.workspace = true
 thiserror.workspace = true
 smallvec.workspace = true

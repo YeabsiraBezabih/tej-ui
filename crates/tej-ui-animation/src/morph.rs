@@ -97,6 +97,7 @@ impl<T: Lerp + Clone> KeyframeSequence<T> {
     }
 
     /// Inserts a keyframe at time `t` (0.0 to 1.0).
+    #[must_use]
     pub fn add_keyframe(mut self, t: f32, value: T) -> Self {
         self.keyframes.push((t.clamp(0.0, 1.0), value));
         self.keyframes
@@ -114,7 +115,7 @@ impl<T: Lerp + Clone> KeyframeSequence<T> {
         if t <= self.keyframes[0].0 {
             return Some(self.keyframes[0].1.clone());
         }
-        if t >= self.keyframes.last().map(|k| k.0).unwrap_or(1.0) {
+        if t >= self.keyframes.last().map_or(1.0, |k| k.0) {
             return self.keyframes.last().map(|k| k.1.clone());
         }
 

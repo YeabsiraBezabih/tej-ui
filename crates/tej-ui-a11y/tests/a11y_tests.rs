@@ -59,11 +59,11 @@ fn test_a11y_os_preferences_reactive_bindings() {
     assert_eq!(prefs.scale_font_size(16.0), 16.0);
 
     // Toggle reduced motion
-    prefs.set_reduced_motion(true);
+    prefs.enable_reduced_motion();
     assert!(prefs.is_reduced_motion());
 
     // Toggle high contrast
-    prefs.set_high_contrast(true);
+    prefs.enable_high_contrast();
     assert!(prefs.is_high_contrast());
 
     // Scale font size (e.g. 1.5x Dynamic Type)
@@ -79,7 +79,7 @@ fn test_a11y_bridge_events() {
     let mut bridge = A11yBridge::new();
     assert!(!bridge.is_screen_reader_active());
 
-    bridge.set_screen_reader_active(true);
+    bridge.activate_screen_reader();
     assert!(bridge.is_screen_reader_active());
 
     let mut tree = A11yTree::new();
@@ -114,5 +114,8 @@ fn test_a11y_bridge_events() {
     );
 
     // Queue drained
-    assert!(bridge.drain_events().is_empty());
+    assert_eq!(
+        bridge.drain_events(),
+        [] as [tej_ui_a11y::A11yBridgeEvent; 0]
+    );
 }

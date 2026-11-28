@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("========================================================");
 
     let vault_db = VaultDatabase::open_seeded()?;
-    let notes = vault_db.initial_notes();
+    let notes = VaultDatabase::initial_notes();
 
     if is_test_mode {
         println!("\n[Test Mode] Executing automated verification...");
@@ -44,10 +44,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if is_cli_mode {
         // Launch interactive terminal REPL
-        return run_interactive(vault_db, notes);
+        return run_interactive(&vault_db, notes);
     }
 
     // Launch authentic native desktop GUI window (Wayland / X11 / Win32 / AppKit)
-    run_desktop_gui(vault_db, notes);
+    run_desktop_gui(&notes);
     Ok(())
 }

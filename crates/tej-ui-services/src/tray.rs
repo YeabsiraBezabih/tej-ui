@@ -30,20 +30,28 @@ impl TrayIcon {
     }
 
     /// Set hover tooltip string.
+    #[must_use]
     pub fn tooltip(mut self, text: impl Into<String>) -> Self {
         self.tooltip = Some(text.into());
         self
     }
 
     /// Set numeric notification badge counter.
+    #[must_use]
     pub fn badge(mut self, count: u32) -> Self {
         self.badge_count = Some(count);
         self
     }
 
-    /// Show or hide the tray icon.
-    pub fn set_visible(&mut self, visible: bool) -> Result<()> {
-        self.is_visible = visible;
+    /// Show the tray icon.
+    pub fn show(&mut self) -> Result<()> {
+        self.is_visible = true;
+        Ok(())
+    }
+
+    /// Hide the tray icon.
+    pub fn hide(&mut self) -> Result<()> {
+        self.is_visible = false;
         Ok(())
     }
 }

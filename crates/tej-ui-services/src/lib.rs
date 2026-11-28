@@ -27,7 +27,9 @@ pub use dialogs::{FileDialog, FileDialogProvider, FileFilter};
 pub use dnd::{DragDropEvent, DropPayload};
 pub use dnd_protocol::{DragPreview, DragSession, DropAction, MimeNegotiator};
 pub use error::{Result, ServiceError};
-pub use keychain::{BiometricAuthResult, BiometricPromptConfig, BiometricVerifier, SecureKeyStore};
+pub use keychain::{
+    BiometricAuthResult, BiometricPromptConfig, BiometricVerifier, SecretProtection, SecureKeyStore,
+};
 pub use l10n::{L10nManager, Locale, MessageCatalog, MessageEntry, PluralCategory};
 pub use menu::{AppBadgeController, MenuBar, MenuItem, MenuItemRole, TaskbarState};
 pub use notification::{

@@ -40,41 +40,41 @@ impl ColorHsv {
     /// Convert HSV to 8-bit RGBA channels `(r, g, b, a)`.
     #[must_use]
     pub fn to_rgba8(self) -> (u8, u8, u8, u8) {
-        let c = self.v * self.s;
+        let chroma = self.v * self.s;
         let h_prime = self.h / 60.0;
-        let x = c * (1.0 - (h_prime.rem_euclid(2.0) - 1.0).abs());
-        let m = self.v - c;
+        let sec = chroma * (1.0 - (h_prime.rem_euclid(2.0) - 1.0).abs());
+        let match_v = self.v - chroma;
 
         let (r1, g1, b1) = match h_prime as u32 {
-            0 => (c, x, 0.0),
-            1 => (x, c, 0.0),
-            2 => (0.0, c, x),
-            3 => (0.0, x, c),
-            4 => (x, 0.0, c),
-            _ => (c, 0.0, x),
+            0 => (chroma, sec, 0.0),
+            1 => (sec, chroma, 0.0),
+            2 => (0.0, chroma, sec),
+            3 => (0.0, sec, chroma),
+            4 => (sec, 0.0, chroma),
+            _ => (chroma, 0.0, sec),
         };
 
-        let r = ((r1 + m) * 255.0).round() as u8;
-        let g = ((g1 + m) * 255.0).round() as u8;
-        let b = ((b1 + m) * 255.0).round() as u8;
-        let a = (self.a * 255.0).round() as u8;
+        let red = ((r1 + match_v) * 255.0).round() as u8;
+        let green = ((g1 + match_v) * 255.0).round() as u8;
+        let blue = ((b1 + match_v) * 255.0).round() as u8;
+        let alpha = (self.a * 255.0).round() as u8;
 
-        (r, g, b, a)
+        (red, green, blue, alpha)
     }
 
     /// Construct from 8-bit RGBA values.
     #[must_use]
-    pub fn from_rgba8(r: u8, g: u8, b: u8, a: u8) -> Self {
-        let rf = r as f32 / 255.0;
-        let gf = g as f32 / 255.0;
-        let bf = b as f32 / 255.0;
-        let af = a as f32 / 255.0;
+    pub fn from_rgba8(red: u8, green: u8, blue: u8, alpha: u8) -> Self {
+        let rf = f32::from(red) / 255.0;
+        let gf = f32::from(green) / 255.0;
+        let bf = f32::from(blue) / 255.0;
+        let af = f32::from(alpha) / 255.0;
 
         let max = rf.max(gf).max(bf);
         let min = rf.min(gf).min(bf);
         let delta = max - min;
 
-        let h = if delta <= 0.0 {
+        let hue = if delta <= 0.0 {
             0.0
         } else if (max - rf).abs() < f32::EPSILON {
             60.0 * (((gf - bf) / delta).rem_euclid(6.0))
@@ -84,45 +84,45 @@ impl ColorHsv {
             60.0 * (((rf - gf) / delta) + 4.0)
         };
 
-        let s = if max <= 0.0 { 0.0 } else { delta / max };
-        let v = max;
+        let sat = if max <= 0.0 { 0.0 } else { delta / max };
+        let val = max;
 
-        Self::new(h, s, v, af)
+        Self::new(hue, sat, val, af)
     }
 
     /// Format as standard `#RRGGBB` or `#RRGGBBAA` hexadecimal color string.
     #[must_use]
     pub fn to_hex_string(self) -> String {
-        let (r, g, b, a) = self.to_rgba8();
-        if a == 255 {
-            format!("#{r:02X}{g:02X}{b:02X}")
+        let (red, green, blue, alpha) = self.to_rgba8();
+        if alpha == 255 {
+            format!("#{red:02X}{green:02X}{blue:02X}")
         } else {
-            format!("#{r:02X}{g:02X}{b:02X}{a:02X}")
+            format!("#{red:02X}{green:02X}{blue:02X}{alpha:02X}")
         }
     }
 
     /// Parse hex color string `#RGB`, `#RRGGBB`, or `#RRGGBBAA`.
     pub fn from_hex_str(hex: &str) -> Option<Self> {
-        let s = hex.strip_prefix('#').unwrap_or(hex);
-        match s.len() {
+        let digits = hex.strip_prefix('#').unwrap_or(hex);
+        match digits.len() {
             6 => {
-                let r = u8::from_str_radix(&s[0..2], 16).ok()?;
-                let g = u8::from_str_radix(&s[2..4], 16).ok()?;
-                let b = u8::from_str_radix(&s[4..6], 16).ok()?;
-                Some(Self::from_rgba8(r, g, b, 255))
+                let red = u8::from_str_radix(&digits[0..2], 16).ok()?;
+                let green = u8::from_str_radix(&digits[2..4], 16).ok()?;
+                let blue = u8::from_str_radix(&digits[4..6], 16).ok()?;
+                Some(Self::from_rgba8(red, green, blue, 255))
             }
             8 => {
-                let r = u8::from_str_radix(&s[0..2], 16).ok()?;
-                let g = u8::from_str_radix(&s[2..4], 16).ok()?;
-                let b = u8::from_str_radix(&s[4..6], 16).ok()?;
-                let a = u8::from_str_radix(&s[6..8], 16).ok()?;
-                Some(Self::from_rgba8(r, g, b, a))
+                let red = u8::from_str_radix(&digits[0..2], 16).ok()?;
+                let green = u8::from_str_radix(&digits[2..4], 16).ok()?;
+                let blue = u8::from_str_radix(&digits[4..6], 16).ok()?;
+                let alpha = u8::from_str_radix(&digits[6..8], 16).ok()?;
+                Some(Self::from_rgba8(red, green, blue, alpha))
             }
             3 => {
-                let r = u8::from_str_radix(&s[0..1], 16).ok()? * 17;
-                let g = u8::from_str_radix(&s[1..2], 16).ok()? * 17;
-                let b = u8::from_str_radix(&s[2..3], 16).ok()? * 17;
-                Some(Self::from_rgba8(r, g, b, 255))
+                let red = u8::from_str_radix(&digits[0..1], 16).ok()? * 17;
+                let green = u8::from_str_radix(&digits[1..2], 16).ok()? * 17;
+                let blue = u8::from_str_radix(&digits[2..3], 16).ok()? * 17;
+                Some(Self::from_rgba8(red, green, blue, 255))
             }
             _ => None,
         }

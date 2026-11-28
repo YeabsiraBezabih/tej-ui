@@ -84,14 +84,22 @@ impl FileDialog {
         self
     }
 
-    /// Whether multiple files can be selected in the picker.
+    /// Allows selecting multiple files in the picker.
     #[must_use]
-    pub const fn multiple(mut self, multiple: bool) -> Self {
-        self.allows_multiple = multiple;
+    pub const fn allow_multiple(mut self) -> Self {
+        self.allows_multiple = true;
+        self
+    }
+
+    /// Restricts the picker to single-file selection.
+    #[must_use]
+    pub const fn single_selection(mut self) -> Self {
+        self.allows_multiple = false;
         self
     }
 
     /// Bind dialog modality to a parent native window.
+    #[must_use]
     pub fn parent_window(mut self, parent: &dyn HasWindowHandle) -> Self {
         if let Ok(handle) = parent.window_handle() {
             match handle.as_raw() {

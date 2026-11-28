@@ -21,6 +21,7 @@ impl PaletteItem {
         }
     }
 
+    #[must_use]
     pub fn with_subtitle(mut self, subtitle: impl Into<String>) -> Self {
         self.subtitle = Some(subtitle.into());
         self
@@ -112,7 +113,7 @@ impl SemanticPalette {
         let mut sig = 0u64;
         for (i, byte) in text.as_bytes().iter().enumerate() {
             let shift = (i * 7) % 64;
-            sig ^= (*byte as u64) << shift;
+            sig ^= u64::from(*byte) << shift;
         }
         sig
     }

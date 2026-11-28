@@ -15,7 +15,7 @@ impl SvgPathParser {
     /// Parses SVG path string directly into a PathBuilder.
     pub fn parse(svg_d: &str, builder: &mut PathBuilder) -> Result<(), SvgPathError> {
         let path = VectorPath::parse_svg(svg_d)?;
-        for event in path.inner().iter() {
+        for event in path.inner() {
             match event {
                 lyon_path::Event::Begin { at } => builder.move_to(at.x, at.y),
                 lyon_path::Event::Line { to, .. } => builder.line_to(to.x, to.y),
@@ -70,213 +70,206 @@ impl VectorPath {
 
     /// Parses an SVG path data string (`d="..."`) conforming to SVG 2.0 grammar.
     pub fn parse_svg(svg_d: &str) -> Result<Self, SvgPathError> {
-        let mut builder = PathBuilder::new();
-        let bytes = svg_d.as_bytes();
-        let mut cursor = 0;
-        let mut current_point = (0.0f32, 0.0f32);
-        let mut start_point = (0.0f32, 0.0f32);
-        let mut last_cmd = ' ';
-        let mut last_cubic_ctrl: Option<(f32, f32)> = None;
-        let mut last_quad_ctrl: Option<(f32, f32)> = None;
-
-        while cursor < bytes.len() {
-            skip_whitespace_and_commas(bytes, &mut cursor);
-            if cursor >= bytes.len() {
+        let mut state = SvgParseState::new(svg_d.as_bytes());
+        while state.cursor < state.bytes.len() {
+            skip_whitespace_and_commas(state.bytes, &mut state.cursor);
+            if state.cursor >= state.bytes.len() {
                 break;
             }
 
-            let ch = bytes[cursor] as char;
+            let ch = state.bytes[state.cursor] as char;
             let cmd = if ch.is_ascii_alphabetic() {
-                cursor += 1;
-                last_cmd = ch;
+                state.cursor += 1;
+                state.last_cmd = ch;
                 ch
             } else {
-                if last_cmd == ' ' {
+                if state.last_cmd == ' ' {
                     return Err(SvgPathError::UnknownCommand {
                         command: ch,
-                        offset: cursor,
+                        offset: state.cursor,
                     });
                 }
-                last_cmd
+                state.last_cmd
             };
 
-            let is_relative = cmd.is_ascii_lowercase();
-            let upper = cmd.to_ascii_uppercase();
-
-            match upper {
-                'M' => {
-                    let x = read_float(bytes, &mut cursor)?;
-                    let y = read_float(bytes, &mut cursor)?;
-                    let (target_x, target_y) = if is_relative {
-                        (current_point.0 + x, current_point.1 + y)
-                    } else {
-                        (x, y)
-                    };
-                    builder.move_to(target_x, target_y);
-                    current_point = (target_x, target_y);
-                    start_point = current_point;
-                    last_cmd = if is_relative { 'l' } else { 'L' };
-                    last_cubic_ctrl = None;
-                    last_quad_ctrl = None;
-                }
-                'L' => {
-                    let x = read_float(bytes, &mut cursor)?;
-                    let y = read_float(bytes, &mut cursor)?;
-                    let (target_x, target_y) = if is_relative {
-                        (current_point.0 + x, current_point.1 + y)
-                    } else {
-                        (x, y)
-                    };
-                    builder.line_to(target_x, target_y);
-                    current_point = (target_x, target_y);
-                    last_cubic_ctrl = None;
-                    last_quad_ctrl = None;
-                }
-                'H' => {
-                    let x = read_float(bytes, &mut cursor)?;
-                    let target_x = if is_relative { current_point.0 + x } else { x };
-                    builder.line_to(target_x, current_point.1);
-                    current_point.0 = target_x;
-                    last_cubic_ctrl = None;
-                    last_quad_ctrl = None;
-                }
-                'V' => {
-                    let y = read_float(bytes, &mut cursor)?;
-                    let target_y = if is_relative { current_point.1 + y } else { y };
-                    builder.line_to(current_point.0, target_y);
-                    current_point.1 = target_y;
-                    last_cubic_ctrl = None;
-                    last_quad_ctrl = None;
-                }
-                'C' => {
-                    let c1x = read_float(bytes, &mut cursor)?;
-                    let c1y = read_float(bytes, &mut cursor)?;
-                    let c2x = read_float(bytes, &mut cursor)?;
-                    let c2y = read_float(bytes, &mut cursor)?;
-                    let x = read_float(bytes, &mut cursor)?;
-                    let y = read_float(bytes, &mut cursor)?;
-
-                    let (t_c1x, t_c1y, t_c2x, t_c2y, t_x, t_y) = if is_relative {
-                        (
-                            current_point.0 + c1x,
-                            current_point.1 + c1y,
-                            current_point.0 + c2x,
-                            current_point.1 + c2y,
-                            current_point.0 + x,
-                            current_point.1 + y,
-                        )
-                    } else {
-                        (c1x, c1y, c2x, c2y, x, y)
-                    };
-
-                    builder.cubic_bezier_to(t_c1x, t_c1y, t_c2x, t_c2y, t_x, t_y);
-                    current_point = (t_x, t_y);
-                    last_cubic_ctrl = Some((t_c2x, t_c2y));
-                    last_quad_ctrl = None;
-                }
-                'S' => {
-                    let (c1x, c1y) = match last_cubic_ctrl {
-                        Some((lx, ly)) => (2.0 * current_point.0 - lx, 2.0 * current_point.1 - ly),
-                        None => current_point,
-                    };
-                    let c2x = read_float(bytes, &mut cursor)?;
-                    let c2y = read_float(bytes, &mut cursor)?;
-                    let x = read_float(bytes, &mut cursor)?;
-                    let y = read_float(bytes, &mut cursor)?;
-
-                    let (t_c2x, t_c2y, t_x, t_y) = if is_relative {
-                        (
-                            current_point.0 + c2x,
-                            current_point.1 + c2y,
-                            current_point.0 + x,
-                            current_point.1 + y,
-                        )
-                    } else {
-                        (c2x, c2y, x, y)
-                    };
-
-                    builder.cubic_bezier_to(c1x, c1y, t_c2x, t_c2y, t_x, t_y);
-                    current_point = (t_x, t_y);
-                    last_cubic_ctrl = Some((t_c2x, t_c2y));
-                    last_quad_ctrl = None;
-                }
-                'Q' => {
-                    let cx = read_float(bytes, &mut cursor)?;
-                    let cy = read_float(bytes, &mut cursor)?;
-                    let x = read_float(bytes, &mut cursor)?;
-                    let y = read_float(bytes, &mut cursor)?;
-
-                    let (t_cx, t_cy, t_x, t_y) = if is_relative {
-                        (
-                            current_point.0 + cx,
-                            current_point.1 + cy,
-                            current_point.0 + x,
-                            current_point.1 + y,
-                        )
-                    } else {
-                        (cx, cy, x, y)
-                    };
-
-                    builder.quadratic_bezier_to(t_cx, t_cy, t_x, t_y);
-                    current_point = (t_x, t_y);
-                    last_quad_ctrl = Some((t_cx, t_cy));
-                    last_cubic_ctrl = None;
-                }
-                'T' => {
-                    let (cx, cy) = match last_quad_ctrl {
-                        Some((qx, qy)) => (2.0 * current_point.0 - qx, 2.0 * current_point.1 - qy),
-                        None => current_point,
-                    };
-                    let x = read_float(bytes, &mut cursor)?;
-                    let y = read_float(bytes, &mut cursor)?;
-
-                    let (t_x, t_y) = if is_relative {
-                        (current_point.0 + x, current_point.1 + y)
-                    } else {
-                        (x, y)
-                    };
-
-                    builder.quadratic_bezier_to(cx, cy, t_x, t_y);
-                    current_point = (t_x, t_y);
-                    last_quad_ctrl = Some((cx, cy));
-                    last_cubic_ctrl = None;
-                }
-                'A' => {
-                    let _rx = read_float(bytes, &mut cursor)?;
-                    let _ry = read_float(bytes, &mut cursor)?;
-                    let _rot = read_float(bytes, &mut cursor)?;
-                    let _large_arc = read_float(bytes, &mut cursor)?;
-                    let _sweep = read_float(bytes, &mut cursor)?;
-                    let x = read_float(bytes, &mut cursor)?;
-                    let y = read_float(bytes, &mut cursor)?;
-
-                    let (t_x, t_y) = if is_relative {
-                        (current_point.0 + x, current_point.1 + y)
-                    } else {
-                        (x, y)
-                    };
-
-                    builder.line_to(t_x, t_y);
-                    current_point = (t_x, t_y);
-                    last_cubic_ctrl = None;
-                    last_quad_ctrl = None;
-                }
-                'Z' => {
-                    builder.close();
-                    current_point = start_point;
-                    last_cubic_ctrl = None;
-                    last_quad_ctrl = None;
-                }
-                _ => {
-                    return Err(SvgPathError::UnknownCommand {
-                        command: cmd,
-                        offset: cursor - 1,
-                    });
-                }
-            }
+            state.apply_command(cmd)?;
         }
 
-        Ok(builder.build())
+        Ok(state.builder.build())
+    }
+}
+
+struct SvgParseState<'a> {
+    bytes: &'a [u8],
+    cursor: usize,
+    builder: PathBuilder,
+    current_point: (f32, f32),
+    start_point: (f32, f32),
+    last_cmd: char,
+    last_cubic_ctrl: Option<(f32, f32)>,
+    last_quad_ctrl: Option<(f32, f32)>,
+}
+
+#[derive(Clone, Copy)]
+enum CoordMode {
+    Absolute,
+    Relative,
+}
+
+impl<'a> SvgParseState<'a> {
+    fn new(bytes: &'a [u8]) -> Self {
+        Self {
+            bytes,
+            cursor: 0,
+            builder: PathBuilder::new(),
+            current_point: (0.0, 0.0),
+            start_point: (0.0, 0.0),
+            last_cmd: ' ',
+            last_cubic_ctrl: None,
+            last_quad_ctrl: None,
+        }
+    }
+
+    fn resolve_point(&self, mode: CoordMode, x: f32, y: f32) -> (f32, f32) {
+        match mode {
+            CoordMode::Relative => (self.current_point.0 + x, self.current_point.1 + y),
+            CoordMode::Absolute => (x, y),
+        }
+    }
+
+    fn reset_controls(&mut self) {
+        self.last_cubic_ctrl = None;
+        self.last_quad_ctrl = None;
+    }
+
+    fn read_next_float(&mut self) -> Result<f32, SvgPathError> {
+        read_float(self.bytes, &mut self.cursor)
+    }
+
+    fn read_next_point(&mut self, mode: CoordMode) -> Result<(f32, f32), SvgPathError> {
+        let x = self.read_next_float()?;
+        let y = self.read_next_float()?;
+        Ok(self.resolve_point(mode, x, y))
+    }
+
+    fn apply_command(&mut self, cmd: char) -> Result<(), SvgPathError> {
+        let mode = if cmd.is_ascii_lowercase() {
+            CoordMode::Relative
+        } else {
+            CoordMode::Absolute
+        };
+        match cmd.to_ascii_uppercase() {
+            'M' => {
+                let target = self.read_next_point(mode)?;
+                self.builder.move_to(target.0, target.1);
+                self.current_point = target;
+                self.start_point = target;
+                self.last_cmd = match mode {
+                    CoordMode::Relative => 'l',
+                    CoordMode::Absolute => 'L',
+                };
+                self.reset_controls();
+            }
+            'L' => {
+                let target = self.read_next_point(mode)?;
+                self.builder.line_to(target.0, target.1);
+                self.current_point = target;
+                self.reset_controls();
+            }
+            'H' => {
+                let x = self.read_next_float()?;
+                let target_x = self.resolve_point(mode, x, 0.0).0;
+                self.builder.line_to(target_x, self.current_point.1);
+                self.current_point.0 = target_x;
+                self.reset_controls();
+            }
+            'V' => {
+                let y = self.read_next_float()?;
+                let target_y = self.resolve_point(mode, 0.0, y).1;
+                self.builder.line_to(self.current_point.0, target_y);
+                self.current_point.1 = target_y;
+                self.reset_controls();
+            }
+            'C' | 'S' | 'Q' | 'T' => self.apply_curve_command(cmd.to_ascii_uppercase(), mode)?,
+            'A' => {
+                for _ in 0..5 {
+                    let _ = self.read_next_float()?;
+                }
+                let target = self.read_next_point(mode)?;
+                self.builder.line_to(target.0, target.1);
+                self.current_point = target;
+                self.reset_controls();
+            }
+            'Z' => {
+                self.builder.close();
+                self.current_point = self.start_point;
+                self.reset_controls();
+            }
+            _ => {
+                return Err(SvgPathError::UnknownCommand {
+                    command: cmd,
+                    offset: self.cursor - 1,
+                });
+            }
+        }
+        Ok(())
+    }
+
+    fn apply_curve_command(&mut self, upper: char, mode: CoordMode) -> Result<(), SvgPathError> {
+        match upper {
+            'C' => {
+                let c1 = self.read_next_point(mode)?;
+                let c2 = self.read_next_point(mode)?;
+                let target = self.read_next_point(mode)?;
+                self.builder
+                    .cubic_bezier_to(c1.0, c1.1, c2.0, c2.1, target.0, target.1);
+                self.current_point = target;
+                self.last_cubic_ctrl = Some(c2);
+                self.last_quad_ctrl = None;
+            }
+            'S' => {
+                let c1 = match self.last_cubic_ctrl {
+                    Some((lx, ly)) => (
+                        2.0 * self.current_point.0 - lx,
+                        2.0 * self.current_point.1 - ly,
+                    ),
+                    None => self.current_point,
+                };
+                let c2 = self.read_next_point(mode)?;
+                let target = self.read_next_point(mode)?;
+                self.builder
+                    .cubic_bezier_to(c1.0, c1.1, c2.0, c2.1, target.0, target.1);
+                self.current_point = target;
+                self.last_cubic_ctrl = Some(c2);
+                self.last_quad_ctrl = None;
+            }
+            'Q' => {
+                let ctrl = self.read_next_point(mode)?;
+                let target = self.read_next_point(mode)?;
+                self.builder
+                    .quadratic_bezier_to(ctrl.0, ctrl.1, target.0, target.1);
+                self.current_point = target;
+                self.last_quad_ctrl = Some(ctrl);
+                self.last_cubic_ctrl = None;
+            }
+            'T' => {
+                let ctrl = match self.last_quad_ctrl {
+                    Some((qx, qy)) => (
+                        2.0 * self.current_point.0 - qx,
+                        2.0 * self.current_point.1 - qy,
+                    ),
+                    None => self.current_point,
+                };
+                let target = self.read_next_point(mode)?;
+                self.builder
+                    .quadratic_bezier_to(ctrl.0, ctrl.1, target.0, target.1);
+                self.current_point = target;
+                self.last_quad_ctrl = Some(ctrl);
+                self.last_cubic_ctrl = None;
+            }
+            _ => {}
+        }
+        Ok(())
     }
 }
 
@@ -344,8 +337,9 @@ impl PathBuilder {
         });
     }
 
-    pub fn end(&mut self, close: bool) {
-        self.inner.end(close);
+    /// Ends the current subpath without closing it.
+    pub fn end_open(&mut self) {
+        self.inner.end(false);
     }
 
     pub fn close(&mut self) {

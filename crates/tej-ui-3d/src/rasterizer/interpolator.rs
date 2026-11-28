@@ -62,9 +62,9 @@ impl PerspectiveBarycentrics {
     #[inline]
     #[must_use]
     pub fn interpolate_color(&self, c0: Color, c1: Color, c2: Color) -> (f32, f32, f32) {
-        let r = (c0.r as f32) * self.k0 + (c1.r as f32) * self.k1 + (c2.r as f32) * self.k2;
-        let g = (c0.g as f32) * self.k0 + (c1.g as f32) * self.k1 + (c2.g as f32) * self.k2;
-        let b = (c0.b as f32) * self.k0 + (c1.b as f32) * self.k1 + (c2.b as f32) * self.k2;
+        let r = f32::from(c0.r) * self.k0 + f32::from(c1.r) * self.k1 + f32::from(c2.r) * self.k2;
+        let g = f32::from(c0.g) * self.k0 + f32::from(c1.g) * self.k1 + f32::from(c2.g) * self.k2;
+        let b = f32::from(c0.b) * self.k0 + f32::from(c1.b) * self.k1 + f32::from(c2.b) * self.k2;
         (r, g, b)
     }
 

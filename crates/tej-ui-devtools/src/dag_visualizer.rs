@@ -49,16 +49,18 @@ impl DagSnapshot {
     /// Exports the dependency graph as Graphviz DOT format for rendering in DevTools.
     #[must_use]
     pub fn to_dot(&self) -> String {
+        use std::fmt::Write;
         let mut out = String::from("digraph ReactiveDAG {\n  rankdir=LR;\n  node [shape=box];\n");
         for (id, node) in &self.nodes {
             let color = if node.is_dirty { "red" } else { "black" };
-            out.push_str(&format!(
-                "  \"{:?}\" [label=\"{} (Epoch: {})\" color=\"{}\"];\n",
-                id, node.label, node.last_updated_epoch.0, color
-            ));
+            let _ = writeln!(
+                out,
+                "  \"{id:?}\" [label=\"{} (Epoch: {})\" color=\"{color}\"];",
+                node.label, node.last_updated_epoch.0
+            );
         }
         for (from, to) in &self.edges {
-            out.push_str(&format!("  \"{:?}\" -> \"{:?}\";\n", from, to));
+            let _ = writeln!(out, "  \"{from:?}\" -> \"{to:?}\";");
         }
         out.push_str("}\n");
         out
@@ -95,7 +97,7 @@ impl ReactiveDagInspector {
         self.node_names
             .get(&node_id)
             .cloned()
-            .unwrap_or_else(|| format!("Node_{:?}", node_id))
+            .unwrap_or_else(|| format!("Node_{node_id:?}"))
     }
 
     /// Names a signal by converting its SignalId to NodeId.

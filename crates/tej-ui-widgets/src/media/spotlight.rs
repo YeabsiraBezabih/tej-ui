@@ -60,8 +60,8 @@ impl Default for SpotlightCard {
         Self {
             bounds: Rect::ZERO,
             background: Color::WHITE,
-            border_color: Color::from_rgb_u32(0xEAECF0), // Tej Gray 200
-            spotlight_color: Color::from_rgb_u32(0x7F56D9), // Tej Brand 600
+            border_color: Color::from_rgb_u32(0x00EA_ECF0), // Tej Gray 200
+            spotlight_color: Color::from_rgb_u32(0x007F_56D9), // Tej Brand 600
             spotlight_radius: 120.0,
             cursor_x: 0.0,
             cursor_y: 0.0,

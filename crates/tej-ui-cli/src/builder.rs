@@ -19,8 +19,17 @@ impl BuildConfig {
         }
     }
 
-    pub fn with_release(mut self, release: bool) -> Self {
-        self.release = release;
+    /// Configures the build for release mode.
+    #[must_use]
+    pub const fn release(mut self) -> Self {
+        self.release = true;
+        self
+    }
+
+    /// Configures the build for debug mode.
+    #[must_use]
+    pub const fn debug(mut self) -> Self {
+        self.release = false;
         self
     }
 

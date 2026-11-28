@@ -17,13 +17,16 @@ impl FuzzRng {
     /// Generates next 32-bit random integer.
     pub fn next_u32(&mut self) -> u32 {
         // Linear congruential generator (LCG)
-        self.state = self.state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        self.state = self
+            .state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1);
         (self.state >> 32) as u32
     }
 
     /// Generates next float in range [min, max).
     pub fn next_f32(&mut self, min: f32, max: f32) -> f32 {
-        let normalized = (self.next_u32() as f32) / (u32::MAX as f32);
+        let normalized = (f64::from(self.next_u32()) / f64::from(u32::MAX)) as f32;
         min + normalized * (max - min)
     }
 }

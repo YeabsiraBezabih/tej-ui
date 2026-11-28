@@ -94,8 +94,8 @@ fn telemetry_dashboard_view(
                     compositor.fill_rect(bounds, Color::rgb(18, 20, 24));
 
                     // Draw horizontal grid lines
-                    for y_step in 1..=4 {
-                        let y = bounds.origin.y + (y_step as f32 * 48.0);
+                    for y_step in 1u16..=4 {
+                        let y = bounds.origin.y + (f32::from(y_step) * 48.0);
                         compositor.fill_rect(
                             Rect::new(bounds.origin.x, y, bounds.size.width, 1.0),
                             Color::rgba(255, 255, 255, 30),
@@ -134,7 +134,7 @@ fn telemetry_dashboard_view(
     .spacing(16)
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() {
     let args: Vec<String> = env::args().collect();
     let is_test_mode = args.iter().any(|a| a == "--test" || a == "--batch");
 
@@ -169,10 +169,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         for tick in 1..=1000 {
             batch(|| {
                 tick_count.set(tick);
-                let cpu = 20.0 + ((tick % 70) as f32);
-                let gpu = 30.0 + ((tick % 60) as f32);
-                let ram = 200.0 + ((tick % 100) as f32);
-                let net = 1000.0 + ((tick % 3000) as f32);
+                let cpu = 20.0 + f32::from(u16::try_from(tick % 70).unwrap_or(0));
+                let gpu = 30.0 + f32::from(u16::try_from(tick % 60).unwrap_or(0));
+                let ram = 200.0 + f32::from(u16::try_from(tick % 100).unwrap_or(0));
+                let net = 1000.0 + f32::from(u16::try_from(tick % 3000).unwrap_or(0));
 
                 metrics.set(TelemetryMetrics {
                     cpu_usage: cpu,
@@ -190,9 +190,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("  ✓ Successfully executed 1,000 telemetry frame updates in {elapsed:?}");
         println!(
             "  ✓ Average tick latency: {:.2} µs / frame",
-            elapsed.as_micros() as f64 / 1000.0
+            elapsed.as_secs_f64() * 1000.0
         );
-        return Ok(());
+        return;
     }
 
     println!("Running headless frame presentation test...");
@@ -204,5 +204,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let _state = app.run_headless_frame();
     println!("Telemetry dashboard initialized and rendered successfully!");
-    Ok(())
 }

@@ -13,13 +13,13 @@ use tej_ui_hal::gpu::{BackendConfig, GpuCompositor, HeadlessTarget, PremulColor}
 
 #[test]
 fn test_transform2d_math() {
-    let t = Transform2D::translation(10.0, 20.0);
-    let (x, y) = t.transform_point(5.0, 5.0);
-    assert!((x - 15.0).abs() < 1e-4);
-    assert!((y - 25.0).abs() < 1e-4);
+    let translate = Transform2D::translation(10.0, 20.0);
+    let (tx, ty) = translate.transform_point(5.0, 5.0);
+    assert!((tx - 15.0).abs() < 1e-4);
+    assert!((ty - 25.0).abs() < 1e-4);
 
-    let s = Transform2D::scale(2.0, 3.0);
-    let (sx, sy) = s.transform_point(10.0, 10.0);
+    let scale = Transform2D::scale(2.0, 3.0);
+    let (sx, sy) = scale.transform_point(10.0, 10.0);
     assert!((sx - 20.0).abs() < 1e-4);
     assert!((sy - 30.0).abs() < 1e-4);
 
@@ -28,7 +28,7 @@ fn test_transform2d_math() {
     assert!((rx - 0.0).abs() < 1e-4);
     assert!((ry - 1.0).abs() < 1e-4);
 
-    let combined = t.multiply(&s);
+    let combined = translate.multiply(&scale);
     let (cx, cy) = combined.transform_point(5.0, 5.0);
     assert!((cx - 20.0).abs() < 1e-4);
     assert!((cy - 35.0).abs() < 1e-4);
@@ -66,8 +66,8 @@ fn test_tessellator_fill_and_stroke() {
     let mut mesh = TessellatedMesh::new();
 
     tess.tessellate_fill(&parsed, PremulColor::WHITE, FillRule::NonZero, &mut mesh);
-    assert!(!mesh.vertices.is_empty());
-    assert!(!mesh.indices.is_empty());
+    assert_ne!(mesh.vertices, [] as [tej_ui_hal::gpu::VectorVertex; 0]);
+    assert_ne!(mesh.indices, [] as [u32; 0]);
     assert_eq!(mesh.indices.len() % 3, 0);
 
     let vertex_count_before = mesh.vertices.len();

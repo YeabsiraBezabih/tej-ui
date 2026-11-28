@@ -196,7 +196,8 @@ pub struct ViewportUniform {
     pub viewport_size: [f32; 2],
     /// Display scale factor (HiDPI DPI ratio).
     pub scale_factor: f32,
-    pub _pad: f32,
+    /// Padding for 16-byte uniform alignment.
+    pub pad: f32,
 }
 
 const _: () = assert!(core::mem::size_of::<ViewportUniform>() == 16);

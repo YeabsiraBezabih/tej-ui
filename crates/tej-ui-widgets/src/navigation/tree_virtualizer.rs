@@ -105,6 +105,15 @@ pub struct TreeMultiSelection {
     last_focused_id: Option<String>,
 }
 
+/// Click selection behavior for [`TreeMultiSelection::select`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SelectionMode {
+    /// Single click: selects only the clicked node.
+    Single,
+    /// Modifier click (Cmd/Ctrl): toggles the clicked node in the selection set.
+    Toggle,
+}
+
 impl TreeMultiSelection {
     #[must_use]
     pub fn new() -> Self {
@@ -127,11 +136,11 @@ impl TreeMultiSelection {
     }
 
     /// Handle click selection:
-    /// - `is_toggle` (Cmd/Ctrl): toggles the clicked node.
-    /// - Single click: selects only this node.
-    pub fn select(&mut self, id: impl Into<String>, is_toggle: bool) {
+    /// - [`SelectionMode::Toggle`] (Cmd/Ctrl): toggles the clicked node.
+    /// - [`SelectionMode::Single`]: selects only this node.
+    pub fn select(&mut self, id: impl Into<String>, mode: SelectionMode) {
         let id_str = id.into();
-        if is_toggle {
+        if matches!(mode, SelectionMode::Toggle) {
             if self.selected_ids.contains(&id_str) {
                 self.selected_ids.remove(&id_str);
             } else {

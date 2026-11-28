@@ -126,7 +126,7 @@ impl NaniteStreamer {
 
         stats.clusters_uploaded = uploaded_count;
         stats.resident_vram_bytes = self.ring.resident_vram_bytes();
-        stats.staging_upload_time_us = staging_start.elapsed().as_micros() as f64;
+        stats.staging_upload_time_us = staging_start.elapsed().as_secs_f64() * 1_000_000.0;
     }
 
     /// Accessor for the underlying GPU descriptor ring.

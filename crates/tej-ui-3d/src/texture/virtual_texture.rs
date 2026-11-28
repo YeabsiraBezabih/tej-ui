@@ -89,11 +89,11 @@ impl VirtualTexture {
         let v_clamped = v.fract().abs();
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let tx =
-            ((u_clamped * tiles_x as f32).floor() as u16).min(tiles_x.saturating_sub(1) as u16);
+        let tx = ((u_clamped * crate::math::count_to_f32(tiles_x)).floor() as u16)
+            .min(tiles_x.saturating_sub(1) as u16);
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let ty =
-            ((v_clamped * tiles_y as f32).floor() as u16).min(tiles_y.saturating_sub(1) as u16);
+        let ty = ((v_clamped * crate::math::count_to_f32(tiles_y)).floor() as u16)
+            .min(tiles_y.saturating_sub(1) as u16);
 
         VirtualTileCoord::new(mip, tx, ty)
     }

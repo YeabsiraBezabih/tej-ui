@@ -60,23 +60,41 @@ impl Accordion {
 
     /// Allows multiple sections to be open simultaneously.
     #[must_use]
-    pub const fn multiple(mut self, allow: bool) -> Self {
-        self.allow_multiple = allow;
+    pub const fn allow_multiple(mut self) -> Self {
+        self.allow_multiple = true;
+        self
+    }
+
+    /// Restricts the accordion so at most one section is open at a time.
+    #[must_use]
+    pub const fn single_open(mut self) -> Self {
+        self.allow_multiple = false;
         self
     }
 
     /// Toggles open state for an item.
     pub fn toggle_item(&self, item_id: &str) {
-        toggle_item_signal(self.open_items, item_id, self.allow_multiple);
+        let policy = if self.allow_multiple {
+            OpenPolicy::Multiple
+        } else {
+            OpenPolicy::Single
+        };
+        toggle_item_signal(self.open_items, item_id, policy);
     }
 }
 
-fn toggle_item_signal(open_items: Signal<HashSet<String>>, item_id: &str, allow_multiple: bool) {
+#[derive(Clone, Copy)]
+enum OpenPolicy {
+    Single,
+    Multiple,
+}
+
+fn toggle_item_signal(open_items: Signal<HashSet<String>>, item_id: &str, policy: OpenPolicy) {
     let mut current = open_items.get();
     if current.contains(item_id) {
         current.remove(item_id);
     } else {
-        if !allow_multiple {
+        if matches!(policy, OpenPolicy::Single) {
             current.clear();
         }
         current.insert(item_id.to_string());
@@ -179,7 +197,7 @@ impl View for Accordion {
                 .computed_bounds
                 .get(header_node as usize)
                 .copied()
-                .unwrap_or(Rect::new(0.0, (i as f32) * 48.0, 400.0, 48.0));
+                .unwrap_or(Rect::new(0.0, crate::count_to_f32(i) * 48.0, 400.0, 48.0));
 
             let is_open = state.open_items.contains(&item.id);
             let is_hovered = ctx.is_hovered(header_node);
@@ -241,27 +259,25 @@ impl View for Accordion {
             );
 
             // Expanded content panel
-            if is_open {
-                if let Some(Some(content_node)) = state.content_nodes.get(i) {
-                    if let Some(content_bounds) = ctx
-                        .arena
-                        .computed_bounds
-                        .get(*content_node as usize)
-                        .copied()
-                    {
-                        ctx.fill_rect(content_bounds, ctx.theme.colors.background);
-                        let content_pt = Point::new(
-                            content_bounds.origin.x + 12.0,
-                            content_bounds.origin.y + 12.0,
-                        );
-                        ctx.draw_text(
-                            &item.content,
-                            content_pt,
-                            ctx.theme.typography.body_small.font_size,
-                            ctx.theme.colors.muted_foreground,
-                        );
-                    }
-                }
+            if is_open
+                && let Some(Some(content_node)) = state.content_nodes.get(i)
+                && let Some(content_bounds) = ctx
+                    .arena
+                    .computed_bounds
+                    .get(*content_node as usize)
+                    .copied()
+            {
+                ctx.fill_rect(content_bounds, ctx.theme.colors.background);
+                let content_pt = Point::new(
+                    content_bounds.origin.x + 12.0,
+                    content_bounds.origin.y + 12.0,
+                );
+                ctx.draw_text(
+                    &item.content,
+                    content_pt,
+                    ctx.theme.typography.body_small.font_size,
+                    ctx.theme.colors.muted_foreground,
+                );
             }
         }
     }
@@ -273,13 +289,17 @@ impl View for Accordion {
             };
             let open_sig = self.open_items;
             let item_id = item.id.clone();
-            let allow_multiple = self.allow_multiple;
+            let policy = if self.allow_multiple {
+                OpenPolicy::Multiple
+            } else {
+                OpenPolicy::Single
+            };
 
             // Click (and Enter 13 / Space 32 via EventDispatcher) toggles expand/collapse
             dispatcher.register_click(
                 header_node,
                 Arc::new(move || {
-                    toggle_item_signal(open_sig, &item_id, allow_multiple);
+                    toggle_item_signal(open_sig, &item_id, policy);
                 }),
             );
 
@@ -290,7 +310,7 @@ impl View for Accordion {
                 header_node,
                 Arc::new(move |key_code| {
                     if key_code == 13 || key_code == 32 {
-                        toggle_item_signal(open_sig_key, &item_id_key, allow_multiple);
+                        toggle_item_signal(open_sig_key, &item_id_key, policy);
                     }
                 }),
             );

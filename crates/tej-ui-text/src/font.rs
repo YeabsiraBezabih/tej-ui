@@ -36,11 +36,10 @@ impl SystemFont {
     pub const fn default_point_size(self) -> f32 {
         match self {
             Self::Caption => 11.0,
-            Self::Body => 14.0,
             Self::Title => 18.0,
             Self::Headline => 24.0,
             Self::Monospace => 13.0,
-            Self::Named(_) => 14.0,
+            Self::Body | Self::Named(_) => 14.0,
         }
     }
 

@@ -38,10 +38,10 @@ pub struct VirtualGridMetric {
 fn read_rss_mb() -> f64 {
     if let Ok(statm) = fs::read_to_string("/proc/self/statm") {
         let parts: Vec<&str> = statm.split_whitespace().collect();
-        if parts.len() >= 2 {
-            if let Ok(pages) = parts[1].parse::<u64>() {
-                return (pages as f64 * 4.0) / 1024.0;
-            }
+        if parts.len() >= 2
+            && let Ok(pages) = parts[1].parse::<u32>()
+        {
+            return (f64::from(pages) * 4.0) / 1024.0;
         }
     }
     0.0
@@ -63,19 +63,19 @@ fn bench_standard_virtual_list(row_count: usize) -> VirtualGridMetric {
     scroll_pos.set(50_000_000.0 * 36.0);
     vlist.patch(&mut state, 1);
     black_box(&state);
-    let jump1_us = t0.elapsed().as_micros() as f64;
+    let jump1_us = t0.elapsed().as_secs_f64() * 1e6;
 
     // Jump 2: 50,000,000 -> 99,999,900
     let t1 = Instant::now();
     scroll_pos.set(99_999_900.0 * 36.0);
     vlist.patch(&mut state, 1);
     black_box(&state);
-    let jump2_us = t1.elapsed().as_micros() as f64;
+    let jump2_us = t1.elapsed().as_secs_f64() * 1e6;
 
     let (alloc_count, _bytes, _peak) = TrackingAllocator::delta_since(snap);
-    let avg_us = (jump1_us + jump2_us) / 2.0;
+    let avg_us = f64::midpoint(jump1_us, jump2_us);
     // 120Hz frame budget is 8.33ms = 8333us
-    let dropped = if avg_us > 8333.0 { 1 } else { 0 };
+    let dropped = usize::from(avg_us > 8333.0);
 
     VirtualGridMetric {
         backend_name: "Standard VirtualList (In-Memory Vec)",
@@ -116,7 +116,7 @@ fn bench_mydb_zerocopy_virtual_grid(row_count: usize) -> VirtualGridMetric {
             black_box(lens.value_str().unwrap_or(""));
         }
     }
-    let jump1_us = t0.elapsed().as_nanos() as f64 / 1000.0;
+    let jump1_us = t0.elapsed().as_secs_f64() * 1e6;
 
     // Jump 2: 50,000,000 -> 99,999,900
     let t1 = Instant::now();
@@ -129,11 +129,11 @@ fn bench_mydb_zerocopy_virtual_grid(row_count: usize) -> VirtualGridMetric {
             black_box(lens.value_str().unwrap_or(""));
         }
     }
-    let jump2_us = t1.elapsed().as_nanos() as f64 / 1000.0;
+    let jump2_us = t1.elapsed().as_secs_f64() * 1e6;
 
     let (alloc_count, _bytes, _peak) = TrackingAllocator::delta_since(snap);
-    let avg_us = (jump1_us + jump2_us) / 2.0;
-    let dropped = if avg_us > 8333.0 { 1 } else { 0 };
+    let avg_us = f64::midpoint(jump1_us, jump2_us);
+    let dropped = usize::from(avg_us > 8333.0);
 
     VirtualGridMetric {
         backend_name: "tej-ui + MyDb (Zero-Copy Mmap Pages)",

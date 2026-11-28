@@ -25,8 +25,8 @@ fn test_mesh_generation_cube_and_sphere() {
     assert_eq!(cube.indices.len(), 36);
 
     let sphere = Mesh::sphere(1.0, 8, 8, Color::rgb(0, 0, 255));
-    assert!(!sphere.vertices.is_empty());
-    assert!(!sphere.indices.is_empty());
+    assert_ne!(sphere.vertices, [] as [tej_ui_3d::Vertex; 0]);
+    assert_ne!(sphere.indices, [] as [u32; 0]);
 }
 
 #[test]
@@ -176,8 +176,8 @@ fn test_nanite_meshlet_packer_and_header_serialization() {
     use tej_ui_3d::{BlenderMesh, MeshletPacker};
 
     let mesh = BlenderMesh::generate_sculpt(8, 8);
-    assert!(!mesh.vertices.is_empty());
-    assert!(!mesh.triangles.is_empty());
+    assert_ne!(mesh.vertices, [] as [[f32; 3]; 0]);
+    assert_ne!(mesh.triangles, [] as [[u32; 3]; 0]);
 
     let packed = MeshletPacker::pack_geometry(&mesh.vertices, &mesh.triangles, 0, 0.01);
     assert!(!packed.is_empty());
@@ -336,13 +336,12 @@ fn test_suzanne_mesh_rasterization() {
     let non_bg = rasterizer
         .color_buffer
         .iter()
-        .filter(|&&c| c != 0xFF1E1E24)
+        .filter(|&&c| c != 0xFF1E_1E24)
         .count();
     // Verify Suzanne covers a substantial portion of the screen (thousands of pixels)
     assert!(
         non_bg > 5000,
-        "Suzanne must cover significant screen pixels, got {}",
-        non_bg
+        "Suzanne must cover significant screen pixels, got {non_bg}"
     );
 
     // Verify rich 3D shading variation (directional diffuse + specular highlights)
@@ -350,7 +349,7 @@ fn test_suzanne_mesh_rasterization() {
         .color_buffer
         .iter()
         .copied()
-        .filter(|&c| c != 0xFF1E1E24)
+        .filter(|&c| c != 0xFF1E_1E24)
         .collect();
     assert!(
         unique_colors.len() > 100,
@@ -445,7 +444,7 @@ fn test_splash_screen_multi_color_rendering() {
         .color_buffer
         .iter()
         .copied()
-        .filter(|&c| c != 0xFF1E1E24)
+        .filter(|&c| c != 0xFF1E_1E24)
         .collect();
     assert!(
         unique_colors.len() > 150,

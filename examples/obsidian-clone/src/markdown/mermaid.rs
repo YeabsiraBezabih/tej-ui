@@ -173,8 +173,9 @@ pub fn render_mermaid_diagram(
     }
 
     let max_level = graph.nodes.values().map(|n| n.level).max().unwrap_or(0);
+    let level_count = f32::from(u16::try_from(max_level + 1).unwrap_or(u16::MAX));
     let card_w = max_w.min(760.0);
-    let card_h = ((max_level + 1) as f32 * 68.0 + 30.0).max(120.0);
+    let card_h = (level_count * 68.0 + 30.0).max(120.0);
 
     // Background Card
     surface.fill_rect(Rect::new(x, y, card_w, card_h), COLOR_MERMAID_BG);
@@ -199,16 +200,14 @@ pub fn render_mermaid_diagram(
     let node_h = 32.0;
 
     for node in graph.nodes.values() {
+        let lvl = f32::from(u16::try_from(node.level).unwrap_or(u16::MAX));
+        let ord = f32::from(u16::try_from(node.order).unwrap_or(u16::MAX));
         let (nx, ny) = if graph.is_horizontal {
-            let step_x = (card_w - 60.0) / (max_level + 1).max(1) as f32;
-            let px = x + 30.0 + (node.level as f32) * step_x;
-            let py = y + 42.0 + (node.order as f32) * 44.0;
-            (px, py)
+            let step_x = (card_w - 60.0) / level_count.max(1.0);
+            (x + 30.0 + lvl * step_x, y + 42.0 + ord * 44.0)
         } else {
-            let step_y = (card_h - 60.0) / (max_level + 1).max(1) as f32;
-            let py = y + 36.0 + (node.level as f32) * step_y;
-            let px = x + 40.0 + (node.order as f32) * 160.0;
-            (px, py)
+            let step_y = (card_h - 60.0) / level_count.max(1.0);
+            (x + 40.0 + ord * 160.0, y + 36.0 + lvl * step_y)
         };
         node_positions.insert(node.id.clone(), Rect::new(nx, ny, node_w, node_h));
     }
@@ -231,8 +230,8 @@ pub fn render_mermaid_diagram(
 
             // Optional edge label
             if let Some(ref l) = edge.label {
-                let mid_x = (p1.x + p2.x) / 2.0 + 6.0;
-                let mid_y = (p1.y + p2.y) / 2.0 - 4.0;
+                let mid_x = f32::midpoint(p1.x, p2.x) + 6.0;
+                let mid_y = f32::midpoint(p1.y, p2.y) - 4.0;
                 surface.draw_text(l, Point::new(mid_x, mid_y), 9.0, COLOR_EDGE_LABEL);
             }
         }

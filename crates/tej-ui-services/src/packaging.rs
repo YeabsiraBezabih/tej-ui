@@ -66,7 +66,7 @@ impl EnterprisePolicyManager {
 
     /// Retrieves an enterprise policy value.
     pub fn get_policy(&self, key: &str) -> Option<&str> {
-        self.policies.get(key).map(|s| s.as_str())
+        self.policies.get(key).map(std::string::String::as_str)
     }
 
     /// Checks if telemetry is disabled by enterprise administrative decree.

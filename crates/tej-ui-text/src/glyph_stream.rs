@@ -67,9 +67,8 @@ impl GlyphStreamer {
         atlas: &mut VramAtlas,
         out_instances: &mut Vec<GlyphInstance>,
     ) {
-        let font_ref = match FontRef::from_index(config.font_data, config.font_index) {
-            Some(f) => f,
-            None => return,
+        let Some(font_ref) = FontRef::from_index(config.font_data, config.font_index) else {
+            return;
         };
 
         let mut scale_context = self.scale_context.lock();
@@ -88,61 +87,60 @@ impl GlyphStreamer {
 
             let key = GlyphKey::new(config.font_id, u32::from(g.glyph_id), subpixel_bin, size_px);
 
-            let (alloc, bearing_left, bearing_top) = match atlas.get(&key) {
-                Some(a) => {
-                    let (left, top) = self.bearings.lock().get(&key).copied().unwrap_or((0, 0));
-                    (a, left, top)
+            let (alloc, bearing_left, bearing_top) = if let Some(a) = atlas.get(&key) {
+                let (left, top) = self.bearings.lock().get(&key).copied().unwrap_or((0, 0));
+                (a, left, top)
+            } else {
+                // Rasterize glyph using swash scaler
+                let Some(image) = Render::new(&[
+                    Source::ColorOutline(0),
+                    Source::ColorBitmap(swash::scale::StrikeWith::BestFit),
+                    Source::Outline,
+                ])
+                .format(swash::zeno::Format::Alpha)
+                .render(&mut scaler, g.glyph_id) else {
+                    pen_x += g.advance;
+                    continue;
+                };
+
+                let w = image.placement.width;
+                let h = image.placement.height;
+                let left = image.placement.left;
+                let top = image.placement.top;
+
+                if w == 0 || h == 0 {
+                    pen_x += g.advance;
+                    continue;
                 }
-                None => {
-                    // Rasterize glyph using swash scaler
-                    let Some(image) = Render::new(&[
-                        Source::ColorOutline(0),
-                        Source::ColorBitmap(swash::scale::StrikeWith::BestFit),
-                        Source::Outline,
-                    ])
-                    .format(swash::zeno::Format::Alpha)
-                    .render(&mut scaler, g.glyph_id) else {
-                        pen_x += g.advance;
-                        continue;
-                    };
 
-                    let w = image.placement.width;
-                    let h = image.placement.height;
-                    let left = image.placement.left;
-                    let top = image.placement.top;
+                // If atlas is completely full even after eviction, skip emitting a broken UV quad
+                let Ok(alloc) = atlas.insert(key, w, h, &image.data) else {
+                    pen_x += g.advance;
+                    continue;
+                };
 
-                    if w == 0 || h == 0 {
-                        pen_x += g.advance;
-                        continue;
-                    }
-
-                    // If atlas is completely full even after eviction, skip emitting a broken UV quad
-                    let Ok(alloc) = atlas.insert(key, w, h, &image.data) else {
-                        pen_x += g.advance;
-                        continue;
-                    };
-
-                    let mut bearings = self.bearings.lock();
-                    if bearings.len() >= MAX_BEARING_CACHE_ENTRIES {
-                        bearings.clear();
-                    }
-                    bearings.insert(key, (left, top));
-
-                    (alloc, left, top)
+                let mut bearings = self.bearings.lock();
+                if bearings.len() >= MAX_BEARING_CACHE_ENTRIES {
+                    bearings.clear();
                 }
+                bearings.insert(key, (left, top));
+
+                (alloc, left, top)
             };
 
-            let glyph_w = alloc.pixel_rect[2] as f32;
-            let glyph_h = alloc.pixel_rect[3] as f32;
-            let quad_x = pen_x + g.x_offset + (bearing_left as f32);
-            let quad_y = config.origin_y + g.y_offset - (bearing_top as f32);
+            let glyph_w = f32::from(u16::try_from(alloc.pixel_rect[2]).unwrap_or(u16::MAX));
+            let glyph_h = f32::from(u16::try_from(alloc.pixel_rect[3]).unwrap_or(u16::MAX));
+            let bearing_x = f32::from(i16::try_from(bearing_left).unwrap_or(0));
+            let bearing_y = f32::from(i16::try_from(bearing_top).unwrap_or(0));
+            let quad_x = pen_x + g.x_offset + bearing_x;
+            let quad_y = config.origin_y + g.y_offset - bearing_y;
 
             out_instances.push(GlyphInstance::new(
                 [quad_x, quad_y, glyph_w, glyph_h],
                 alloc.uv_bounds,
                 config.color,
                 config.clip_bounds,
-                false,
+                tej_ui_hal::gpu::GlyphKind::AlphaMask,
             ));
 
             pen_x += g.advance;
@@ -174,7 +172,7 @@ impl GlyphStreamer {
             current_x = next_x;
         }
 
-        let last_cluster = run.glyphs.last().map(|g| g.cluster_index).unwrap_or(0);
+        let last_cluster = run.glyphs.last().map_or(0, |g| g.cluster_index);
         CaretHit {
             cluster_index: last_cluster,
             is_trailing: true,

@@ -51,7 +51,7 @@ impl MenuItem {
 
     pub fn role(role: MenuItemRole, label: impl Into<String>) -> Self {
         Self::Action {
-            id: format!("{:?}", role).to_lowercase(),
+            id: format!("{role:?}").to_lowercase(),
             label: label.into(),
             role,
             shortcut: None,
@@ -60,6 +60,7 @@ impl MenuItem {
         }
     }
 
+    #[must_use]
     pub fn with_shortcut(mut self, shortcut: Shortcut) -> Self {
         if let Self::Action {
             shortcut: ref mut s,

@@ -43,15 +43,15 @@ fn test_windows_scroll_physics_and_precision_touchpad() {
     assert_eq!(scroll.accumulated_wheel_delta(), 0.0);
 
     // Single detent wheel scroll (120 units)
-    let delta = scroll.handle_wheel_message(120.0, false);
+    let delta = scroll.handle_wheel_message(120.0, tej_ui_platform_windows::WheelAxis::Vertical);
     assert_eq!(delta, 60.0); // 1.0 * 3 lines * 20px
     assert_eq!(scroll.accumulated_wheel_delta(), 120.0);
     assert!(!scroll.is_at_rest());
 
     // Fractional high-precision wheel scroll accumulates properly
-    let _ = scroll.handle_wheel_message(60.0, false);
+    let _ = scroll.handle_wheel_message(60.0, tej_ui_platform_windows::WheelAxis::Vertical);
     assert_eq!(scroll.accumulated_wheel_delta(), 180.0);
-    let _ = scroll.handle_wheel_message(-30.0, true);
+    let _ = scroll.handle_wheel_message(-30.0, tej_ui_platform_windows::WheelAxis::Horizontal);
     assert_eq!(scroll.accumulated_wheel_delta(), 150.0);
 
     // Step physics
@@ -68,8 +68,8 @@ fn test_windows_theme_and_colorization() {
     assert_eq!(theme.mode, Win32ThemeMode::Dark);
     assert!(!theme.is_high_contrast());
 
-    // Parse DWM ARGB colorization (e.g. 0xC40078D4)
-    let custom = Win32SystemTheme::from_colorization_argb(0xC40078D4, true);
+    // Parse DWM ARGB colorization (e.g. 0xC400_78D4)
+    let custom = Win32SystemTheme::from_colorization_argb(0xC400_78D4, Win32ThemeMode::Dark);
     assert_eq!(custom.accent_color, Color::rgb(0, 120, 212));
     assert_eq!(custom.titlebar_text_color, Color::rgb(255, 255, 255));
 }
@@ -85,8 +85,8 @@ fn test_windows_direct_composition_surface_rasterization() {
     surface.end_frame();
 
     assert_eq!(surface.draw_calls(), 1);
-    // BGRA red: 0xFFFF0000
-    assert_eq!(surface.pixel_data()[0], 0xFFFF0000);
+    // BGRA red: 0xFFFF_0000
+    assert_eq!(surface.pixel_data()[0], 0xFFFF_0000);
 }
 
 #[test]

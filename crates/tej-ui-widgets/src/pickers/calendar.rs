@@ -27,7 +27,6 @@ impl CalendarDate {
     pub const fn days_in_month(year: i32, month: u8) -> u8 {
         match month {
             1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
-            4 | 6 | 9 | 11 => 30,
             2 => {
                 if Self::is_leap_year(year) {
                     29
@@ -119,19 +118,16 @@ impl CalendarPickerState {
 
     /// Select or extend a date selection.
     pub fn select_date(&mut self, date: CalendarDate) {
-        match self.pending_start {
-            Some(start) => {
-                if date >= start {
-                    self.range = Some(DateRange::new(start, date));
-                } else {
-                    self.range = Some(DateRange::new(date, start));
-                }
-                self.pending_start = None;
+        if let Some(start) = self.pending_start {
+            if date >= start {
+                self.range = Some(DateRange::new(start, date));
+            } else {
+                self.range = Some(DateRange::new(date, start));
             }
-            None => {
-                self.pending_start = Some(date);
-                self.range = Some(DateRange::new(date, date));
-            }
+            self.pending_start = None;
+        } else {
+            self.pending_start = Some(date);
+            self.range = Some(DateRange::new(date, date));
         }
     }
 }

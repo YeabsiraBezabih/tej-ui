@@ -1,7 +1,7 @@
 use tej_ui_layout::{
     AnchorPositionArea, Dimension, GridAutoFlow, JustifyItems, JustifySelf, LayoutDirection,
     LogicalCornerRadii, LogicalInsets, LogicalSize, OverscrollBehavior, PlaceContent, ResizeMode,
-    ScrollSnapAlign, ScrollSnapStop, ScrollSnapType, ScrollbarGutter, ScrollbarWidth,
+    ScrollSnapAlign, ScrollSnapStop, ScrollSnapType, ScrollbarGutter, ScrollbarWidth, WritingAxis,
 };
 
 #[test]
@@ -59,12 +59,12 @@ fn test_logical_size_resolution() {
     let size = LogicalSize::new(Dimension::Points(300.0), Dimension::Points(100.0));
 
     // Horizontal text flow: width = inline (300), height = block (100)
-    let (w_h, h_h) = size.to_physical(false);
+    let (w_h, h_h) = size.to_physical(WritingAxis::Horizontal);
     assert_eq!(w_h, Dimension::Points(300.0));
     assert_eq!(h_h, Dimension::Points(100.0));
 
     // Vertical text flow: width = block (100), height = inline (300)
-    let (w_v, h_v) = size.to_physical(true);
+    let (w_v, h_v) = size.to_physical(WritingAxis::Vertical);
     assert_eq!(w_v, Dimension::Points(100.0));
     assert_eq!(h_v, Dimension::Points(300.0));
 }

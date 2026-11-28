@@ -72,8 +72,8 @@ impl Default for FlameGraph {
             bounds: Rect::ZERO,
             row_height: 22.0,
             gap: 1.0,
-            background: Color::from_rgb_u32(0x101828), // Tej Gray 900
-            border_color: Color::from_rgb_u32(0x344054), // Tej Gray 700
+            background: Color::from_rgb_u32(0x0010_1828), // Tej Gray 900
+            border_color: Color::from_rgb_u32(0x0034_4054), // Tej Gray 700
             corner_radius: 8.0,
         }
     }

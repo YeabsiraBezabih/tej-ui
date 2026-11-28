@@ -72,9 +72,9 @@ fn test_linear_space_color_and_blending() {
     // Roundtrip linear conversion
     let srgb = Color::rgb(128, 64, 200);
     let back = srgb.to_linear().to_srgb_color();
-    assert!((back.r as i32 - srgb.r as i32).abs() <= 1);
-    assert!((back.g as i32 - srgb.g as i32).abs() <= 1);
-    assert!((back.b as i32 - srgb.b as i32).abs() <= 1);
+    assert!((i32::from(back.r) - i32::from(srgb.r)).abs() <= 1);
+    assert!((i32::from(back.g) - i32::from(srgb.g)).abs() <= 1);
+    assert!((i32::from(back.b) - i32::from(srgb.b)).abs() <= 1);
 
     // Linear-space blending without dark fringes:
     // Blending semi-transparent white (50% alpha) over black in linear space produces ~188 sRGB (not 128!)
@@ -123,7 +123,7 @@ fn test_multi_monitor_and_window_registry() {
         "Dell 4K External",
         Rect::from_origin_size(Point::new(1920.0, 0.0), Size::new(3840.0, 2160.0)),
         2.0,
-        false,
+        tej_ui_hal::MonitorRole::Secondary,
     ));
 
     assert_eq!(manager.monitors().len(), 2);
@@ -553,6 +553,6 @@ fn test_native_view_embedding() {
     host.set_clip_rect(Some(Rect::new(50.0, 50.0, 400.0, 400.0)));
     assert_eq!(host.clip_rect(), Some(Rect::new(50.0, 50.0, 400.0, 400.0)));
 
-    host.set_visible(false);
+    host.hide();
     assert!(!host.is_visible());
 }

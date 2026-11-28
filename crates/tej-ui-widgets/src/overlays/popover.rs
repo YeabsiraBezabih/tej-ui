@@ -53,6 +53,7 @@ impl<Target: View, Content: View> Popover<Target, Content> {
     }
 
     /// Set preferred popover placement relative to anchor.
+    #[must_use]
     pub fn placement(mut self, placement: PopoverPlacement) -> Self {
         self.placement = placement;
         self
@@ -79,10 +80,17 @@ impl<Target: View, Content: View> Popover<Target, Content> {
         self
     }
 
-    /// Enable or disable collision-aware auto-flipping.
+    /// Enables collision-aware auto-flipping.
     #[must_use]
-    pub const fn auto_flip(mut self, auto_flip: bool) -> Self {
-        self.auto_flip = auto_flip;
+    pub const fn with_auto_flip(mut self) -> Self {
+        self.auto_flip = true;
+        self
+    }
+
+    /// Disables collision-aware auto-flipping.
+    #[must_use]
+    pub const fn no_auto_flip(mut self) -> Self {
+        self.auto_flip = false;
         self
     }
 
@@ -268,9 +276,9 @@ impl<Target: View, Content: View> View for Popover<Target, Content> {
                 .and_then(|cn| ctx.arena.computed_bounds.get(cn as usize).copied());
 
             let overlay_size = self.overlay_size.unwrap_or_else(|| {
-                content_bounds
-                    .map(|r| Size::new(r.size.width.max(120.0), r.size.height.max(40.0)))
-                    .unwrap_or(Size::new(200.0, 120.0))
+                content_bounds.map_or(Size::new(200.0, 120.0), |r| {
+                    Size::new(r.size.width.max(120.0), r.size.height.max(40.0))
+                })
             });
 
             let viewport = self

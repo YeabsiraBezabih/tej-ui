@@ -74,7 +74,7 @@ impl Default for ToolCallTray {
         Self {
             bounds: Rect::ZERO,
             background: Color::WHITE,
-            border_color: Color::from_rgb_u32(0xEAECF0), // Tej Gray 200
+            border_color: Color::from_rgb_u32(0x00EA_ECF0), // Tej Gray 200
             corner_radius: 8.0,
         }
     }
@@ -84,10 +84,10 @@ impl ToolCallTray {
     #[must_use]
     pub fn status_color(&self, status: ToolExecutionStatus) -> Color {
         match status {
-            ToolExecutionStatus::Pending => Color::from_rgb_u32(0x98A2B3), // Gray 400
-            ToolExecutionStatus::Executing => Color::from_rgb_u32(0x7F56D9), // Brand 600
-            ToolExecutionStatus::Success => Color::from_rgb_u32(0x12B76A), // Success 500
-            ToolExecutionStatus::Failed => Color::from_rgb_u32(0xF04438),  // Error 500
+            ToolExecutionStatus::Pending => Color::from_rgb_u32(0x0098_A2B3), // Gray 400
+            ToolExecutionStatus::Executing => Color::from_rgb_u32(0x007F_56D9), // Brand 600
+            ToolExecutionStatus::Success => Color::from_rgb_u32(0x0012_B76A), // Success 500
+            ToolExecutionStatus::Failed => Color::from_rgb_u32(0x00F0_4438),  // Error 500
         }
     }
 

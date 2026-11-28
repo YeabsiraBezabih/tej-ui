@@ -52,11 +52,12 @@ impl InstanceBufferPool {
         let current_index = self.cpu_instances.len() as u32;
         self.cpu_instances.push(instance);
 
-        if let Some(last_batch) = self.batches.last_mut() {
-            if last_batch.scissor == scissor && last_batch.instance_range.end == current_index {
-                last_batch.instance_range.end = current_index + 1;
-                return;
-            }
+        if let Some(last_batch) = self.batches.last_mut()
+            && last_batch.scissor == scissor
+            && last_batch.instance_range.end == current_index
+        {
+            last_batch.instance_range.end = current_index + 1;
+            return;
         }
 
         self.batches.push(DrawBatch {

@@ -230,7 +230,7 @@ fn test_rasterizer_near_plane_walkthrough_continuity() {
     let drawn_pixels = rasterizer
         .color_buffer
         .iter()
-        .filter(|&&p| p != 0xFF1E1E24)
+        .filter(|&&p| p != 0xFF1E_1E24)
         .count();
     assert!(
         drawn_pixels > 0,

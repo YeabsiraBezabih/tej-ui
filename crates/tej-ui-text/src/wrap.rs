@@ -108,7 +108,8 @@ pub fn wrap_text(
         .iter()
         .map(|line| measurer.measure_slice(line, font, font_size).width)
         .fold(0.0_f32, f32::max);
-    let height = (lines.len() as f32) * line_height;
+    let line_count = u16::try_from(lines.len()).unwrap_or(u16::MAX);
+    let height = f32::from(line_count) * line_height;
 
     WrappedText {
         lines,

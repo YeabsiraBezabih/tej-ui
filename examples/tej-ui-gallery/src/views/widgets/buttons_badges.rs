@@ -26,7 +26,7 @@ pub fn buttons_badges_view() -> impl View {
                         Button::new(Text::new("Large CTA")).size(ButtonSize::Lg),
                         Button::new(Text::new("Disabled Action"))
                             .variant(ButtonVariant::Secondary)
-                            .disabled(true),
+                            .disable(),
                     ))
                     .spacing(8),
                 ))

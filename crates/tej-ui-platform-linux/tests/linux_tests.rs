@@ -156,3 +156,81 @@ fn test_linux_surface_draw_text_respects_color_alpha() {
         "semi-transparent text should not reach full 255 brightness, got {max_red}"
     );
 }
+
+#[test]
+fn test_linux_surface_push_pop_clip_prevents_bleed() {
+    let mut surface = LinuxSurface::new(Size::new(64.0, 64.0));
+    surface.clear(Color::rgb(0, 0, 0));
+
+    // Push outer clip [10, 10, 30, 30] and nested clip [20, 15, 30, 30] -> intersection [20, 15, 20, 25]
+    surface.push_clip(Rect::new(10.0, 10.0, 30.0, 30.0), [0.0; 4]);
+    surface.push_clip(Rect::new(20.0, 15.0, 30.0, 30.0), [0.0; 4]);
+
+    // Draw full-surface rect, rounded rect, diagonal line, and long text
+    surface.fill_rect(Rect::new(0.0, 0.0, 64.0, 64.0), Color::rgb(255, 0, 0));
+    surface.fill_rounded_rect(Rect::new(0.0, 0.0, 64.0, 64.0), 4.0, Color::rgb(0, 255, 0));
+    surface.draw_line(
+        Point::new(0.0, 0.0),
+        Point::new(63.0, 63.0),
+        3.0,
+        Color::rgb(0, 0, 255),
+    );
+    surface.draw_text(
+        "ABCDEFGH",
+        Point::new(0.0, 12.0),
+        16.0,
+        Color::rgb(255, 255, 255),
+    );
+
+    // Every pixel outside [20..40, 15..40] must remain untouched black
+    for y in 0..64usize {
+        for x in 0..64usize {
+            let px = surface.pixels()[y * 64 + x];
+            let inside = (20..40).contains(&x) && (15..40).contains(&y);
+            if !inside {
+                assert_eq!(
+                    px, 0xFF00_0000,
+                    "pixel ({x}, {y}) bled outside intersected clip rect"
+                );
+            }
+        }
+    }
+    // Pixels inside the intersected clip rect must have been painted
+    assert_ne!(surface.pixels()[25 * 64 + 25], 0xFF00_0000);
+
+    // Pop inner clip -> active clip returns to [10..40, 10..40]
+    surface.pop_clip();
+    surface.fill_rect(Rect::new(0.0, 0.0, 64.0, 64.0), Color::rgb(0, 0, 255));
+    assert_eq!(surface.pixels()[12 * 64 + 12], 0xFF00_00FF);
+    assert_eq!(surface.pixels()[5 * 64 + 5], 0xFF00_0000);
+
+    // Pop outer clip -> unclipped drawing reaches (5, 5)
+    surface.pop_clip();
+    surface.fill_rect(Rect::new(0.0, 0.0, 10.0, 10.0), Color::rgb(0, 255, 0));
+    assert_eq!(surface.pixels()[5 * 64 + 5], 0xFF00_FF00);
+}
+
+#[test]
+fn test_linux_surface_draw_text_styled_works() {
+    let mut surface = LinuxSurface::new(Size::new(96.0, 32.0));
+    surface.clear(Color::rgb(0, 0, 0));
+
+    surface.draw_text_styled(
+        "Hello",
+        Point::new(4.0, 4.0),
+        16.0,
+        700,
+        tej_ui_hal::TextFamily::Monospace,
+        Color::rgb(255, 255, 255),
+    );
+
+    let lit_pixels = surface
+        .pixels()
+        .iter()
+        .filter(|&&px| px != 0xFF00_0000)
+        .count();
+    assert!(
+        lit_pixels > 0,
+        "expected draw_text_styled to rasterize visible glyph pixels"
+    );
+}

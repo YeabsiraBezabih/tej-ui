@@ -35,22 +35,22 @@ impl ClipVertex {
             self.normal
         };
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let r =
-            ((self.color.r as f32) * inv_t + (other.color.r as f32) * t).clamp(0.0, 255.0) as u8;
+        let red = (f32::from(self.color.r) * inv_t + f32::from(other.color.r) * t).clamp(0.0, 255.0)
+            as u8;
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let g =
-            ((self.color.g as f32) * inv_t + (other.color.g as f32) * t).clamp(0.0, 255.0) as u8;
+        let g = (f32::from(self.color.g) * inv_t + f32::from(other.color.g) * t).clamp(0.0, 255.0)
+            as u8;
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let b =
-            ((self.color.b as f32) * inv_t + (other.color.b as f32) * t).clamp(0.0, 255.0) as u8;
+        let b = (f32::from(self.color.b) * inv_t + f32::from(other.color.b) * t).clamp(0.0, 255.0)
+            as u8;
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let a =
-            ((self.color.a as f32) * inv_t + (other.color.a as f32) * t).clamp(0.0, 255.0) as u8;
+        let a = (f32::from(self.color.a) * inv_t + f32::from(other.color.a) * t).clamp(0.0, 255.0)
+            as u8;
 
         Self {
             clip_pos,
             normal,
-            color: Color::rgba(r, g, b, a),
+            color: Color::rgba(red, g, b, a),
         }
     }
 }
@@ -186,19 +186,21 @@ pub fn clip_triangle_near_plane(
         }
     }
 
-    if out_len < 3 {
-        ClippedTriangles::EMPTY
-    } else if out_len == 3 {
-        let mut result = ClippedTriangles::EMPTY;
-        result.triangles[0] = [output[0], output[1], output[2]];
-        result.count = 1;
-        result
-    } else {
-        // Triangulate 4-gon [P0, P1, P2, P3] into 2 triangles
-        let mut result = ClippedTriangles::EMPTY;
-        result.triangles[0] = [output[0], output[1], output[2]];
-        result.triangles[1] = [output[0], output[2], output[3]];
-        result.count = 2;
-        result
+    match out_len.cmp(&3) {
+        std::cmp::Ordering::Less => ClippedTriangles::EMPTY,
+        std::cmp::Ordering::Equal => {
+            let mut result = ClippedTriangles::EMPTY;
+            result.triangles[0] = [output[0], output[1], output[2]];
+            result.count = 1;
+            result
+        }
+        std::cmp::Ordering::Greater => {
+            // Triangulate 4-gon [P0, P1, P2, P3] into 2 triangles
+            let mut result = ClippedTriangles::EMPTY;
+            result.triangles[0] = [output[0], output[1], output[2]];
+            result.triangles[1] = [output[0], output[2], output[3]];
+            result.count = 2;
+            result
+        }
     }
 }

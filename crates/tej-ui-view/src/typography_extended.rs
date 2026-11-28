@@ -69,7 +69,7 @@ pub struct CaretStyle {
 impl Default for CaretStyle {
     fn default() -> Self {
         Self {
-            color: Color::from_rgb_u32(0x7F56D9), // Tej Brand 600
+            color: Color::from_rgb_u32(0x007F_56D9), // Tej Brand 600
             width: 2.0,
         }
     }

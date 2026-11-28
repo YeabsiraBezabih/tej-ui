@@ -71,6 +71,106 @@ impl Pagination {
     }
 }
 
+#[derive(Clone, Copy)]
+enum NavButtonState {
+    Disabled,
+    Enabled,
+}
+
+#[derive(Clone, Copy)]
+enum PageButtonState {
+    Inactive,
+    Active,
+}
+
+impl Pagination {
+    fn paint_nav_button(
+        ctx: &mut PaintContext<'_>,
+        node: u32,
+        bounds: Rect,
+        label: &str,
+        btn_state: NavButtonState,
+        font_size: f32,
+    ) {
+        let enabled = matches!(btn_state, NavButtonState::Enabled);
+        let bg = if !enabled {
+            ctx.theme.colors.muted
+        } else if ctx.is_hovered(node) {
+            ctx.theme.colors.accent
+        } else {
+            ctx.theme.colors.secondary
+        };
+        if ctx.is_focused(node) && enabled {
+            let ring = Rect::new(
+                bounds.origin.x - 1.0,
+                bounds.origin.y - 1.0,
+                bounds.size.width + 2.0,
+                bounds.size.height + 2.0,
+            );
+            ctx.fill_rounded_rect(ring, ctx.theme.radii.sm, ctx.theme.colors.ring);
+        }
+        ctx.fill_rounded_rect(bounds, ctx.theme.radii.sm, bg);
+        let fg = if enabled {
+            ctx.theme.colors.foreground
+        } else {
+            ctx.theme.colors.muted_foreground
+        };
+        ctx.draw_text(
+            label,
+            Point::new(
+                bounds.origin.x + 14.0,
+                bounds.origin.y + (bounds.size.height - font_size) * 0.5,
+            ),
+            font_size,
+            fg,
+        );
+    }
+
+    fn paint_page_button(
+        ctx: &mut PaintContext<'_>,
+        node: u32,
+        bounds: Rect,
+        page_num: usize,
+        page_state: PageButtonState,
+        font_size: f32,
+    ) {
+        let is_active = matches!(page_state, PageButtonState::Active);
+        if ctx.is_focused(node) {
+            let ring = Rect::new(
+                bounds.origin.x - 1.0,
+                bounds.origin.y - 1.0,
+                bounds.size.width + 2.0,
+                bounds.size.height + 2.0,
+            );
+            ctx.fill_rounded_rect(ring, ctx.theme.radii.sm, ctx.theme.colors.ring);
+        }
+        let bg = if is_active {
+            ctx.theme.colors.primary
+        } else if ctx.is_hovered(node) {
+            ctx.theme.colors.accent
+        } else {
+            ctx.theme.colors.secondary
+        };
+        let fg = if is_active {
+            ctx.theme.colors.primary_foreground
+        } else {
+            ctx.theme.colors.foreground
+        };
+        ctx.fill_rounded_rect(bounds, ctx.theme.radii.sm, bg);
+        let label = page_num.to_string();
+        let approx_w = crate::count_to_f32(label.len()) * font_size * 0.6;
+        ctx.draw_text(
+            &label,
+            Point::new(
+                bounds.origin.x + (bounds.size.width - approx_w) * 0.5,
+                bounds.origin.y + (bounds.size.height - font_size) * 0.5,
+            ),
+            font_size,
+            fg,
+        );
+    }
+}
+
 impl View for Pagination {
     type State = PaginationState;
 
@@ -141,123 +241,56 @@ impl View for Pagination {
     fn paint(&self, state: &Self::State, ctx: &mut PaintContext<'_>) {
         let font_size = ctx.theme.typography.body_small.font_size;
 
-        // Prev button
         if let Some(prev_bounds) = ctx
             .arena
             .computed_bounds
             .get(state.prev_node as usize)
             .copied()
         {
-            let can_prev = state.current_page > 1;
-            let bg = if !can_prev {
-                ctx.theme.colors.muted
-            } else if ctx.is_hovered(state.prev_node) {
-                ctx.theme.colors.accent
+            let prev_state = if state.current_page > 1 {
+                NavButtonState::Enabled
             } else {
-                ctx.theme.colors.secondary
+                NavButtonState::Disabled
             };
-            if ctx.is_focused(state.prev_node) && can_prev {
-                let ring = Rect::new(
-                    prev_bounds.origin.x - 1.0,
-                    prev_bounds.origin.y - 1.0,
-                    prev_bounds.size.width + 2.0,
-                    prev_bounds.size.height + 2.0,
-                );
-                ctx.fill_rounded_rect(ring, ctx.theme.radii.sm, ctx.theme.colors.ring);
-            }
-            ctx.fill_rounded_rect(prev_bounds, ctx.theme.radii.sm, bg);
-            ctx.draw_text(
+            Self::paint_nav_button(
+                ctx,
+                state.prev_node,
+                prev_bounds,
                 "Prev",
-                Point::new(
-                    prev_bounds.origin.x + 14.0,
-                    prev_bounds.origin.y + (prev_bounds.size.height - font_size) * 0.5,
-                ),
+                prev_state,
                 font_size,
-                if can_prev {
-                    ctx.theme.colors.foreground
-                } else {
-                    ctx.theme.colors.muted_foreground
-                },
             );
         }
 
-        // Page number buttons
         for &(page_num, page_node) in &state.page_nodes {
             if let Some(bounds) = ctx.arena.computed_bounds.get(page_node as usize).copied() {
-                let is_active = page_num == state.current_page;
-                if ctx.is_focused(page_node) {
-                    let ring = Rect::new(
-                        bounds.origin.x - 1.0,
-                        bounds.origin.y - 1.0,
-                        bounds.size.width + 2.0,
-                        bounds.size.height + 2.0,
-                    );
-                    ctx.fill_rounded_rect(ring, ctx.theme.radii.sm, ctx.theme.colors.ring);
-                }
-                let bg = if is_active {
-                    ctx.theme.colors.primary
-                } else if ctx.is_hovered(page_node) {
-                    ctx.theme.colors.accent
+                let page_state = if page_num == state.current_page {
+                    PageButtonState::Active
                 } else {
-                    ctx.theme.colors.secondary
+                    PageButtonState::Inactive
                 };
-                let fg = if is_active {
-                    ctx.theme.colors.primary_foreground
-                } else {
-                    ctx.theme.colors.foreground
-                };
-                ctx.fill_rounded_rect(bounds, ctx.theme.radii.sm, bg);
-                let label = page_num.to_string();
-                let approx_w = (label.len() as f32) * font_size * 0.6;
-                ctx.draw_text(
-                    &label,
-                    Point::new(
-                        bounds.origin.x + (bounds.size.width - approx_w) * 0.5,
-                        bounds.origin.y + (bounds.size.height - font_size) * 0.5,
-                    ),
-                    font_size,
-                    fg,
-                );
+                Self::paint_page_button(ctx, page_node, bounds, page_num, page_state, font_size);
             }
         }
 
-        // Next button
         if let Some(next_bounds) = ctx
             .arena
             .computed_bounds
             .get(state.next_node as usize)
             .copied()
         {
-            let can_next = state.current_page < state.total_pages;
-            let bg = if !can_next {
-                ctx.theme.colors.muted
-            } else if ctx.is_hovered(state.next_node) {
-                ctx.theme.colors.accent
+            let next_state = if state.current_page < state.total_pages {
+                NavButtonState::Enabled
             } else {
-                ctx.theme.colors.secondary
+                NavButtonState::Disabled
             };
-            if ctx.is_focused(state.next_node) && can_next {
-                let ring = Rect::new(
-                    next_bounds.origin.x - 1.0,
-                    next_bounds.origin.y - 1.0,
-                    next_bounds.size.width + 2.0,
-                    next_bounds.size.height + 2.0,
-                );
-                ctx.fill_rounded_rect(ring, ctx.theme.radii.sm, ctx.theme.colors.ring);
-            }
-            ctx.fill_rounded_rect(next_bounds, ctx.theme.radii.sm, bg);
-            ctx.draw_text(
+            Self::paint_nav_button(
+                ctx,
+                state.next_node,
+                next_bounds,
                 "Next",
-                Point::new(
-                    next_bounds.origin.x + 14.0,
-                    next_bounds.origin.y + (next_bounds.size.height - font_size) * 0.5,
-                ),
+                next_state,
                 font_size,
-                if can_next {
-                    ctx.theme.colors.foreground
-                } else {
-                    ctx.theme.colors.muted_foreground
-                },
             );
         }
     }

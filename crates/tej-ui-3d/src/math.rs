@@ -307,35 +307,35 @@ impl Mat4 {
 
     /// Transforms a 3D point (w = 1.0) into homogeneous clip coordinates [x, y, z, w].
     #[must_use]
-    pub fn transform_point4(&self, p: Vec3) -> [f32; 4] {
-        let x =
-            self.cols[0][0] * p.x + self.cols[1][0] * p.y + self.cols[2][0] * p.z + self.cols[3][0];
-        let y =
-            self.cols[0][1] * p.x + self.cols[1][1] * p.y + self.cols[2][1] * p.z + self.cols[3][1];
-        let z =
-            self.cols[0][2] * p.x + self.cols[1][2] * p.y + self.cols[2][2] * p.z + self.cols[3][2];
-        let w =
-            self.cols[0][3] * p.x + self.cols[1][3] * p.y + self.cols[2][3] * p.z + self.cols[3][3];
-        [x, y, z, w]
+    pub fn transform_point4(&self, pt: Vec3) -> [f32; 4] {
+        let cx = self.cols[0][0] * pt.x
+            + self.cols[1][0] * pt.y
+            + self.cols[2][0] * pt.z
+            + self.cols[3][0];
+        let cy = self.cols[0][1] * pt.x
+            + self.cols[1][1] * pt.y
+            + self.cols[2][1] * pt.z
+            + self.cols[3][1];
+        let cz = self.cols[0][2] * pt.x
+            + self.cols[1][2] * pt.y
+            + self.cols[2][2] * pt.z
+            + self.cols[3][2];
+        let cw = self.cols[0][3] * pt.x
+            + self.cols[1][3] * pt.y
+            + self.cols[2][3] * pt.z
+            + self.cols[3][3];
+        [cx, cy, cz, cw]
     }
 
     /// Transforms a 3D point (w = 1.0) and performs perspective divide.
     #[must_use]
-    pub fn transform_point(&self, p: Vec3) -> Vec3 {
-        let x =
-            self.cols[0][0] * p.x + self.cols[1][0] * p.y + self.cols[2][0] * p.z + self.cols[3][0];
-        let y =
-            self.cols[0][1] * p.x + self.cols[1][1] * p.y + self.cols[2][1] * p.z + self.cols[3][1];
-        let z =
-            self.cols[0][2] * p.x + self.cols[1][2] * p.y + self.cols[2][2] * p.z + self.cols[3][2];
-        let w =
-            self.cols[0][3] * p.x + self.cols[1][3] * p.y + self.cols[2][3] * p.z + self.cols[3][3];
-
-        if w.abs() > 0.00001 {
-            let inv = 1.0 / w;
-            Vec3::new(x * inv, y * inv, z * inv)
+    pub fn transform_point(&self, pt: Vec3) -> Vec3 {
+        let [cx, cy, cz, cw] = self.transform_point4(pt);
+        if cw.abs() > 0.00001 {
+            let inv = 1.0 / cw;
+            Vec3::new(cx * inv, cy * inv, cz * inv)
         } else {
-            Vec3::new(x, y, z)
+            Vec3::new(cx, cy, cz)
         }
     }
 
@@ -347,4 +347,10 @@ impl Mat4 {
         let z = self.cols[0][2] * v.x + self.cols[1][2] * v.y + self.cols[2][2] * v.z;
         Vec3::new(x, y, z)
     }
+}
+
+/// Lossless `usize` to `f32` conversion for bounded viewport dimensions and mesh counts.
+#[inline]
+pub(crate) fn count_to_f32(count: usize) -> f32 {
+    f32::from(u16::try_from(count).unwrap_or(u16::MAX))
 }

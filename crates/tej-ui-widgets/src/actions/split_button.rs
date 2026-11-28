@@ -77,8 +77,8 @@ impl Default for SplitButton {
         Self {
             bounds: Rect::ZERO,
             primary_label: "Save".to_string(),
-            background: Color::from_rgb_u32(0x7F56D9), // Tej Brand 600
-            border_color: Color::from_rgb_u32(0x6941C6), // Tej Brand 700
+            background: Color::from_rgb_u32(0x007F_56D9), // Tej Brand 600
+            border_color: Color::from_rgb_u32(0x0069_41C6), // Tej Brand 700
             text_color: Color::WHITE,
             corner_radius: 8.0,
             is_menu_open: false,

@@ -44,8 +44,8 @@ impl Default for TimelineEditor {
             bounds: Rect::ZERO,
             header_width: 160.0,
             track_height: 32.0,
-            background: Color::from_rgb_u32(0x101828), // Tej Gray 900
-            playhead_color: Color::from_rgb_u32(0xF04438), // Tej Error 500
+            background: Color::from_rgb_u32(0x0010_1828), // Tej Gray 900
+            playhead_color: Color::from_rgb_u32(0x00F0_4438), // Tej Error 500
         }
     }
 }

@@ -45,7 +45,7 @@ impl<T> Debug for RouteDefinition<T> {
         f.debug_struct("RouteDefinition")
             .field("pattern", &self.pattern)
             .field("guards_count", &self.guards.len())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -67,7 +67,7 @@ impl<T: Clone + Send + Sync + 'static> Debug for Router<T> {
             .field("history_len", &self.history.read().len())
             .field("routes_count", &self.routes.read().len())
             .field("custom_scheme", &self.custom_scheme)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -124,7 +124,7 @@ impl<T: Clone + Send + Sync + 'static> Router<T> {
 
     /// Navigate to a new path, evaluating route guards and recording history.
     pub fn navigate(&self, target_path: &str) -> bool {
-        let clean_path = self.normalize_path(target_path);
+        let clean_path = Self::normalize_path(target_path);
 
         // Check guards against matching route
         let routes = self.routes.read();
@@ -195,7 +195,7 @@ impl<T: Clone + Send + Sync + 'static> Router<T> {
         (self.fallback)(&path)
     }
 
-    fn normalize_path(&self, raw: &str) -> String {
+    fn normalize_path(raw: &str) -> String {
         let trimmed = raw.trim();
         if trimmed.starts_with('/') {
             trimmed.to_string()

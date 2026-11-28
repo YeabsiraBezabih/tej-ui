@@ -19,12 +19,12 @@ fn test_text_measurer_content_hash_prevents_aba_cache_poisoning() {
     assert_eq!(buf.len(), 4);
     let size_utf8 = measurer.measure_slice(&buf, SystemFont::Body, 16.0);
 
-    // Must not return cached 4-char width for the 2-char string
+    // Must not return cached 4-char width for the 2-char string, and must match an uncached measurement
+    let expected_utf8 = TextMeasurer::new().measure_slice("éé", SystemFont::Body, 16.0);
     assert!(
-        (size_ascii.width - size_utf8.width * 2.0).abs() < 0.01,
-        "ABA cache poisoning detected: ascii={:?}, utf8={:?}",
-        size_ascii,
-        size_utf8
+        size_utf8.width < size_ascii.width * 0.75
+            && (size_utf8.width - expected_utf8.width).abs() < 0.01,
+        "ABA cache poisoning detected: ascii={size_ascii:?}, utf8={size_utf8:?}, expected={expected_utf8:?}"
     );
 }
 
@@ -85,8 +85,8 @@ fn test_rasterizer_guards_non_positive_size_and_bounds_cache() {
             assert!(m_zero.width.is_finite() && m_zero.height > 0.0);
 
             // Cache size must remain bounded at <= 4096 entries
-            for i in 0..4200u32 {
-                let sz = 10.0 + (i as f32) * 0.1;
+            for i in 0..4200u16 {
+                let sz = 10.0 + f32::from(i) * 0.1;
                 let _ = rasterizer.rasterize('A', sz);
             }
             assert!(rasterizer.cache_len() <= 4096);

@@ -88,7 +88,7 @@ impl OtpInputState {
 
     #[must_use]
     pub fn is_complete(&self) -> bool {
-        self.digits.iter().all(|d| d.is_some())
+        self.digits.iter().all(std::option::Option::is_some)
     }
 
     #[must_use]
@@ -116,8 +116,8 @@ impl Default for OtpInput {
             cell_size: 48.0,
             cell_gap: 8.0,
             background: Color::WHITE,
-            border_color: Color::from_rgb_u32(0xD0D5DD), // Tej Gray 300
-            focus_border_color: Color::from_rgb_u32(0x7F56D9), // Tej Brand 600
+            border_color: Color::from_rgb_u32(0x00D0_D5DD), // Tej Gray 300
+            focus_border_color: Color::from_rgb_u32(0x007F_56D9), // Tej Brand 600
             corner_radius: 8.0,
         }
     }

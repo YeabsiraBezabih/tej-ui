@@ -47,8 +47,8 @@ impl Default for DotMatrixDisplay {
             cols: 20,
             dot_size: 3.0,
             dot_gap: 1.5,
-            active_color: Color::from_rgb_u32(0x7F56D9), // Tej Brand 600
-            inactive_color: Color::from_rgb_u32(0x1D2939), // Tej Gray 800
+            active_color: Color::from_rgb_u32(0x007F_56D9), // Tej Brand 600
+            inactive_color: Color::from_rgb_u32(0x001D_2939), // Tej Gray 800
         }
     }
 }
@@ -73,8 +73,8 @@ impl Default for RadialGauge {
             max_value: 100.0,
             current_value: 0.0,
             thickness: 12.0,
-            track_color: Color::from_rgb_u32(0xEAECF0), // Tej Gray 200
-            fill_color: Color::from_rgb_u32(0x7F56D9),  // Tej Brand 600
+            track_color: Color::from_rgb_u32(0x00EA_ECF0), // Tej Gray 200
+            fill_color: Color::from_rgb_u32(0x007F_56D9),  // Tej Brand 600
         }
     }
 }

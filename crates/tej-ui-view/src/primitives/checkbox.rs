@@ -38,6 +38,7 @@ impl Checkbox {
     }
 
     /// Register a toggle event callback.
+    #[must_use]
     pub fn on_toggle<F: Fn(bool) + Send + Sync + 'static>(mut self, handler: F) -> Self {
         self.on_toggle = Some(Arc::new(handler));
         self
@@ -86,14 +87,20 @@ impl View for Checkbox {
             .get(state.node as usize)
             .copied()
             .unwrap_or(tej_ui_layout::Rect::ZERO);
-        let bg = if state.is_checked {
-            ctx.theme.colors.primary
-        } else {
-            ctx.theme.colors.input
-        };
         let radius = ctx.theme.radii.sm;
-        ctx.fill_rounded_rect(bounds, radius, bg);
+
+        if ctx.is_focused(state.node) {
+            let ring = tej_ui_layout::Rect::new(
+                bounds.origin.x - 2.0,
+                bounds.origin.y - 2.0,
+                bounds.size.width + 4.0,
+                bounds.size.height + 4.0,
+            );
+            ctx.fill_rounded_rect(ring, radius + 2.0, ctx.theme.colors.ring);
+        }
+
         if state.is_checked {
+            ctx.fill_rounded_rect(bounds, radius, ctx.theme.colors.primary);
             let inner = tej_ui_layout::Rect::new(
                 bounds.origin.x + 4.0,
                 bounds.origin.y + 4.0,
@@ -101,6 +108,16 @@ impl View for Checkbox {
                 (bounds.size.height - 8.0).max(1.0),
             );
             ctx.fill_rounded_rect(inner, 2.0, ctx.theme.colors.primary_foreground);
+        } else {
+            // 1px input_border + inset input_bg fill
+            ctx.fill_rounded_rect(bounds, radius, ctx.theme.colors.input_border);
+            let inner = tej_ui_layout::Rect::new(
+                bounds.origin.x + 1.0,
+                bounds.origin.y + 1.0,
+                (bounds.size.width - 2.0).max(0.0),
+                (bounds.size.height - 2.0).max(0.0),
+            );
+            ctx.fill_rounded_rect(inner, (radius - 1.0).max(0.0), ctx.theme.colors.input_bg);
         }
     }
 

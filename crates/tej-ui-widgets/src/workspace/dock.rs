@@ -91,9 +91,9 @@ impl Default for DockManager {
             bounds: Rect::ZERO,
             tab_bar_height: 38.0,
             splitter_thickness: 2.0,
-            background: Color::from_rgb_u32(0xF9FAFB), // Tej Gray 50
-            border_color: Color::from_rgb_u32(0xEAECF0), // Tej Gray 200
-            active_tab_indicator: Color::from_rgb_u32(0x7F56D9), // Tej Brand 600
+            background: Color::from_rgb_u32(0x00F9_FAFB), // Tej Gray 50
+            border_color: Color::from_rgb_u32(0x00EA_ECF0), // Tej Gray 200
+            active_tab_indicator: Color::from_rgb_u32(0x007F_56D9), // Tej Brand 600
         }
     }
 }

@@ -133,7 +133,7 @@ fn test_meshlet_packer_preserves_all_triangles_without_truncation() {
 
     for i in 0..num_tris {
         let base = (i * 3) as u32;
-        let x = (i as f32) * 0.1;
+        let x = f32::from(u16::try_from(i).unwrap_or(u16::MAX)) * 0.1;
         vertices.push([x, 0.0, 0.0]);
         vertices.push([x + 0.05, 1.0, 0.0]);
         vertices.push([x + 0.1, 0.0, 0.5]);
@@ -307,8 +307,15 @@ fn test_screen_point_to_ray_supports_reversed_z() {
     let ray_rev = screen_point_to_ray_for_camera(400.0, 225.0, 800.0, 450.0, &inv_rev, &cam_rev);
     let ray_std = screen_point_to_ray_for_camera(400.0, 225.0, 800.0, 450.0, &inv_std, &cam_std);
     let ray_auto = screen_point_to_ray(400.0, 225.0, 800.0, 450.0, &inv_rev, [0.0, 0.0, 5.0]);
-    let ray_explicit =
-        screen_point_to_ray_with_depth(400.0, 225.0, 800.0, 450.0, &inv_rev, [0.0, 0.0, 5.0], true);
+    let ray_explicit = screen_point_to_ray_with_depth(
+        400.0,
+        225.0,
+        800.0,
+        450.0,
+        &inv_rev,
+        [0.0, 0.0, 5.0],
+        tej_ui_3d::nanite::picking::DepthRange::ReversedZ,
+    );
 
     for (label, ray) in [
         ("rev", ray_rev),

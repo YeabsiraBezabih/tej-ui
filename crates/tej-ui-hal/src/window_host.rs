@@ -59,8 +59,11 @@ pub trait TejWindowHost: HasWindowHandle + HasDisplayHandle + PlatformWindow {
     /// Position IME candidate window at caret rect.
     fn set_ime_cursor_area(&mut self, area: ImeCursorArea);
 
-    /// Enable or disable IME text input reception.
-    fn set_ime_allowed(&mut self, allowed: bool);
+    /// Enable IME text input reception.
+    fn enable_ime(&mut self);
+
+    /// Disable IME text input reception.
+    fn disable_ime(&mut self);
 
     /// Whether IME composition is currently enabled.
     fn ime_allowed(&self) -> bool;

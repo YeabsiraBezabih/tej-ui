@@ -30,10 +30,10 @@ impl<T: Clone + PartialEq + Send + Sync + Any + 'static> Memo<T> {
         let compute_clone = Arc::clone(&compute);
         ReactiveRuntime::register_node_with_id(node_id, move || {
             let new_val = compute_clone();
-            if let Ok(old_val) = ReactiveRuntime::untracked_read::<T>(write_signal.id()) {
-                if new_val != old_val {
-                    write_signal.set(new_val);
-                }
+            if let Ok(old_val) = ReactiveRuntime::untracked_read::<T>(write_signal.id())
+                && new_val != old_val
+            {
+                write_signal.set(new_val);
             }
         });
 

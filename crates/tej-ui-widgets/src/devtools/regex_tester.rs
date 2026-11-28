@@ -52,7 +52,7 @@ impl Default for RegexTester {
         Self {
             bounds: Rect::ZERO,
             background: Color::WHITE,
-            border_color: Color::from_rgb_u32(0xD0D5DD), // Tej Gray 300
+            border_color: Color::from_rgb_u32(0x00D0_D5DD), // Tej Gray 300
             corner_radius: 8.0,
         }
     }

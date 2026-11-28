@@ -2,6 +2,7 @@
 
 use tej_ui_hal::Color;
 use tej_ui_layout::{Point, Rect, Size};
+use tej_ui_text::FontRegistry;
 use tej_ui_view::View;
 
 /// Visual presentation style variant for a badge.
@@ -56,9 +57,19 @@ impl Badge {
             BadgeVariant::Secondary => Color::rgb(241, 245, 249),
             BadgeVariant::Destructive => Color::rgb(239, 68, 68),
             BadgeVariant::Outline => Color::rgba(0, 0, 0, 0),
-            BadgeVariant::Success => Color::from_rgb_u32(0xE9F7F2),
-            BadgeVariant::Warning => Color::from_rgb_u32(0xFEF3C7),
+            BadgeVariant::Success => Color::from_rgb_u32(0x00E9_F7F2),
+            BadgeVariant::Warning => Color::from_rgb_u32(0x00FE_F3C7),
         }
+    }
+
+    fn measured_width(&self) -> f32 {
+        let measured = FontRegistry::global().measure_text(
+            &self.text,
+            11.0,
+            tej_ui_text::FontFamilyKind::SansSerif,
+            400,
+        );
+        measured.width.ceil() + 16.0
     }
 }
 
@@ -66,7 +77,7 @@ impl View for Badge {
     type State = BadgeState;
 
     fn build(&self) -> Self::State {
-        let width = (self.text.len() as f32) * 7.5 + 16.0;
+        let width = self.measured_width();
         BadgeState {
             bounds: Rect::from_origin_size(Point::ZERO, Size::new(width, 22.0)),
             text: self.text.clone(),
@@ -75,7 +86,8 @@ impl View for Badge {
     }
 
     fn rebuild(&self, state: &mut Self::State) {
-        state.text = self.text.clone();
+        state.text.clone_from(&self.text);
+        state.bounds.size = Size::new(self.measured_width(), 22.0);
     }
 
     fn patch(&self, state: &mut Self::State, _dirty_bits: u64) {
@@ -83,7 +95,7 @@ impl View for Badge {
     }
 
     fn layout(&self, state: &mut Self::State, arena: &mut tej_ui_layout::LayoutArena) -> u32 {
-        let width = (self.text.len() as f32) * 7.5 + 16.0;
+        let width = self.measured_width();
         let style = tej_ui_layout::LayoutStyle {
             width: tej_ui_layout::Dimension::Points(width),
             height: tej_ui_layout::Dimension::Points(22.0),
@@ -108,25 +120,42 @@ impl View for Badge {
             BadgeVariant::Secondary => ctx.theme.colors.secondary,
             BadgeVariant::Destructive => ctx.theme.colors.destructive,
             BadgeVariant::Outline => Color::TRANSPARENT,
-            BadgeVariant::Success => Color::from_rgb_u32(0xE9F7F2),
-            BadgeVariant::Warning => Color::from_rgb_u32(0xFEF3C7),
+            BadgeVariant::Success => ctx.theme.colors.success,
+            BadgeVariant::Warning => ctx.theme.colors.warning,
         };
         let fg = match self.variant {
             BadgeVariant::Default => ctx.theme.colors.primary_foreground,
             BadgeVariant::Secondary => ctx.theme.colors.secondary_foreground,
             BadgeVariant::Destructive => ctx.theme.colors.destructive_foreground,
             BadgeVariant::Outline => ctx.theme.colors.foreground,
-            BadgeVariant::Success => Color::from_rgb_u32(0x259676),
-            BadgeVariant::Warning => Color::from_rgb_u32(0xD97706),
+            BadgeVariant::Success => ctx.theme.colors.success_foreground,
+            BadgeVariant::Warning => ctx.theme.colors.warning_foreground,
         };
         let radius = ctx.theme.radii.full;
         if self.variant == BadgeVariant::Outline {
             ctx.fill_rounded_rect(bounds, radius, ctx.theme.colors.border);
+            let inner = Rect::new(
+                bounds.origin.x + 1.0,
+                bounds.origin.y + 1.0,
+                (bounds.size.width - 2.0).max(0.0),
+                (bounds.size.height - 2.0).max(0.0),
+            );
+            ctx.fill_rounded_rect(inner, (radius - 1.0).max(0.0), ctx.theme.colors.background);
         } else {
             ctx.fill_rounded_rect(bounds, radius, bg);
         }
         let font_size = ctx.theme.typography.caption.font_size;
-        let text_origin = Point::new(bounds.origin.x + 8.0, bounds.origin.y + 4.0);
-        ctx.draw_text(&state.text, text_origin, font_size, fg);
+        let text_size = FontRegistry::global().measure_text(
+            &state.text,
+            font_size,
+            tej_ui_text::FontFamilyKind::SansSerif,
+            400,
+        );
+        let text_x = bounds.origin.x + ((bounds.size.width - text_size.width) * 0.5).max(4.0);
+        let text_y = bounds.origin.y + ((bounds.size.height - text_size.height) * 0.5).max(0.0);
+        let clip_radius = radius.min(bounds.size.height * 0.5);
+        ctx.push_clip(bounds, [clip_radius; 4]);
+        ctx.draw_text(&state.text, Point::new(text_x, text_y), font_size, fg);
+        ctx.pop_clip();
     }
 }

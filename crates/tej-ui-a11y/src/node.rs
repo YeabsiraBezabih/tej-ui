@@ -50,6 +50,7 @@ impl A11yNode {
     }
 
     /// Set node label.
+    #[must_use]
     pub fn with_label(mut self, label: impl Into<String>) -> Self {
         self.label = Some(label.into());
         self

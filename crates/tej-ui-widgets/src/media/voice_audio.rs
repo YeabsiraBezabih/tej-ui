@@ -58,8 +58,8 @@ impl Default for AudioWaveform {
             bounds: Rect::ZERO,
             bar_width: 3.0,
             bar_gap: 2.0,
-            active_bar_color: Color::from_rgb_u32(0x7F56D9), // Tej Brand 600
-            inactive_bar_color: Color::from_rgb_u32(0xD0D5DD), // Tej Gray 300
+            active_bar_color: Color::from_rgb_u32(0x007F_56D9), // Tej Brand 600
+            inactive_bar_color: Color::from_rgb_u32(0x00D0_D5DD), // Tej Gray 300
             corner_radius: 1.5,
         }
     }

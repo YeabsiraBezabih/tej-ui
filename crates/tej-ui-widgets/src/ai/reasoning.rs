@@ -70,13 +70,13 @@ impl Default for ReasoningDrawer {
         Self {
             bounds: Rect::ZERO,
             // Tej Gray 50
-            background: Color::from_rgb_u32(0xF9FAFB),
+            background: Color::from_rgb_u32(0x00F9_FAFB),
             // Tej Gray 200
-            border_color: Color::from_rgb_u32(0xEAECF0),
+            border_color: Color::from_rgb_u32(0x00EA_ECF0),
             // Tej Gray 700
-            text_color: Color::from_rgb_u32(0x344054),
+            text_color: Color::from_rgb_u32(0x0034_4054),
             // Tej Brand 600
-            accent_color: Color::from_rgb_u32(0x7F56D9),
+            accent_color: Color::from_rgb_u32(0x007F_56D9),
             corner_radius: 8.0,
         }
     }

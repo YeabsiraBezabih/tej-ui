@@ -58,9 +58,9 @@ fn bench_tej_typography(paragraphs: &[String]) -> TypographyBenchMetric {
     let elapsed = t0.elapsed();
     let (alloc_count, bytes, _peak) = TrackingAllocator::delta_since(snap);
     let ms = elapsed.as_secs_f64() * 1000.0;
-    let gps = (total_glyphs as f64) / elapsed.as_secs_f64().max(0.0001);
+    let gps = crate::count_to_f64(total_glyphs) / elapsed.as_secs_f64().max(0.0001);
     let kb_per_10k = if total_glyphs > 0 {
-        ((bytes as f64) / (total_glyphs as f64)) * 10_000.0 / 1024.0
+        (crate::count_to_f64(bytes) / crate::count_to_f64(total_glyphs)) * 10_000.0 / 1024.0
     } else {
         0.0
     };
@@ -97,9 +97,9 @@ fn bench_egui_typography(paragraphs: &[String]) -> TypographyBenchMetric {
 
     let ms = elapsed.as_secs_f64() * 1000.0;
     let approx_glyphs = paragraphs.iter().map(|p| p.chars().count()).sum::<usize>();
-    let gps = (approx_glyphs as f64) / elapsed.as_secs_f64().max(0.0001);
+    let gps = crate::count_to_f64(approx_glyphs) / elapsed.as_secs_f64().max(0.0001);
     let kb_per_10k = if approx_glyphs > 0 {
-        ((bytes as f64) / (approx_glyphs as f64)) * 10_000.0 / 1024.0
+        (crate::count_to_f64(bytes) / crate::count_to_f64(approx_glyphs)) * 10_000.0 / 1024.0
     } else {
         0.0
     };

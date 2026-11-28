@@ -39,16 +39,16 @@ impl Win32SystemTheme {
     }
 
     /// Extracts DWM accent color from Win32 `ColorizationColor` (0xAARRGGBB format).
-    pub fn from_colorization_argb(argb: u32, is_dark: bool) -> Self {
+    #[must_use]
+    pub fn from_colorization_argb(argb: u32, mode: Win32ThemeMode) -> Self {
         let r = ((argb >> 16) & 0xFF) as u8;
         let g = ((argb >> 8) & 0xFF) as u8;
         let b = (argb & 0xFF) as u8;
         let accent = Color::rgb(r, g, b);
 
-        let (mode, text_color) = if is_dark {
-            (Win32ThemeMode::Dark, Color::rgb(255, 255, 255))
-        } else {
-            (Win32ThemeMode::Light, Color::rgb(25, 25, 25))
+        let text_color = match mode {
+            Win32ThemeMode::Dark => Color::rgb(255, 255, 255),
+            Win32ThemeMode::Light | Win32ThemeMode::HighContrast => Color::rgb(25, 25, 25),
         };
 
         Self {

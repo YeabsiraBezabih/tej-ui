@@ -52,10 +52,10 @@ pub fn parse_obj(content: &str, mesh_name: &str) -> Result<BlenderMesh, String> 
                 let mut face_indices = Vec::new();
                 for part in parts {
                     let vertex_idx_str = part.split('/').next().unwrap_or("");
-                    if let Ok(idx) = vertex_idx_str.parse::<usize>() {
-                        if idx > 0 {
-                            face_indices.push((idx - 1) as u32);
-                        }
+                    if let Ok(idx) = vertex_idx_str.parse::<usize>()
+                        && idx > 0
+                    {
+                        face_indices.push((idx - 1) as u32);
                     }
                 }
 

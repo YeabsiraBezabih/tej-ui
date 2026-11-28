@@ -67,6 +67,15 @@ pub struct SecureKeyStore {
     verifier: Option<Arc<dyn BiometricVerifier>>,
 }
 
+/// Access protection policy for a secret stored in [`SecureKeyStore`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SecretProtection {
+    /// Standard OS keychain protection without a biometric gate on read.
+    Standard,
+    /// Requires biometric authentication before reading the secret.
+    BiometricRequired,
+}
+
 impl fmt::Debug for SecureKeyStore {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SecureKeyStore")
@@ -108,8 +117,9 @@ impl SecureKeyStore {
         &mut self,
         key: impl Into<String>,
         secret: &[u8],
-        requires_biometrics: bool,
+        protection: SecretProtection,
     ) {
+        let requires_biometrics = matches!(protection, SecretProtection::BiometricRequired);
         self.secrets.insert(
             key.into(),
             (Zeroizing::new(secret.to_vec()), requires_biometrics),

@@ -93,11 +93,11 @@ impl NaniteGizmoManager {
 
     /// Reverts the last transformation in $O(1)$ time via database snapshot isolation.
     pub fn undo<S: Storage>(&mut self, viewport: &mut SpatialViewportManager<S>) -> bool {
-        viewport.undo().map(|opt| opt.is_some()).unwrap_or(false)
+        viewport.undo().is_ok_and(|opt| opt.is_some())
     }
 
     /// Re-applies the last undone transformation in $O(1)$ time.
     pub fn redo<S: Storage>(&mut self, viewport: &mut SpatialViewportManager<S>) -> bool {
-        viewport.redo().map(|opt| opt.is_some()).unwrap_or(false)
+        viewport.redo().is_ok_and(|opt| opt.is_some())
     }
 }

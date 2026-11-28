@@ -22,11 +22,12 @@ pub fn build_knowledge_graph(notes: &[NoteItem]) -> Canvas3D {
     // 2. Position note spheres in 3D orbit around origin
     let count = notes.len().max(1);
     for (i, note) in notes.iter().enumerate() {
-        #[allow(clippy::cast_precision_loss)]
-        let angle = (i as f32 / count as f32) * std::f32::consts::TAU;
+        let i_f32 = f32::from(u16::try_from(i).unwrap_or(u16::MAX));
+        let count_f32 = f32::from(u16::try_from(count).unwrap_or(u16::MAX));
+        let angle = (i_f32 / count_f32) * std::f32::consts::TAU;
         let radius = 2.2;
         let x = angle.cos() * radius;
-        let y = (i as f32 * 0.4) - 1.0;
+        let y = (i_f32 * 0.4) - 1.0;
         let z = angle.sin() * radius;
 
         let note_color = match note.folder.as_str() {

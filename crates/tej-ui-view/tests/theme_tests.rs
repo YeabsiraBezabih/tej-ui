@@ -6,15 +6,15 @@ use tej_ui_view::{Theme, View, ViewExt, provide_theme, use_theme};
 fn test_theme_presets_and_semantic_tokens() {
     let dark = Theme::dark();
     assert!(dark.is_dark);
-    assert_eq!(dark.colors.background, Color::from_rgb_u32(0x09090B));
-    assert_eq!(dark.colors.foreground, Color::from_rgb_u32(0xFAFAFA));
+    assert_eq!(dark.colors.background, Color::from_rgb_u32(0x0009_090B));
+    assert_eq!(dark.colors.foreground, Color::from_rgb_u32(0x00FA_FAFA));
     assert_eq!(dark.radii.md, 6.0);
     assert_eq!(dark.spacing.md, 16.0);
 
     let light = Theme::light();
     assert!(!light.is_dark);
     assert_eq!(light.colors.background, Color::WHITE);
-    assert_eq!(light.colors.foreground, Color::from_rgb_u32(0x09090B));
+    assert_eq!(light.colors.foreground, Color::from_rgb_u32(0x0009_090B));
 
     let hc = Theme::high_contrast();
     assert!(hc.is_dark);

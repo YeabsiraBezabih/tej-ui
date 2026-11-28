@@ -6,6 +6,7 @@ use tej_ui_layout::{Point, Rect, Size};
 /// Trait for types supporting linear interpolation between values over progress factor `t` in `[0.0, 1.0]`.
 pub trait Lerp {
     /// Compute linearly interpolated value at factor `t`.
+    #[must_use]
     fn lerp(&self, target: &Self, t: f32) -> Self;
 }
 

@@ -191,25 +191,25 @@ impl ContainerQuery {
     #[inline]
     #[must_use]
     pub fn matches(&self, container_width: f32, container_height: f32) -> bool {
-        if let Some(min_w) = self.min_width {
-            if container_width < min_w {
-                return false;
-            }
+        if let Some(min_w) = self.min_width
+            && container_width < min_w
+        {
+            return false;
         }
-        if let Some(max_w) = self.max_width {
-            if container_width > max_w {
-                return false;
-            }
+        if let Some(max_w) = self.max_width
+            && container_width > max_w
+        {
+            return false;
         }
-        if let Some(min_h) = self.min_height {
-            if container_height < min_h {
-                return false;
-            }
+        if let Some(min_h) = self.min_height
+            && container_height < min_h
+        {
+            return false;
         }
-        if let Some(max_h) = self.max_height {
-            if container_height > max_h {
-                return false;
-            }
+        if let Some(max_h) = self.max_height
+            && container_height > max_h
+        {
+            return false;
         }
         true
     }

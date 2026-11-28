@@ -6,7 +6,7 @@ fn test_cli_target_parsing_and_cargo_args() {
     assert_eq!(target, TargetPlatform::WindowsX64);
     assert_eq!(target.triple(), "x86_64-pc-windows-msvc");
 
-    let config = BuildConfig::new(target).with_release(true);
+    let config = BuildConfig::new(target).release();
     let args = config.cargo_args();
     assert_eq!(
         args,

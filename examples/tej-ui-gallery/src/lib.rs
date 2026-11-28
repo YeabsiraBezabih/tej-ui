@@ -23,6 +23,9 @@ pub fn build_gallery_app(state: GalleryState) -> impl View {
 
 /// Executes headless verification of the showcase suite, testing layout,
 /// rendering, and widget mounting across all gallery tabs.
+///
+/// # Panics
+/// Panics if any gallery tab produces an empty layout arena.
 pub fn run_headless_verification() -> Result<(), Box<dyn std::error::Error>> {
     let state = GalleryState::new();
     let mut arena = LayoutArena::new();
@@ -45,8 +48,7 @@ pub fn run_headless_verification() -> Result<(), Box<dyn std::error::Error>> {
 
         assert!(
             !arena.is_empty(),
-            "Gallery tab {:?} failed to produce layout nodes",
-            tab
+            "Gallery tab {tab:?} failed to produce layout nodes"
         );
     }
 

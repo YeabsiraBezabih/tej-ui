@@ -102,8 +102,8 @@ fn test_undo_stack_zero_capacity_does_not_panic() {
 #[test]
 fn test_rich_text_editor_undo_backspace_delete_and_atomic_replace() {
     let mut editor = RichTextEditor::with_text("hello");
-    editor.move_cursor_right(false);
-    editor.move_cursor_right(false);
+    editor.move_cursor_right(tej_ui_widgets::editor::editor_widget::CursorMoveMode::Collapse);
+    editor.move_cursor_right(tej_ui_widgets::editor::editor_widget::CursorMoveMode::Collapse);
     // Cursor at col 2 ('he|llo')
 
     // Collapsed backspace deletes 'e' and records undo history
@@ -142,11 +142,15 @@ fn test_rich_text_editor_paint_renders_caret_and_selection_highlight() {
     let theme = Theme::dark();
     let dirty: [Rect; 0] = [];
     {
-        let mut ctx = PaintContext::new(&mut compositor, &arena, &theme, &dirty);
+        let mut ctx = PaintContext::new(&mut compositor, &arena, &theme, &dirty).with_interaction(
+            Some(state.node),
+            None,
+            None,
+        );
         editor.paint(&state, &mut ctx);
     }
 
-    // Must draw background, selection highlight rect, and 2px-wide cursor caret rect
+    // Must draw background, selection highlight rect, and 2px-wide cursor caret rect when focused
     assert!(
         compositor
             .filled_rects
@@ -157,7 +161,7 @@ fn test_rich_text_editor_paint_renders_caret_and_selection_highlight() {
         compositor
             .filled_rects
             .iter()
-            .any(|(_, c)| *c == Color::rgba(59, 130, 246, 96))
+            .any(|(_, c)| *c == theme.colors.primary.with_alpha(96))
     );
 }
 
@@ -218,7 +222,10 @@ fn test_datagrid_guards_pinned_columns_and_renders() {
 
     assert!(compositor.drawn_texts.iter().any(|(t, _)| t == "ID"));
     assert!(compositor.drawn_texts.iter().any(|(t, _)| t == "Col A"));
-    assert!(!compositor.filled_rects.is_empty());
+    assert_ne!(
+        compositor.filled_rects,
+        [] as [(tej_ui_layout::Rect, tej_ui_hal::Color); 0]
+    );
 }
 
 #[test]

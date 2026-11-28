@@ -113,13 +113,13 @@ fn parse_svg_color(color_str: Option<&str>, default_color: Color) -> Color {
     };
     if c.starts_with('#') {
         let hex = c.trim_start_matches('#');
-        if hex.len() == 6 {
-            if let Ok(v) = u32::from_str_radix(hex, 16) {
-                let r = ((v >> 16) & 0xff) as u8;
-                let g = ((v >> 8) & 0xff) as u8;
-                let b = (v & 0xff) as u8;
-                return Color::rgb(r, g, b);
-            }
+        if hex.len() == 6
+            && let Ok(v) = u32::from_str_radix(hex, 16)
+        {
+            let r = ((v >> 16) & 0xff) as u8;
+            let g = ((v >> 8) & 0xff) as u8;
+            let b = (v & 0xff) as u8;
+            return Color::rgb(r, g, b);
         }
     }
     match c {

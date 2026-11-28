@@ -45,7 +45,7 @@ impl<V: View> Debug for TestHarness<V> {
             .field("mock_clock_millis", &self.mock_clock_millis)
             .field("frame_count", &self.frame_count)
             .field("root_node", &self.root_node)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

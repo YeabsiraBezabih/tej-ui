@@ -125,9 +125,8 @@ fn test_app_headless_and_gpu_surface_bridge_integration() {
     };
 
     let format = backend_cfg.preferred_format;
-    let headless = match HeadlessTarget::new(&ctx, 320, 240, format) {
-        Ok(t) => t,
-        Err(_) => return,
+    let Ok(headless) = HeadlessTarget::new(&ctx, 320, 240, format) else {
+        return;
     };
 
     let mut compositor = GpuCompositor::new(&ctx, format, &backend_cfg);
@@ -140,4 +139,75 @@ fn test_app_headless_and_gpu_surface_bridge_integration() {
         .expect("flush bridge to GpuCompositor");
 
     assert!(stats.instance_count > 0);
+}
+
+#[test]
+fn test_draw_text_styled_baseline_alignment_and_surface_compositor_clipping() {
+    let mut bridge = GpuSurfaceBridge::new(Size::new(640.0, 480.0), 2.0);
+    let surface: &mut dyn SurfaceCompositor = &mut bridge;
+
+    surface.begin_frame(&[Rect::new(0.0, 0.0, 640.0, 480.0)]);
+
+    // Verify SurfaceCompositor::push_clip / pop_clip updates glyph clip_bounds cleanly
+    let clip_rect = Rect::new(20.0, 30.0, 300.0, 120.0);
+    surface.push_clip(clip_rect, [6.0; 4]);
+    surface.draw_text_styled(
+        "Tag.",
+        Point::new(40.0, 50.0),
+        24.0,
+        400,
+        tej_ui_hal::TextFamily::SansSerif,
+        Color::WHITE,
+    );
+    surface.pop_clip();
+
+    // Draw unclipped text after pop_clip to confirm clip stack was restored
+    surface.draw_text_styled(
+        "ok",
+        Point::new(40.0, 100.0),
+        16.0,
+        700,
+        tej_ui_hal::TextFamily::Monospace,
+        Color::WHITE,
+    );
+    surface.end_frame();
+
+    let glyphs = bridge.glyphs();
+    assert_eq!(
+        glyphs.len(),
+        6,
+        "expected 4 glyphs from 'Tag.' + 2 from 'ok'"
+    );
+
+    let glyph_t = glyphs.iter().find(|g| g.ch == 'T').expect("missing 'T'");
+    let glyph_a = glyphs.iter().find(|g| g.ch == 'a').expect("missing 'a'");
+    let glyph_g = glyphs.iter().find(|g| g.ch == 'g').expect("missing 'g'");
+    let glyph_dot = glyphs.iter().find(|g| g.ch == '.').expect("missing '.'");
+    let glyph_o = glyphs.iter().find(|g| g.ch == 'o').expect("missing 'o'");
+
+    // Clipped glyphs carry the SurfaceCompositor clip rect; post-pop glyphs are unclipped
+    let expected_clip = [20.0, 30.0, 300.0, 120.0];
+    assert_eq!(glyph_t.clip_bounds, expected_clip);
+    assert_eq!(glyph_dot.clip_bounds, expected_clip);
+    assert_ne!(glyph_o.clip_bounds, expected_clip);
+    assert_eq!(glyph_o.weight, 700);
+    assert!(glyph_o.monospace);
+    assert_eq!(glyph_t.size_px, 48); // 24.0 * 2.0 scale factor
+
+    // Baseline alignment checks:
+    // 1. Period '.' must sit strictly lower (larger top y) than capital 'T'
+    assert!(
+        glyph_dot.bounds[1] > glyph_t.bounds[1],
+        "expected '.' y ({}) > 'T' y ({})",
+        glyph_dot.bounds[1],
+        glyph_t.bounds[1]
+    );
+
+    // 2. Descender 'g' must extend strictly below lowercase 'a''s bottom edge
+    let a_bottom = glyph_a.bounds[1] + glyph_a.bounds[3];
+    let g_bottom = glyph_g.bounds[1] + glyph_g.bounds[3];
+    assert!(
+        g_bottom > a_bottom,
+        "expected 'g' bottom ({g_bottom}) > 'a' bottom ({a_bottom})"
+    );
 }

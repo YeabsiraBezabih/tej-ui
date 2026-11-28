@@ -24,6 +24,15 @@ pub struct GlyphInstance {
 
 const _: () = assert!(core::mem::size_of::<GlyphInstance>() == 80);
 
+/// Semantic glyph rendering mode (monochrome coverage mask vs. color bitmap emoji).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GlyphKind {
+    /// Single-channel alpha coverage mask tinted by foreground color.
+    AlphaMask,
+    /// Full-color RGBA emoji glyph sampled directly from the color atlas.
+    ColorEmoji,
+}
+
 impl GlyphInstance {
     #[must_use]
     pub fn new(
@@ -31,8 +40,9 @@ impl GlyphInstance {
         uv_bounds: [f32; 4],
         color: PremulColor,
         clip_bounds: [f32; 4],
-        is_color_emoji: bool,
+        kind: GlyphKind,
     ) -> Self {
+        let is_color_emoji = matches!(kind, GlyphKind::ColorEmoji);
         Self {
             bounds,
             uv_bounds,
@@ -89,11 +99,12 @@ impl TextBufferPool {
         let current_index = self.cpu_glyphs.len() as u32;
         self.cpu_glyphs.push(glyph);
 
-        if let Some(last_batch) = self.batches.last_mut() {
-            if last_batch.scissor == scissor && last_batch.instance_range.end == current_index {
-                last_batch.instance_range.end = current_index + 1;
-                return;
-            }
+        if let Some(last_batch) = self.batches.last_mut()
+            && last_batch.scissor == scissor
+            && last_batch.instance_range.end == current_index
+        {
+            last_batch.instance_range.end = current_index + 1;
+            return;
         }
 
         self.batches.push(TextBatch {
@@ -173,109 +184,21 @@ impl TextPipeline {
             });
 
         let buffer_pool = TextBufferPool::new(ctx.device(), initial_capacity);
-
-        let bind_group_layout_0 =
-            ctx.device()
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("tej_text_bind_group_layout_0"),
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
-
-        let bind_group_layout_1 =
-            ctx.device()
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("tej_text_bind_group_layout_1"),
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::FRAGMENT,
-                            ty: wgpu::BindingType::Texture {
-                                sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                                view_dimension: wgpu::TextureViewDimension::D2,
-                                multisampled: false,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::FRAGMENT,
-                            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                            count: None,
-                        },
-                    ],
-                });
-
+        let (bind_group_layout_0, bind_group_layout_1) =
+            Self::create_bind_group_layouts(ctx.device());
         let bind_group_0 = Self::create_bind_group_0(
             ctx.device(),
             &bind_group_layout_0,
             uniform_buffer,
             buffer_pool.buffer(),
         );
-
-        let pipeline_layout =
-            ctx.device()
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("tej_text_pipeline_layout"),
-                    bind_group_layouts: &[&bind_group_layout_0, &bind_group_layout_1],
-                    push_constant_ranges: &[],
-                });
-
-        let pipeline = ctx
-            .device()
-            .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("tej_ui_text_pipeline"),
-                layout: Some(&pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &shader,
-                    entry_point: Some("vs_main"),
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    buffers: &[],
-                },
-                fragment: Some(wgpu::FragmentState {
-                    module: &shader,
-                    entry_point: Some("fs_main"),
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    targets: &[Some(wgpu::ColorTargetState {
-                        format: target_format,
-                        blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
-                        write_mask: wgpu::ColorWrites::ALL,
-                    })],
-                }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleStrip,
-                    strip_index_format: None,
-                    front_face: wgpu::FrontFace::Ccw,
-                    cull_mode: None,
-                    unclipped_depth: false,
-                    polygon_mode: wgpu::PolygonMode::Fill,
-                    conservative: false,
-                },
-                depth_stencil: None,
-                multisample: wgpu::MultisampleState::default(),
-                multiview: None,
-                cache: None,
-            });
+        let pipeline = Self::create_render_pipeline(
+            ctx.device(),
+            &shader,
+            target_format,
+            &bind_group_layout_0,
+            &bind_group_layout_1,
+        );
 
         Self {
             pipeline,
@@ -284,6 +207,106 @@ impl TextPipeline {
             bind_group_0,
             buffer_pool,
         }
+    }
+
+    fn create_bind_group_layouts(
+        device: &wgpu::Device,
+    ) -> (wgpu::BindGroupLayout, wgpu::BindGroupLayout) {
+        let layout_0 = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("tej_text_bind_group_layout_0"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+            ],
+        });
+        let layout_1 = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("tej_text_bind_group_layout_1"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
+        });
+        (layout_0, layout_1)
+    }
+
+    fn create_render_pipeline(
+        device: &wgpu::Device,
+        shader: &wgpu::ShaderModule,
+        target_format: wgpu::TextureFormat,
+        bind_group_layout_0: &wgpu::BindGroupLayout,
+        bind_group_layout_1: &wgpu::BindGroupLayout,
+    ) -> wgpu::RenderPipeline {
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("tej_text_pipeline_layout"),
+            bind_group_layouts: &[bind_group_layout_0, bind_group_layout_1],
+            push_constant_ranges: &[],
+        });
+
+        device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("tej_ui_text_pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: shader,
+                entry_point: Some("vs_main"),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                buffers: &[],
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: shader,
+                entry_point: Some("fs_main"),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: target_format,
+                    blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleStrip,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
+                unclipped_depth: false,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+            cache: None,
+        })
     }
 
     fn create_bind_group_0(

@@ -43,13 +43,19 @@ impl VaultDatabase {
     }
 
     /// Retrieve all seeded notes.
-    pub fn initial_notes(&self) -> Vec<NoteItem> {
+    pub fn initial_notes() -> Vec<NoteItem> {
         default_vault_notes()
     }
 }
 
 /// Returns the initial suite of mock notes showcasing Markdown, LaTeX, Mermaid, and SVG.
 pub fn default_vault_notes() -> Vec<NoteItem> {
+    let mut notes = seed_core_notes();
+    notes.extend(seed_feature_notes());
+    notes
+}
+
+fn seed_core_notes() -> Vec<NoteItem> {
     vec![
         NoteItem::new(
             1,
@@ -116,6 +122,11 @@ pub fn default_vault_notes() -> Vec<NoteItem> {
             vec!["mydb".into(), "zero-copy".into(), "rust".into()],
             vec!["1".into(), "4".into()],
         ),
+    ]
+}
+
+fn seed_feature_notes() -> Vec<NoteItem> {
+    vec![
         NoteItem::new(
             4,
             "Interactive Playground.md",

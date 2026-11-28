@@ -64,11 +64,13 @@ impl SplitPaneController {
         }
     }
 
+    #[must_use]
     pub fn orientation(mut self, orientation: SplitOrientation) -> Self {
         self.orientation = orientation;
         self
     }
 
+    #[must_use]
     pub fn limits(mut self, min: f32, max: f32) -> Self {
         self.min_ratio = min.clamp(0.0, 1.0);
         self.max_ratio = max.clamp(self.min_ratio, 1.0);

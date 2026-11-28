@@ -53,8 +53,8 @@ impl Default for GanttChart {
             row_height: 38.0,
             day_column_width: 32.0,
             background: Color::WHITE,
-            border_color: Color::from_rgb_u32(0xEAECF0), // Tej Gray 200
-            grid_line_color: Color::from_rgb_u32(0xF2F4F7), // Tej Gray 100
+            border_color: Color::from_rgb_u32(0x00EA_ECF0), // Tej Gray 200
+            grid_line_color: Color::from_rgb_u32(0x00F2_F4F7), // Tej Gray 100
         }
     }
 }

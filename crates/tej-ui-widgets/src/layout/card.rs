@@ -152,12 +152,12 @@ impl<V: View> View for Card<V> {
     }
 
     fn rebuild(&self, state: &mut Self::State) {
-        state.title = self.title.clone();
+        state.title.clone_from(&self.title);
         self.child.rebuild(&mut state.child_state);
     }
 
     fn patch(&self, state: &mut Self::State, dirty_bits: u64) {
-        state.title = self.title.clone();
+        state.title.clone_from(&self.title);
         self.child.patch(&mut state.child_state, dirty_bits);
     }
 
@@ -174,6 +174,11 @@ impl<V: View> View for Card<V> {
             self.padding.top + header_offset + 8.0
         } else {
             self.padding.top
+        };
+        let bottom_padding = if self.footer.is_some() {
+            self.padding.bottom + 32.0
+        } else {
+            self.padding.bottom
         };
 
         let width = self.width;
@@ -196,8 +201,8 @@ impl<V: View> View for Card<V> {
             }
             est_lines = count.max(1);
         }
-        let total_desc_h = (est_lines as f32) * line_height;
-        let min_h = top_padding + total_desc_h + self.padding.bottom + 12.0;
+        let total_desc_h = crate::count_to_f32(est_lines) * line_height;
+        let min_h = top_padding + total_desc_h + bottom_padding + 12.0;
 
         let has_child_content = !arena.children[child_node as usize].is_empty()
             || arena.styles[child_node as usize].height != tej_ui_layout::Dimension::Auto;
@@ -216,7 +221,7 @@ impl<V: View> View for Card<V> {
             padding: Insets::new(
                 top_padding,
                 self.padding.right,
-                self.padding.bottom,
+                bottom_padding,
                 self.padding.left,
             ),
             ..Default::default()
@@ -246,7 +251,10 @@ impl<V: View> View for Card<V> {
             (bounds.size.width - 2.0).max(0.0),
             (bounds.size.height - 2.0).max(0.0),
         );
-        ctx.fill_rounded_rect(inner, (radius - 1.0).max(0.0), ctx.theme.colors.card);
+        let inner_radius = (radius - 1.0).max(0.0);
+        ctx.fill_rounded_rect(inner, inner_radius, ctx.theme.colors.card);
+
+        ctx.push_clip(inner, [inner_radius; 4]);
 
         // Title
         if !state.title.is_empty() {
@@ -268,7 +276,7 @@ impl<V: View> View for Card<V> {
             let char_w = ctx.theme.typography.body_small.font_size * 0.55;
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let max_chars_per_line = ((max_w / char_w).floor() as usize).max(10);
-            let desc_offset_y = if !state.title.is_empty() { 24.0 } else { 0.0 };
+            let desc_offset_y = if state.title.is_empty() { 0.0 } else { 24.0 };
             let mut y = bounds.origin.y + self.padding.top + desc_offset_y;
             let line_height = ctx.theme.typography.body_small.font_size * 1.35;
 
@@ -325,6 +333,8 @@ impl<V: View> View for Card<V> {
                 ctx.theme.colors.muted_foreground,
             );
         }
+
+        ctx.pop_clip();
     }
 
     fn register_events(

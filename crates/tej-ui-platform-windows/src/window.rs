@@ -59,7 +59,7 @@ impl WindowsWindow {
 
     /// Simulates handling a `WM_DPICHANGED` Win32 message.
     pub fn handle_dpi_changed(&mut self, new_dpi: u32, suggested_size: Size) {
-        let new_scale = (new_dpi as f32) / 96.0;
+        let new_scale = f32::from(u16::try_from(new_dpi).unwrap_or(u16::MAX)) / 96.0;
         self.scale_factor = new_scale;
         self.size = suggested_size;
         self.event_queue.push(UiEvent::ScaleFactorChanged {
@@ -183,8 +183,12 @@ impl TejWindowHost for WindowsWindow {
         self.ime_area = area;
     }
 
-    fn set_ime_allowed(&mut self, allowed: bool) {
-        self.ime_allowed = allowed;
+    fn enable_ime(&mut self) {
+        self.ime_allowed = true;
+    }
+
+    fn disable_ime(&mut self) {
+        self.ime_allowed = false;
     }
 
     fn ime_allowed(&self) -> bool {

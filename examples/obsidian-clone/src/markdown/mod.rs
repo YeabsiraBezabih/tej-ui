@@ -124,86 +124,81 @@ pub fn render_markdown_document(
             if i < lines.len() {
                 i += 1;
             }
-            let code_h = (code_lines.len() as f32 * 20.0 + 16.0).max(36.0);
-            surface.fill_rect(Rect::new(x + 6.0, cur_y, w - 12.0, code_h), COLOR_CODE_BG);
-            surface.fill_rect(Rect::new(x + 6.0, cur_y, w - 12.0, 1.0), COLOR_BORDER);
-            surface.fill_rect(
-                Rect::new(x + 6.0, cur_y + code_h - 1.0, w - 12.0, 1.0),
-                COLOR_BORDER,
-            );
-
-            let mut code_y = cur_y + 10.0;
-            for cl in code_lines {
-                surface.draw_text(cl, Point::new(x + 18.0, code_y), 11.0, COLOR_YELLOW);
-                code_y += 20.0;
-            }
-            cur_y += code_h + 12.0;
+            cur_y += render_code_block(surface, x, cur_y, w, &code_lines);
             continue;
         }
 
-        // 5. Headings
-        if let Some(rest) = line.strip_prefix("# ") {
-            surface.draw_text(rest, Point::new(x + 6.0, cur_y), 18.0, COLOR_TEXT);
-            cur_y += 26.0;
-            surface.fill_rect(Rect::new(x + 6.0, cur_y, w - 12.0, 1.0), COLOR_BORDER);
-            cur_y += 10.0;
-            i += 1;
-            continue;
-        }
-
-        if let Some(rest) = line.strip_prefix("## ") {
-            surface.draw_text(rest, Point::new(x + 6.0, cur_y), 15.0, COLOR_ACCENT);
-            cur_y += 24.0;
-            i += 1;
-            continue;
-        }
-
-        if let Some(rest) = line.strip_prefix("### ") {
-            surface.draw_text(rest, Point::new(x + 6.0, cur_y), 13.0, COLOR_ACCENT);
-            cur_y += 22.0;
-            i += 1;
-            continue;
-        }
-
-        // 6. Checklists and List Items
-        if let Some(stripped) = line.strip_prefix("- [ ]") {
-            surface.fill_rect(Rect::new(x + 8.0, cur_y + 3.0, 12.0, 12.0), COLOR_BORDER);
-            surface.draw_text(stripped, Point::new(x + 28.0, cur_y), 12.0, COLOR_TEXT);
-            cur_y += 22.0;
-            i += 1;
-            continue;
-        }
-
-        if let Some(stripped) = line
-            .strip_prefix("- [x]")
-            .or_else(|| line.strip_prefix("- [X]"))
-        {
-            surface.fill_rect(Rect::new(x + 8.0, cur_y + 3.0, 12.0, 12.0), COLOR_GREEN);
-            surface.draw_text("v", Point::new(x + 11.0, cur_y + 3.0), 9.0, Color::BLACK);
-            surface.draw_text(stripped, Point::new(x + 28.0, cur_y), 12.0, COLOR_TEXT_DIM);
-            cur_y += 22.0;
-            i += 1;
-            continue;
-        }
-
-        if line.starts_with('-') || line.starts_with('*') {
-            surface.fill_rect(Rect::new(x + 10.0, cur_y + 6.0, 5.0, 5.0), COLOR_ACCENT);
-            surface.draw_text(&line[1..], Point::new(x + 24.0, cur_y), 12.0, COLOR_TEXT);
-            cur_y += 22.0;
-            i += 1;
-            continue;
-        }
-
-        // 7. Regular paragraph text or inline LaTeX
-        if !line.is_empty() {
-            surface.draw_text(line, Point::new(x + 6.0, cur_y), 12.0, COLOR_TEXT);
-            cur_y += 20.0;
-        } else {
-            cur_y += 10.0;
-        }
-
+        cur_y += render_markdown_line(surface, x, cur_y, w, line);
         i += 1;
     }
 
     cur_y - y
+}
+
+fn render_code_block(
+    surface: &mut LinuxSurface,
+    x: f32,
+    cur_y: f32,
+    w: f32,
+    code_lines: &[&str],
+) -> f32 {
+    let count_f32 = f32::from(u16::try_from(code_lines.len()).unwrap_or(u16::MAX));
+    let code_h = (count_f32 * 20.0 + 16.0).max(36.0);
+    surface.fill_rect(Rect::new(x + 6.0, cur_y, w - 12.0, code_h), COLOR_CODE_BG);
+    surface.fill_rect(Rect::new(x + 6.0, cur_y, w - 12.0, 1.0), COLOR_BORDER);
+    surface.fill_rect(
+        Rect::new(x + 6.0, cur_y + code_h - 1.0, w - 12.0, 1.0),
+        COLOR_BORDER,
+    );
+
+    let mut code_y = cur_y + 10.0;
+    for cl in code_lines {
+        surface.draw_text(cl, Point::new(x + 18.0, code_y), 11.0, COLOR_YELLOW);
+        code_y += 20.0;
+    }
+    code_h + 12.0
+}
+
+fn render_markdown_line(surface: &mut LinuxSurface, x: f32, cur_y: f32, w: f32, line: &str) -> f32 {
+    if let Some(rest) = line.strip_prefix("# ") {
+        surface.draw_text(rest, Point::new(x + 6.0, cur_y), 18.0, COLOR_TEXT);
+        surface.fill_rect(
+            Rect::new(x + 6.0, cur_y + 26.0, w - 12.0, 1.0),
+            COLOR_BORDER,
+        );
+        return 36.0;
+    }
+    if let Some(rest) = line.strip_prefix("## ") {
+        surface.draw_text(rest, Point::new(x + 6.0, cur_y), 15.0, COLOR_ACCENT);
+        return 24.0;
+    }
+    if let Some(rest) = line.strip_prefix("### ") {
+        surface.draw_text(rest, Point::new(x + 6.0, cur_y), 13.0, COLOR_ACCENT);
+        return 22.0;
+    }
+    if let Some(stripped) = line.strip_prefix("- [ ]") {
+        surface.fill_rect(Rect::new(x + 8.0, cur_y + 3.0, 12.0, 12.0), COLOR_BORDER);
+        surface.draw_text(stripped, Point::new(x + 28.0, cur_y), 12.0, COLOR_TEXT);
+        return 22.0;
+    }
+    if let Some(stripped) = line
+        .strip_prefix("- [x]")
+        .or_else(|| line.strip_prefix("- [X]"))
+    {
+        surface.fill_rect(Rect::new(x + 8.0, cur_y + 3.0, 12.0, 12.0), COLOR_GREEN);
+        surface.draw_text("v", Point::new(x + 11.0, cur_y + 3.0), 9.0, Color::BLACK);
+        surface.draw_text(stripped, Point::new(x + 28.0, cur_y), 12.0, COLOR_TEXT_DIM);
+        return 22.0;
+    }
+    if line.starts_with('-') || line.starts_with('*') {
+        surface.fill_rect(Rect::new(x + 10.0, cur_y + 6.0, 5.0, 5.0), COLOR_ACCENT);
+        surface.draw_text(&line[1..], Point::new(x + 24.0, cur_y), 12.0, COLOR_TEXT);
+        return 22.0;
+    }
+    if line.is_empty() {
+        10.0
+    } else {
+        surface.draw_text(line, Point::new(x + 6.0, cur_y), 12.0, COLOR_TEXT);
+        20.0
+    }
 }

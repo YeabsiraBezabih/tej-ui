@@ -75,6 +75,10 @@ pub fn print_comparative_table(results: &FullBenchmarkSuiteResults) {
         results.p1.peak_rss_ram_mb
     );
 
+    print_detailed_phase_metrics(results);
+}
+
+fn print_detailed_phase_metrics(results: &FullBenchmarkSuiteResults) {
     println!("\n### Detailed Pipeline Phase Metrics");
     println!(
         "- **Phase 1**: Ingestion throughput: {:.2} Mtris/s | Peak RSS: {:.2} MB",

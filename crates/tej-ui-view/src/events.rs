@@ -88,7 +88,7 @@ impl Debug for EventDispatcher {
             .field("text_listeners", &self.text_handlers.len())
             .field("capture_listeners", &self.capture_handlers.len())
             .field("bubble_listeners", &self.bubble_handlers.len())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -322,12 +322,12 @@ impl EventDispatcher {
         let path = target_node.map(|t| arena.path_from_root(t));
 
         // 2. Phase 1: Capturing (Tunneling) from root down to target
-        if let Some(ref p) = path {
-            if !self.dispatch_capture(event, p) {
-                result.handled = true;
-                result.cursor = self.current_cursor(arena);
-                return result;
-            }
+        if let Some(ref p) = path
+            && !self.dispatch_capture(event, p)
+        {
+            result.handled = true;
+            result.cursor = self.current_cursor(arena);
+            return result;
         }
 
         // 3. Phase 2: Target invocation
@@ -359,25 +359,24 @@ impl EventDispatcher {
             } => {
                 let hit = arena.hit_test(root, *position);
                 let target = hit.and_then(|n| self.find_click_target(arena, n));
-                if let Some(pressed) = self.pressed_node {
-                    if Some(pressed) == target {
-                        if let Some(handler) = self.click_handlers.get(&pressed) {
-                            handler();
-                            result.handled = true;
-                            result.needs_repaint = true;
-                        }
-                    }
+                if let Some(pressed) = self.pressed_node
+                    && Some(pressed) == target
+                    && let Some(handler) = self.click_handlers.get(&pressed)
+                {
+                    handler();
+                    result.handled = true;
+                    result.needs_repaint = true;
                 }
                 self.pressed_node = None;
                 result.needs_repaint = true;
             }
             UiEvent::TextInput { text } => {
-                if let Some(focused) = self.focused_node {
-                    if let Some(handler) = self.text_handlers.get(&focused) {
-                        handler(text);
-                        result.handled = true;
-                        result.needs_repaint = true;
-                    }
+                if let Some(focused) = self.focused_node
+                    && let Some(handler) = self.text_handlers.get(&focused)
+                {
+                    handler(text);
+                    result.handled = true;
+                    result.needs_repaint = true;
                 }
             }
             UiEvent::KeyDown { key_code } => match *key_code {
@@ -389,22 +388,22 @@ impl EventDispatcher {
                 }
                 13 | 32 => {
                     // Enter (13) or Space (32) activates focused clickable control
-                    if let Some(focused) = self.focused_node {
-                        if let Some(handler) = self.click_handlers.get(&focused) {
-                            handler();
-                            result.handled = true;
-                            result.needs_repaint = true;
-                        }
+                    if let Some(focused) = self.focused_node
+                        && let Some(handler) = self.click_handlers.get(&focused)
+                    {
+                        handler();
+                        result.handled = true;
+                        result.needs_repaint = true;
                     }
                 }
                 code => {
                     let target = self.focused_node.or(Some(root));
-                    if let Some(node) = target {
-                        if let Some(handler) = self.key_handlers.get(&node) {
-                            handler(code);
-                            result.handled = true;
-                            result.needs_repaint = true;
-                        }
+                    if let Some(node) = target
+                        && let Some(handler) = self.key_handlers.get(&node)
+                    {
+                        handler(code);
+                        result.handled = true;
+                        result.needs_repaint = true;
                     }
                 }
             },

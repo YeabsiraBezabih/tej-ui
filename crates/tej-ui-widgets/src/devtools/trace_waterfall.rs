@@ -63,7 +63,7 @@ impl Default for TraceWaterfall {
             bounds: Rect::ZERO,
             row_height: 32.0,
             background: Color::WHITE,
-            border_color: Color::from_rgb_u32(0xEAECF0), // Tej Gray 200
+            border_color: Color::from_rgb_u32(0x00EA_ECF0), // Tej Gray 200
             corner_radius: 8.0,
         }
     }

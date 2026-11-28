@@ -35,11 +35,11 @@ fn read_process_rss_mb() -> f64 {
         if let Ok(statm) = std::fs::read_to_string("/proc/self/statm") {
             let mut parts = statm.split_whitespace();
             let _total_pages = parts.next();
-            if let Some(resident_str) = parts.next() {
-                if let Ok(resident_pages) = resident_str.parse::<u64>() {
-                    let page_size_bytes = 4096.0_f64;
-                    return (resident_pages as f64 * page_size_bytes) / (1024.0 * 1024.0);
-                }
+            if let Some(resident_str) = parts.next()
+                && let Ok(resident_pages) = resident_str.parse::<u32>()
+            {
+                let page_size_bytes = 4096.0_f64;
+                return (f64::from(resident_pages) * page_size_bytes) / (1024.0 * 1024.0);
             }
         }
     }
@@ -51,7 +51,10 @@ fn read_process_rss_mb() -> f64 {
 fn read_current_binary_size_mb() -> f64 {
     std::env::current_exe()
         .and_then(std::fs::metadata)
-        .map_or(0.0, |meta| (meta.len() as f64) / (1024.0 * 1024.0))
+        .map_or(0.0, |meta| {
+            let len = u32::try_from(meta.len()).unwrap_or(u32::MAX);
+            f64::from(len) / (1024.0 * 1024.0)
+        })
 }
 
 /// Execute Phase 8 memory and footprint evaluations.
@@ -75,7 +78,7 @@ pub fn run_phase_8_footprint() -> Vec<FootprintMetric> {
     let m_10k = tej.create_rows(10_000);
     black_box(m_10k);
 
-    let live_heap_mb = (m_10k.peak_live_heap_bytes as f64) / (1024.0 * 1024.0);
+    let live_heap_mb = crate::count_to_f64(m_10k.peak_live_heap_bytes) / (1024.0 * 1024.0);
     let measured_active_rss_mb = read_process_rss_mb();
     let active_rss_mb = if measured_active_rss_mb > 0.0 {
         measured_active_rss_mb

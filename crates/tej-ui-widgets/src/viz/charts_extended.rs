@@ -52,8 +52,8 @@ impl Default for CandlestickChart {
     fn default() -> Self {
         Self {
             bounds: Rect::ZERO,
-            bull_color: Color::from_rgb_u32(0x12B76A), // Tej Success 500
-            bear_color: Color::from_rgb_u32(0xF04438), // Tej Error 500
+            bull_color: Color::from_rgb_u32(0x0012_B76A), // Tej Success 500
+            bear_color: Color::from_rgb_u32(0x00F0_4438), // Tej Error 500
             wick_thickness: 1.5,
             body_width: 8.0,
         }

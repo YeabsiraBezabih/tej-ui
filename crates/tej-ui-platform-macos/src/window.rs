@@ -174,8 +174,12 @@ impl TejWindowHost for MacosWindow {
         self.ime_area = area;
     }
 
-    fn set_ime_allowed(&mut self, allowed: bool) {
-        self.ime_allowed = allowed;
+    fn enable_ime(&mut self) {
+        self.ime_allowed = true;
+    }
+
+    fn disable_ime(&mut self) {
+        self.ime_allowed = false;
     }
 
     fn ime_allowed(&self) -> bool {

@@ -33,25 +33,25 @@ impl<T: Copy + Eq> RleColumn<T> {
         if count == 0 {
             return;
         }
-        if let Some(last) = self.runs.last_mut() {
-            if last.value == value {
-                if let Some(sum) = last.count.checked_add(count) {
-                    last.count = sum;
-                    self.total_elements += count as usize;
-                    return;
-                }
-                let remaining = u32::MAX - last.count;
-                last.count = u32::MAX;
-                let overflow = count - remaining;
-                if overflow > 0 {
-                    self.runs.push(RleRun {
-                        value,
-                        count: overflow,
-                    });
-                }
+        if let Some(last) = self.runs.last_mut()
+            && last.value == value
+        {
+            if let Some(sum) = last.count.checked_add(count) {
+                last.count = sum;
                 self.total_elements += count as usize;
                 return;
             }
+            let remaining = u32::MAX - last.count;
+            last.count = u32::MAX;
+            let overflow = count - remaining;
+            if overflow > 0 {
+                self.runs.push(RleRun {
+                    value,
+                    count: overflow,
+                });
+            }
+            self.total_elements += count as usize;
+            return;
         }
         self.runs.push(RleRun { value, count });
         self.total_elements += count as usize;

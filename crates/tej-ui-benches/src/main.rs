@@ -18,6 +18,16 @@ mod phase7_a11y_hit;
 mod phase8_footprint;
 mod reporter;
 
+#[inline]
+pub(crate) fn count_to_f32(n: usize) -> f32 {
+    f32::from(u16::try_from(n).unwrap_or(u16::MAX))
+}
+
+#[inline]
+pub(crate) fn count_to_f64(n: usize) -> f64 {
+    f64::from(u32::try_from(n).unwrap_or(u32::MAX))
+}
+
 use phase1_krausest::run_phase_1_krausest;
 use phase2_layout::run_phase_2_layout_stress;
 use phase3_telemetry::run_phase_3_telemetry_stress;

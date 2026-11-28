@@ -113,13 +113,13 @@ pub fn shade_uniform(tri: &ResolvedTriangle, ctx: &ShadingContext) -> Option<u32
 
     let c = tri.colors[0];
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    let lit_r = ((c.r as f32 * lit + spec * 255.0).min(255.0)) as u8;
+    let lit_r = ((f32::from(c.r) * lit + spec * 255.0).min(255.0)) as u8;
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    let lit_g = ((c.g as f32 * lit + spec * 255.0).min(255.0)) as u8;
+    let lit_g = ((f32::from(c.g) * lit + spec * 255.0).min(255.0)) as u8;
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    let lit_b = ((c.b as f32 * lit + spec * 255.0).min(255.0)) as u8;
+    let lit_b = ((f32::from(c.b) * lit + spec * 255.0).min(255.0)) as u8;
 
-    Some(0xFF00_0000 | ((lit_r as u32) << 16) | ((lit_g as u32) << 8) | (lit_b as u32))
+    Some(0xFF00_0000 | (u32::from(lit_r) << 16) | (u32::from(lit_g) << 8) | u32::from(lit_b))
 }
 
 /// Resolves a single visible fragment into a 32-bit packed color (`0xAARRGGBB`).
@@ -181,7 +181,7 @@ pub fn shade_fragment(
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let lit_b = ((base_b * lit + spec * 255.0).min(255.0)) as u8;
 
-    Some(0xFF00_0000 | ((lit_r as u32) << 16) | ((lit_g as u32) << 8) | (lit_b as u32))
+    Some(0xFF00_0000 | (u32::from(lit_r) << 16) | (u32::from(lit_g) << 8) | u32::from(lit_b))
 }
 
 /// Resolves a screen tile from the visibility buffer to the output color buffer.
@@ -201,11 +201,11 @@ pub fn resolve_tile<F>(
     let mut cached_uniform_color: Option<u32> = None;
 
     for y in bounds.min_y..=bounds.max_y {
-        let py = y as f32 + 0.5;
+        let py = crate::math::count_to_f32(y) + 0.5;
         let row_idx = y * width;
 
         for x in bounds.min_x..=bounds.max_x {
-            let px = x as f32 + 0.5;
+            let px = crate::math::count_to_f32(x) + 0.5;
             let idx = row_idx + x;
             let vis = vis_buffer.get_pixel(x, y);
 
@@ -227,10 +227,10 @@ pub fn resolve_tile<F>(
 
                 if let Some(color) = cached_uniform_color {
                     color_buffer[idx] = color;
-                } else if let Some(tri) = &cached_tri {
-                    if let Some(color) = shade_fragment(px, py, tri, ctx) {
-                        color_buffer[idx] = color;
-                    }
+                } else if let Some(tri) = &cached_tri
+                    && let Some(color) = shade_fragment(px, py, tri, ctx)
+                {
+                    color_buffer[idx] = color;
                 }
             }
         }

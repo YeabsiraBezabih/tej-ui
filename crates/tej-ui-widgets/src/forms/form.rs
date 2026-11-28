@@ -24,7 +24,7 @@ impl<T: Clone + Debug + Send + Sync + 'static> Debug for FormField<T> {
             .field("dirty", &self.dirty.get())
             .field("touched", &self.touched.get())
             .field("errors", &self.errors.get())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -139,7 +139,7 @@ impl Debug for FormController {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("FormController")
             .field("registered_fields", &self.validators.len())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

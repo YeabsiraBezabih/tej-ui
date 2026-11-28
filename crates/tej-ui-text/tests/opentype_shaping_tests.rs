@@ -1,8 +1,8 @@
 //! Automated tests for SystemFontDb, OpenTypeShaper, and GlyphStreamer.
 
 use tej_ui_text::{
-    CaretHit, GlyphStreamer, OpenTypeShaper, PositionedGlyph, ShapedTextRun, ShaperFeatures,
-    SystemFontDb, TextDirection,
+    CaretHit, FontSlant, GlyphStreamer, OpenTypeShaper, PositionedGlyph, ShapedTextRun,
+    ShaperFeatures, SystemFontDb, TextDirection,
 };
 
 #[test]
@@ -10,10 +10,10 @@ fn test_system_font_db_discovery() {
     let db = SystemFontDb::new();
     // System font discovery queries OS font database
     let count = db.family_count();
-    println!("Discovered {} system font families on host", count);
+    println!("Discovered {count} system font families on host");
 
     // Query generic families
-    let sans = db.query_font("sans-serif", 400, false);
+    let sans = db.query_font("sans-serif", 400, FontSlant::Normal);
     if count > 0 {
         assert!(sans.is_some(), "Generic sans-serif font should resolve");
     }

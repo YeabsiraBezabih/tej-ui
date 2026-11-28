@@ -18,7 +18,7 @@ pub fn bayer8(x: u32, y: u32) -> f32 {
         | ((qy & 2) << 1)
         | ((a & 4) >> 1)
         | ((qy & 4) >> 2);
-    (m as f32 + 0.5) / 64.0
+    (f32::from(u8::try_from(m).unwrap_or(63)) + 0.5) / 64.0
 }
 
 /// Evaluates whether a pixel at `(x, y)` is active for a target opacity / density `[0.0, 1.0]`.

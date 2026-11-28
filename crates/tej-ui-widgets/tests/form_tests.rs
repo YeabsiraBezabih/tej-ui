@@ -33,7 +33,7 @@ fn test_form_field_validation_lifecycle() {
     // Set valid value
     username.set("alice".into());
     assert!(username.is_valid());
-    assert!(username.errors().is_empty());
+    assert_eq!(username.errors(), [] as [std::string::String; 0]);
 
     // Reset
     username.reset("bob".into());

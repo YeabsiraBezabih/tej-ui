@@ -13,7 +13,7 @@ pub mod window;
 
 pub use backdrop::{DwmAttributes, WindowBackdrop};
 pub use hit_test::{NcHitCode, Win32WindowFrame};
-pub use scroll::{WHEEL_DELTA, Win32ScrollPhysics};
+pub use scroll::{WHEEL_DELTA, WheelAxis, Win32ScrollPhysics};
 pub use surface::DirectCompositionSurface;
 pub use theme::{Win32SystemTheme, Win32ThemeMode};
 pub use window::WindowsWindow;

@@ -51,6 +51,10 @@ impl<T: Any + Send + Sync + 'static> Signal<T> {
     }
 
     /// Read the current value of the signal, automatically tracking dependency if within an observer.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the underlying signal slot is missing or its generation is stale.
     pub fn get(self) -> T
     where
         T: Clone,
@@ -60,6 +64,10 @@ impl<T: Any + Send + Sync + 'static> Signal<T> {
     }
 
     /// Read the current value without recording a reactive dependency.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the underlying signal slot is missing or its generation is stale.
     pub fn untracked_get(self) -> T
     where
         T: Clone,
@@ -68,6 +76,10 @@ impl<T: Any + Send + Sync + 'static> Signal<T> {
     }
 
     /// Overwrite the signal's value and trigger downstream notifications.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the underlying signal slot is missing or its generation is stale.
     pub fn set(self, value: T) {
         ReactiveRuntime::write_signal(self.id, value)
             .expect("Signal write failed: slot missing or stale generation");
@@ -137,6 +149,10 @@ impl<T: 'static> Copy for ReadSignal<T> {}
 
 impl<T: Any + Send + Sync + 'static> ReadSignal<T> {
     /// Read the current value and register dependency.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the underlying signal slot is missing or its generation is stale.
     pub fn get(self) -> T
     where
         T: Clone,
@@ -145,6 +161,10 @@ impl<T: Any + Send + Sync + 'static> ReadSignal<T> {
     }
 
     /// Read without dependency tracking.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the underlying signal slot is missing or its generation is stale.
     pub fn untracked_get(self) -> T
     where
         T: Clone,
@@ -183,11 +203,19 @@ impl<T: 'static> Copy for WriteSignal<T> {}
 
 impl<T: Any + Send + Sync + 'static> WriteSignal<T> {
     /// Set a new value and trigger downstream notifications.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the underlying signal slot is missing or its generation is stale.
     pub fn set(self, value: T) {
         ReactiveRuntime::write_signal(self.id, value).expect("WriteSignal set failed");
     }
 
     /// Mutate the value via closure.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the underlying signal slot is missing or its generation is stale.
     pub fn update<F: FnOnce(&mut T)>(self, f: F)
     where
         T: Clone,

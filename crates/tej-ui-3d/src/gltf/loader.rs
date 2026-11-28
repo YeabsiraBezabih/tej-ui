@@ -187,7 +187,7 @@ impl<'a> GlbPackage<'a> {
         for i in 0..index_count {
             let base = byte_offset + i * 2;
             let idx = u16::from_le_bytes([bin[base], bin[base + 1]]);
-            indices.push(idx as u32);
+            indices.push(u32::from(idx));
         }
 
         Ok(indices)

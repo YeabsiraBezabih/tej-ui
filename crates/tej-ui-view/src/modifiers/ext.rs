@@ -5,7 +5,7 @@ use super::styled::Styled;
 use crate::view::View;
 use std::fmt::Debug;
 use tej_ui_hal::Color;
-use tej_ui_layout::{Dimension, Insets};
+use tej_ui_layout::{Dimension, Insets, Overflow};
 
 /// Composable view modifier methods available on every `View`.
 pub trait ViewExt: View + Sized {
@@ -62,6 +62,26 @@ pub trait ViewExt: View + Sized {
         self.styled().height(height)
     }
 
+    /// Set minimum width constraint.
+    fn min_width(self, min_width: Dimension) -> Styled<Self> {
+        self.styled().min_width(min_width)
+    }
+
+    /// Set maximum width constraint.
+    fn max_width(self, max_width: Dimension) -> Styled<Self> {
+        self.styled().max_width(max_width)
+    }
+
+    /// Set minimum height constraint.
+    fn min_height(self, min_height: Dimension) -> Styled<Self> {
+        self.styled().min_height(min_height)
+    }
+
+    /// Set maximum height constraint.
+    fn max_height(self, max_height: Dimension) -> Styled<Self> {
+        self.styled().max_height(max_height)
+    }
+
     /// Enable or configure flex wrapping along the cross axis.
     fn flex_wrap(self, wrap: tej_ui_layout::FlexWrap) -> Styled<Self> {
         self.styled().flex_wrap(wrap)
@@ -70,6 +90,16 @@ pub trait ViewExt: View + Sized {
     /// Set flex grow factor (e.g. 1.0 to expand and fill remaining space).
     fn flex_grow(self, flex_grow: f32) -> Styled<Self> {
         self.styled().flex_grow(flex_grow)
+    }
+
+    /// Set flex shrink factor (default 1.0; set to 0.0 to prevent shrinking).
+    fn flex_shrink(self, flex_shrink: f32) -> Styled<Self> {
+        self.styled().flex_shrink(flex_shrink)
+    }
+
+    /// Set overflow clipping behavior on both X and Y axes.
+    fn overflow(self, overflow: Overflow) -> Styled<Self> {
+        self.styled().overflow(overflow)
     }
 
     /// Set column span in CSS Grid layout.

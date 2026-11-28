@@ -57,10 +57,10 @@ impl FontEngine {
         ];
 
         for path in &candidates {
-            if let Ok(bytes) = fs::read(path) {
-                if let Ok(font) = Font::from_bytes(bytes, FontSettings::default()) {
-                    fonts.push(font);
-                }
+            if let Ok(bytes) = fs::read(path)
+                && let Ok(font) = Font::from_bytes(bytes, FontSettings::default())
+            {
+                fonts.push(font);
             }
         }
 
@@ -84,6 +84,18 @@ impl FontEngine {
     #[must_use]
     pub fn has_vector_font(&self) -> bool {
         !self.fonts.is_empty()
+    }
+
+    /// Return `(ascent, new_line_size)` horizontal line metrics for the primary font at `font_size`.
+    /// Falls back to `(font_size * 0.8, font_size * 1.35)` when no vector font metrics are available.
+    #[must_use]
+    pub fn line_metrics(&self, font_size: f32) -> (f32, f32) {
+        if let Some(font) = self.fonts.first()
+            && let Some(metrics) = font.horizontal_line_metrics(font_size)
+        {
+            return (metrics.ascent, metrics.new_line_size);
+        }
+        (font_size * 0.8, font_size * 1.35)
     }
 
     /// Retrieve or rasterize a glyph with subpixel antialiasing at the specified point size.

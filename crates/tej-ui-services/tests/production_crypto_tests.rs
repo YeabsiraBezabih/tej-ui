@@ -4,17 +4,24 @@
 use ed25519_dalek::{Signer, SigningKey};
 use sha2::{Digest, Sha256};
 use tej_ui_services::{
-    Ed25519Sha256Verifier, OtaUpdater, ReleaseChannel, SecureKeyStore, SignatureVerifier,
-    UpdateManifest,
+    Ed25519Sha256Verifier, OtaUpdater, ReleaseChannel, SecretProtection, SecureKeyStore,
+    SignatureVerifier, UpdateManifest,
 };
+
+#[derive(Clone, Copy)]
+enum PatchUrgency {
+    Normal,
+    CriticalSecurity,
+}
 
 fn build_signed_manifest(
     signing_key: &SigningKey,
     version: &str,
     channel: ReleaseChannel,
     artifact_bytes: &[u8],
-    is_critical_security_patch: bool,
+    urgency: PatchUrgency,
 ) -> UpdateManifest {
+    let is_critical_security_patch = matches!(urgency, PatchUrgency::CriticalSecurity);
     let sha256_checksum = hex::encode(Sha256::digest(artifact_bytes));
     let mut manifest = UpdateManifest {
         version: version.to_string(),
@@ -40,7 +47,7 @@ fn test_with_default_crypto_verifies_valid_signed_manifest_and_artifact() {
         "1.2.0",
         ReleaseChannel::Stable,
         artifact,
-        true,
+        PatchUrgency::CriticalSecurity,
     );
     let updater = OtaUpdater::with_default_crypto("1.1.0", &pubkey_hex);
 
@@ -60,7 +67,7 @@ fn test_with_default_crypto_rejects_tampered_manifest_fields() {
         "2.0.0",
         ReleaseChannel::Stable,
         artifact,
-        false,
+        PatchUrgency::Normal,
     );
     let updater = OtaUpdater::with_default_crypto("1.9.0", &pubkey_hex);
     assert!(updater.verify_manifest(&valid_manifest));
@@ -97,7 +104,7 @@ fn test_with_default_crypto_rejects_wrong_key_and_wrong_signature() {
         "1.5.0",
         ReleaseChannel::Stable,
         artifact,
-        false,
+        PatchUrgency::Normal,
     );
 
     // Updater configured with a different public key must reject the manifest
@@ -133,7 +140,7 @@ fn test_with_default_crypto_rejects_corrupted_artifact() {
         "3.0.0",
         ReleaseChannel::Stable,
         artifact,
-        false,
+        PatchUrgency::Normal,
     );
     let updater = OtaUpdater::with_default_crypto("2.9.9", &pubkey_hex);
 
@@ -178,7 +185,7 @@ fn test_ota_updater_new_still_fails_closed() {
         "1.1.0",
         ReleaseChannel::Stable,
         artifact,
-        false,
+        PatchUrgency::Normal,
     );
 
     let fail_closed_updater = OtaUpdater::new("1.0.0", ReleaseChannel::Stable, &pubkey_hex);
@@ -189,14 +196,14 @@ fn test_ota_updater_new_still_fails_closed() {
 #[test]
 fn test_zeroizing_secure_keystore_lifecycle() {
     let mut store = SecureKeyStore::new();
-    store.store_secret("token", b"initial-secret-value", false);
+    store.store_secret("token", b"initial-secret-value", SecretProtection::Standard);
     assert_eq!(
         store.retrieve_secret("token", None),
         Some(b"initial-secret-value".as_slice())
     );
 
     // Overwriting drops and zeroizes previous Zeroizing<Vec<u8>> buffer
-    store.store_secret("token", b"rotated-secret-value", false);
+    store.store_secret("token", b"rotated-secret-value", SecretProtection::Standard);
     assert_eq!(
         store.retrieve_secret("token", None),
         Some(b"rotated-secret-value".as_slice())
@@ -206,7 +213,7 @@ fn test_zeroizing_secure_keystore_lifecycle() {
     assert!(store.delete_secret("token"));
     assert_eq!(store.retrieve_secret("token", None), None);
 
-    store.store_secret("session", b"ephemeral-key", false);
+    store.store_secret("session", b"ephemeral-key", SecretProtection::Standard);
     store.wipe_memory();
     assert_eq!(store.key_info("session"), None);
 }

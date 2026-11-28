@@ -59,7 +59,7 @@ impl Default for PipelineGraph {
             stage_width: 140.0,
             stage_height: 64.0,
             background: Color::WHITE,
-            border_color: Color::from_rgb_u32(0xEAECF0), // Tej Gray 200
+            border_color: Color::from_rgb_u32(0x00EA_ECF0), // Tej Gray 200
             corner_radius: 8.0,
         }
     }

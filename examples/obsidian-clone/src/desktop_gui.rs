@@ -1,16 +1,15 @@
 //! Native desktop GUI runner for the Obsidian Clone using `tej::App` and declarative `View`.
 
 use crate::app_view::{ObsidianState, build_obsidian_view};
-use crate::db::VaultDatabase;
 use crate::models::NoteItem;
 use tej_ui::App;
 use tej_ui_hal::WindowConfig;
 use tej_ui_layout::Size;
 
 /// Run the interactive native desktop GUI application via declarative `App::new(view).run()`.
-pub fn run_desktop_gui(_vault_db: VaultDatabase, notes: Vec<NoteItem>) {
+pub fn run_desktop_gui(notes: &[NoteItem]) {
     let state = ObsidianState::new();
-    let view = build_obsidian_view(&state, &notes);
+    let view = build_obsidian_view(&state, notes);
 
     let app = App::new(view).window(WindowConfig {
         title: "Obsidian — tej-ui Native Studio".to_string(),
@@ -37,7 +36,7 @@ pub(crate) fn insert_char_at(
     }
     let line = line_idx.min(lines.len().saturating_sub(1));
     let col = col_idx.min(lines[line].chars().count());
-    let byte_offset: usize = lines[line].chars().take(col).map(|c| c.len_utf8()).sum();
+    let byte_offset: usize = lines[line].chars().take(col).map(char::len_utf8).sum();
     lines[line].insert_str(byte_offset, text);
     *content = lines.join("\n");
     (line, col + text.chars().count())
@@ -56,12 +55,8 @@ pub(crate) fn delete_before_cursor(
     let line = line_idx.min(lines.len().saturating_sub(1));
     if col_idx > 0 {
         let col = col_idx.min(lines[line].chars().count());
-        let start_byte: usize = lines[line]
-            .chars()
-            .take(col - 1)
-            .map(|c| c.len_utf8())
-            .sum();
-        let char_len = lines[line].chars().nth(col - 1).map_or(1, |c| c.len_utf8());
+        let start_byte: usize = lines[line].chars().take(col - 1).map(char::len_utf8).sum();
+        let char_len = lines[line].chars().nth(col - 1).map_or(1, char::len_utf8);
         lines[line].drain(start_byte..start_byte + char_len);
         *content = lines.join("\n");
         (line, col - 1)
@@ -88,7 +83,7 @@ pub(crate) fn insert_newline_at(
     }
     let line = line_idx.min(lines.len().saturating_sub(1));
     let col = col_idx.min(lines[line].chars().count());
-    let byte_offset: usize = lines[line].chars().take(col).map(|c| c.len_utf8()).sum();
+    let byte_offset: usize = lines[line].chars().take(col).map(char::len_utf8).sum();
     let rest = lines[line].split_off(byte_offset);
     lines.insert(line + 1, rest);
     *content = lines.join("\n");

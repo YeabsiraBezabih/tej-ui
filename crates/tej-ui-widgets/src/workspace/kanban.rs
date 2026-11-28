@@ -49,11 +49,11 @@ impl KanbanState {
                 break;
             }
         }
-        if let Some(card) = extracted {
-            if let Some(dest_col) = self.columns.get_mut(dest_col_index) {
-                let insert_at = dest_card_index.min(dest_col.cards.len());
-                dest_col.cards.insert(insert_at, card);
-            }
+        if let Some(card) = extracted
+            && let Some(dest_col) = self.columns.get_mut(dest_col_index)
+        {
+            let insert_at = dest_card_index.min(dest_col.cards.len());
+            dest_col.cards.insert(insert_at, card);
         }
     }
 }
@@ -76,8 +76,8 @@ impl Default for KanbanBoard {
             column_width: 280.0,
             column_gap: 16.0,
             card_corner_radius: 8.0,
-            background: Color::from_rgb_u32(0xF9FAFB), // Tej Gray 50
-            column_background: Color::from_rgb_u32(0xF2F4F7), // Tej Gray 100
+            background: Color::from_rgb_u32(0x00F9_FAFB), // Tej Gray 50
+            column_background: Color::from_rgb_u32(0x00F2_F4F7), // Tej Gray 100
         }
     }
 }

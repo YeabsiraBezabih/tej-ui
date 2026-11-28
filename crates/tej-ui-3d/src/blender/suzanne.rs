@@ -25,23 +25,25 @@ impl BlenderMesh {
         let colors = Vec::new();
         let mut triangles = Vec::new();
 
-        let p = 2.0f32; // Torus knot harmonic p
-        let q = 3.0f32; // Torus knot harmonic q
+        let harm_p = 2.0f32; // Torus knot harmonic p
+        let harm_q = 3.0f32; // Torus knot harmonic q
         let r_tube = 0.4f32;
+        let rings_f = crate::math::count_to_f32(rings);
+        let segs_f = crate::math::count_to_f32(tube_segments);
 
         for i in 0..rings {
-            let u = (i as f32 / rings as f32) * 2.0 * PI;
-            let r = 1.2 + 0.6 * (q * u).cos();
-            let x0 = r * (p * u).cos();
-            let y0 = r * (p * u).sin();
-            let z0 = 0.6 * (q * u).sin();
+            let u_angle = (crate::math::count_to_f32(i) / rings_f) * 2.0 * PI;
+            let radius = 1.2 + 0.6 * (harm_q * u_angle).cos();
+            let x0 = radius * (harm_p * u_angle).cos();
+            let y0 = radius * (harm_p * u_angle).sin();
+            let z0 = 0.6 * (harm_q * u_angle).sin();
 
             // Tangent approximation
-            let u_next = u + 0.01;
-            let r_next = 1.2 + 0.6 * (q * u_next).cos();
-            let x_next = r_next * (p * u_next).cos();
-            let y_next = r_next * (p * u_next).sin();
-            let z_next = 0.6 * (q * u_next).sin();
+            let u_next = u_angle + 0.01;
+            let r_next = 1.2 + 0.6 * (harm_q * u_next).cos();
+            let x_next = r_next * (harm_p * u_next).cos();
+            let y_next = r_next * (harm_p * u_next).sin();
+            let z_next = 0.6 * (harm_q * u_next).sin();
 
             let tx = x_next - x0;
             let ty = y_next - y0;
@@ -68,9 +70,9 @@ impl BlenderMesh {
             let bz = tx * ny - ty * nx;
 
             for j in 0..tube_segments {
-                let v = (j as f32 / tube_segments as f32) * 2.0 * PI;
-                let cos_v = v.cos();
-                let sin_v = v.sin();
+                let v_angle = (crate::math::count_to_f32(j) / segs_f) * 2.0 * PI;
+                let cos_v = v_angle.cos();
+                let sin_v = v_angle.sin();
 
                 let px = x0 + r_tube * (cos_v * nx + sin_v * bx);
                 let py = y0 + r_tube * (cos_v * ny + sin_v * by);
@@ -183,9 +185,9 @@ impl BlenderMesh {
             }
         }
         let center = [
-            (min_bound[0] + max_bound[0]) * 0.5,
-            (min_bound[1] + max_bound[1]) * 0.5,
-            (min_bound[2] + max_bound[2]) * 0.5,
+            f32::midpoint(min_bound[0], max_bound[0]),
+            f32::midpoint(min_bound[1], max_bound[1]),
+            f32::midpoint(min_bound[2], max_bound[2]),
         ];
         let extent_x = max_bound[0] - min_bound[0];
         let extent_y = max_bound[1] - min_bound[1];

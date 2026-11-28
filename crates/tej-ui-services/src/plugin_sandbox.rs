@@ -19,7 +19,7 @@ impl SbomComponent {
     ) -> Self {
         let n = name.into();
         let v = version.into();
-        let purl = format!("pkg:cargo/{}@{}", n, v);
+        let purl = format!("pkg:cargo/{n}@{v}");
         Self {
             name: n,
             version: v,
@@ -59,10 +59,13 @@ impl SbomGenerator {
             } else {
                 ""
             };
-            json.push_str(&format!(
-                "    {{\"type\": \"library\", \"name\": \"{}\", \"version\": \"{}\", \"purl\": \"{}\", \"licenses\": [{{\"license\": {{\"id\": \"{}\"}}}}]}}{}\n",
-                c.name, c.version, c.purl, c.license, comma
-            ));
+            let _ = std::fmt::Write::write_fmt(
+                &mut json,
+                format_args!(
+                    "    {{\"type\": \"library\", \"name\": \"{}\", \"version\": \"{}\", \"purl\": \"{}\", \"licenses\": [{{\"license\": {{\"id\": \"{}\"}}}}]}}{comma}\n",
+                    c.name, c.version, c.purl, c.license
+                ),
+            );
         }
         json.push_str("  ]\n}");
         json

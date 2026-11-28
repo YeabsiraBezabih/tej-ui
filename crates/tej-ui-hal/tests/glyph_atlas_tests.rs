@@ -16,7 +16,7 @@ fn test_glyph_instance_layout() {
         [0.0, 0.0, 0.5, 0.5],
         PremulColor::WHITE,
         [0.0, 0.0, 800.0, 600.0],
-        false,
+        tej_ui_hal::gpu::GlyphKind::AlphaMask,
     );
     let bytes = bytemuck::bytes_of(&glyph);
     assert_eq!(bytes.len(), 80);
@@ -25,12 +25,9 @@ fn test_glyph_instance_layout() {
 #[test]
 fn test_atlas_shelf_packing_and_lru() {
     let config = BackendConfig::default();
-    let ctx = match GpuContext::new_headless(&config) {
-        Ok(c) => c,
-        Err(_) => {
-            eprintln!("Skipping test: no compatible GPU or software rasterizer found.");
-            return;
-        }
+    let Ok(ctx) = GpuContext::new_headless(&config) else {
+        eprintln!("Skipping test: no compatible GPU or software rasterizer found.");
+        return;
     };
 
     let mut atlas = match VramAtlas::new(ctx.device(), 256, 256, AtlasFormat::Grayscale) {
@@ -68,12 +65,9 @@ fn test_headless_text_render_and_pixel_readback() {
         allow_software_fallback: true,
         ..Default::default()
     };
-    let ctx = match GpuContext::new_headless(&config) {
-        Ok(c) => c,
-        Err(_) => {
-            eprintln!("Skipping test: no compatible GPU adapter found.");
-            return;
-        }
+    let Ok(ctx) = GpuContext::new_headless(&config) else {
+        eprintln!("Skipping test: no compatible GPU adapter found.");
+        return;
     };
 
     let format = wgpu::TextureFormat::Rgba8Unorm;
@@ -105,7 +99,12 @@ fn test_headless_text_render_and_pixel_readback() {
 
     // Draw glyph with solid yellow color at (16, 16, 16, 16)
     let yellow = PremulColor::from_rgba8(255, 255, 0, 255);
-    compositor.draw_glyph([16.0, 16.0, 16.0, 16.0], alloc.uv_bounds, yellow, false);
+    compositor.draw_glyph(
+        [16.0, 16.0, 16.0, 16.0],
+        alloc.uv_bounds,
+        yellow,
+        tej_ui_hal::gpu::GlyphKind::AlphaMask,
+    );
 
     let mut target = RenderTarget::Headless(headless);
     let stats = compositor.submit_with_atlas(&ctx, &mut target, Some(&mut atlas));

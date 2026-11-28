@@ -33,34 +33,34 @@ fn bench_tej_a11y(node_count: usize, hit_queries: usize) -> A11yBenchMetric {
     for i in 1..node_count {
         let child_id = tree.allocate_id();
         let mut child_node = A11yNode::new(child_id, A11yRole::Button);
-        let y = ((i % 100) * 10) as f32;
-        let x = ((i / 100) * 80) as f32;
+        let y = crate::count_to_f32((i % 100) * 10);
+        let x = crate::count_to_f32((i / 100) * 80);
         child_node.bounds = Rect::new(x, y, 76.0, 8.0);
         child_node.label = Some(format!("Interactive Button #{i}"));
         root_node.children.push(child_id);
         tree.insert_node(child_node);
     }
     tree.insert_node(root_node);
-    let sync_us = t0.elapsed().as_micros() as f64;
+    let sync_us = t0.elapsed().as_secs_f64() * 1e6;
 
     // 2. 10,000 Hit Tests
     let t_hit = Instant::now();
     let mut hit_count = 0usize;
     for i in 0..hit_queries {
-        let px = ((i * 137) % 1920) as f32;
-        let py = ((i * 251) % 1080) as f32;
+        let px = crate::count_to_f32((i * 137) % 1920);
+        let py = crate::count_to_f32((i * 251) % 1080);
         // Simple linear/spatial bounds check across nodes
         for node_id in 1..node_count.min(100) {
-            if let Some(n) = tree.get_node(A11yId(node_id as u32)) {
-                if n.bounds.contains(tej_ui_layout::Point::new(px, py)) {
-                    hit_count += 1;
-                    break;
-                }
+            if let Some(n) = tree.get_node(A11yId(node_id as u32))
+                && n.bounds.contains(tej_ui_layout::Point::new(px, py))
+            {
+                hit_count += 1;
+                break;
             }
         }
     }
     black_box(hit_count);
-    let hit_ns = (t_hit.elapsed().as_nanos() as f64) / (hit_queries as f64);
+    let hit_ns = (t_hit.elapsed().as_secs_f64() * 1e9) / crate::count_to_f64(hit_queries);
 
     // 3. Tab Focus Traversal
     let t_focus = Instant::now();
@@ -74,7 +74,7 @@ fn bench_tej_a11y(node_count: usize, hit_queries: usize) -> A11yBenchMetric {
         };
         black_box(tree.get_node(A11yId(current_id)));
     }
-    let focus_ns = (t_focus.elapsed().as_nanos() as f64) / (focus_cycles as f64);
+    let focus_ns = (t_focus.elapsed().as_secs_f64() * 1e9) / f64::from(focus_cycles);
 
     let (_alloc, bytes, _peak) = TrackingAllocator::delta_since(snap);
 
@@ -84,7 +84,7 @@ fn bench_tej_a11y(node_count: usize, hit_queries: usize) -> A11yBenchMetric {
         a11y_tree_sync_us: sync_us,
         hit_test_latency_ns: hit_ns,
         focus_next_latency_ns: focus_ns,
-        heap_allocated_kb: bytes as f64 / 1024.0,
+        heap_allocated_kb: crate::count_to_f64(bytes) / 1024.0,
     }
 }
 
